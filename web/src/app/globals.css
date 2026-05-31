@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #ECE7DD;
+  --paper-2: #E3DDD0;
+  --ink: #19140F;
+  --ink-soft: #4A433A;
+  --steel: #6B6358;
+  --accent: #E14A1F;
+  --line: rgba(25, 20, 15, 0.14);
+}
+
+@theme inline {
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+
+.mono {
+  font-family: var(--font-mono), monospace;
+}
