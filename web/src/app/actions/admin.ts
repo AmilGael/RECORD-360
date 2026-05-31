@@ -45,6 +45,26 @@ export async function createPartida(formData: FormData) {
   revalidatePath(`/app/projects/${projectId}`);
 }
 
+// Soft delete: archive an obra. Its partidas and immutable registros are
+// preserved (never destroyed) — the obra is just hidden from the dashboard.
+export async function archiveProject(formData: FormData) {
+  const { companyId } = await requireAdmin();
+  const id = String(formData.get("projectId"));
+  const project = await prisma.project.findFirst({ where: { id, companyId } });
+  if (!project) throw new Error("Forbidden");
+  await prisma.project.update({ where: { id }, data: { archivedAt: new Date() } });
+  revalidatePath("/app");
+}
+
+export async function restoreProject(formData: FormData) {
+  const { companyId } = await requireAdmin();
+  const id = String(formData.get("projectId"));
+  const project = await prisma.project.findFirst({ where: { id, companyId } });
+  if (!project) throw new Error("Forbidden");
+  await prisma.project.update({ where: { id }, data: { archivedAt: null } });
+  revalidatePath("/app");
+}
+
 export async function createUser(formData: FormData) {
   // Minting users (incl. ADMINs) is ADMIN-only — stricter than other admin actions.
   const { companyId, role } = await requireSession();

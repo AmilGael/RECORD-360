@@ -45,6 +45,7 @@ model Project {
   name        String
   description String?
   partidas    Partida[]
+  archivedAt  DateTime?
   createdAt   DateTime  @default(now())
 }
 
