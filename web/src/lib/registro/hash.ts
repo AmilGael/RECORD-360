@@ -1,3 +1,6 @@
+// Server-only module: uses node:crypto and must never be imported into a
+// client component. Domain logic for the per-partida hash chain. Reached only
+// through server actions (logRegistro) and server-side chain verification.
 import { createHash } from "node:crypto";
 import { canonicalPayload, type RegistroPayload } from "./canonical";
 

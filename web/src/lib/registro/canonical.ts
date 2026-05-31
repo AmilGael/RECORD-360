@@ -1,3 +1,6 @@
+// Server-only. Produces the canonical, deterministic string that feeds the
+// tamper-evidence hash. Field set, key order, and per-field formatting are
+// pinned (see the M1 design spec) so create-time and verify-time hashes match.
 export type RegistroPayload = {
   type: "NOTE" | "PHOTO";
   text: string | null;
@@ -15,7 +18,7 @@ export function canonicalPayload(p: RegistroPayload): string {
     gpsLat: p.gpsLat === null ? null : p.gpsLat.toFixed(6),
     gpsLng: p.gpsLng === null ? null : p.gpsLng.toFixed(6),
     mediaUrl: p.mediaUrl,
-    progressPct: p.progressPct,
+    progressPct: p.progressPct === null ? null : Math.round(p.progressPct),
     serverCreatedAt: p.serverCreatedAt.toISOString(),
     text: p.text,
     type: p.type,

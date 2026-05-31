@@ -15,8 +15,18 @@ describe("canonicalPayload", () => {
   });
 
   it("is stable regardless of input field order", () => {
-    const reordered: RegistroPayload = { ...base };
+    // Same values, properties authored in reverse-alphabetical order — output
+    // must be byte-identical to `base`, proving the canonical sort drives it.
+    const reordered: RegistroPayload = {
+      serverCreatedAt: new Date("2026-05-31T08:42:17.123Z"),
+      gpsLng: -69.9312, gpsLat: 18.4861, authorId: "ckxaAUTHOR",
+      progressPct: 72, mediaUrl: null, text: "Vaciado completado", type: "NOTE",
+    };
     expect(canonicalPayload(reordered)).toBe(canonicalPayload(base));
+  });
+
+  it("rounds non-integer progressPct to an integer", () => {
+    expect(canonicalPayload({ ...base, progressPct: 71.6 })).toContain('"progressPct":72');
   });
 
   it("includes nulls for absent gps", () => {
