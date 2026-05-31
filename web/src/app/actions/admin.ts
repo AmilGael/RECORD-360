@@ -32,7 +32,7 @@ export async function createProject(formData: FormData) {
       description: String(formData.get("description") ?? "") || null,
     },
   });
-  revalidatePath("/");
+  revalidatePath("/app");
 }
 
 export async function createPartida(formData: FormData) {
@@ -42,7 +42,7 @@ export async function createPartida(formData: FormData) {
   const project = await prisma.project.findFirst({ where: { id: projectId, companyId } });
   if (!project) throw new Error("Forbidden");
   await prisma.partida.create({ data: { projectId, name: String(formData.get("name")) } });
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}`);
 }
 
 export async function createUser(formData: FormData) {
@@ -65,6 +65,6 @@ export async function createUser(formData: FormData) {
       passwordHash: await bcrypt.hash(tempPassword, 10),
     },
   });
-  revalidatePath("/admin");
+  revalidatePath("/app/admin");
   return tempPassword;
 }

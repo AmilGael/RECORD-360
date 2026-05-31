@@ -39,5 +39,5 @@ export async function logRegistro(formData: FormData) {
   }
 
   await appendRegistro({ partidaId, authorId, type, text, mediaUrl, progressPct, gpsLat, gpsLng });
-  revalidatePath(`/partidas/${partidaId}`);
+  revalidatePath(`/app/partidas/${partidaId}`);
 }

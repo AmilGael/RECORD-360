@@ -6,10 +6,11 @@ export const authConfig = {
   providers: [], // real providers are added in auth.ts (Node runtime only)
   callbacks: {
     authorized({ auth, request }) {
-      const isLoggedIn = !!auth?.user;
-      const isLoginPage = request.nextUrl.pathname.startsWith("/login");
-      if (isLoginPage) return true; // login is the only public page
-      return isLoggedIn; // false => next-auth redirects to the signIn page
+      const { pathname } = request.nextUrl;
+      // Public: landing ("/") and the login page. Everything else (the /app/* product) requires a session.
+      const isPublic = pathname === "/" || pathname.startsWith("/login");
+      if (isPublic) return true;
+      return !!auth?.user; // false => next-auth redirects to the signIn page
     },
     jwt({ token, user }) {
       if (user) {
