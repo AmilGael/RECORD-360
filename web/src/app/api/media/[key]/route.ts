@@ -2,18 +2,25 @@ import { storage } from "@/lib/storage";
 import { contentTypeForKey } from "@/lib/storage/mime";
 import { Readable } from "node:stream";
 import path from "node:path";
+import { auth } from "@/auth";
 
 // SECURITY: media is served inline on the first-party origin, so it must never
 // be sniffable/executable as anything other than a known-safe raster image.
 // The Content-Type comes from the stored extension (which put() derives from a
 // validated MIME allowlist — SVG excluded), with nosniff + a locked-down CSP.
-// TODO(Phase 3): gate this handler behind `auth()` so only signed-in users can
-// fetch media; add per-company authorization once media is linked to a tenant.
+// Phase 3: auth gate in place — only signed-in users may fetch media.
+// Per-tenant (per-company) authorization remains a later enhancement.
 export async function GET(_req: Request, ctx: { params: Promise<{ key: string }> }) {
   const { key } = await ctx.params;
   const safeKey = path.basename(key); // prevent path traversal
   const contentType = contentTypeForKey(safeKey);
   if (!contentType) return new Response("Not found", { status: 404 });
+
+  // Auth gate: reject unauthenticated requests before touching storage,
+  // so we don't leak whether the key exists.
+  const session = await auth();
+  if (!session?.user) return new Response("Unauthorized", { status: 401 });
+
   try {
     const nodeStream = await storage.get(safeKey);
     const webStream = Readable.toWeb(nodeStream as Readable) as ReadableStream;
