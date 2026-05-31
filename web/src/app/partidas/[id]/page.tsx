@@ -1,12 +1,16 @@
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 import Link from "next/link";
 import { LogComposer } from "@/components/log-composer";
 import { RecordCard } from "@/components/record-card";
 
 export default async function PartidaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const partida = await prisma.partida.findUniqueOrThrow({
-    where: { id },
+  const session = await auth();
+  const companyId = (session!.user as { companyId: string }).companyId;
+  // Tenant scoping: only return the partida if its project belongs to the caller's company.
+  const partida = await prisma.partida.findFirstOrThrow({
+    where: { id, project: { companyId } },
     include: { project: true, registros: { orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }] } },
   });
   return (

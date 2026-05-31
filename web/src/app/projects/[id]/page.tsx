@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 import Link from "next/link";
 import { createPartida } from "@/app/actions/admin";
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const project = await prisma.project.findUniqueOrThrow({ where: { id }, include: { partidas: { orderBy: { createdAt: "desc" } } } });
+  const session = await auth();
+  const companyId = (session!.user as { companyId: string }).companyId;
+  // Tenant scoping: only return the project if it belongs to the caller's company.
+  const project = await prisma.project.findFirstOrThrow({ where: { id, companyId }, include: { partidas: { orderBy: { createdAt: "desc" } } } });
   return (
     <main style={{ maxWidth: 900, margin: "0 auto", padding: 40 }}>
       <Link href="/" className="mono" style={{ fontSize: 12, color: "var(--steel)" }}>← OBRAS</Link>

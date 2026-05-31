@@ -1,18 +1,34 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createUser } from "@/app/actions/admin";
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ temp?: string }> }) {
-  const { temp } = await searchParams;
+const TEMP_PW_COOKIE = "r360_temp_pw";
+
+export default async function AdminPage() {
   const session = await auth();
-  const companyId = (session!.user as { companyId: string }).companyId;
+  const user = session!.user as { companyId: string; role: string };
+  // Only ADMIN/MANAGER may view the team screen.
+  if (user.role !== "ADMIN" && user.role !== "MANAGER") redirect("/");
+  const companyId = user.companyId;
+
   const users = await prisma.user.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } });
+
+  // Flash the freshly-created temp password from a short-lived httpOnly cookie
+  // (kept out of the URL). It auto-expires; cookies can't be cleared at render.
+  const temp = (await cookies()).get(TEMP_PW_COOKIE)?.value;
 
   async function addUser(formData: FormData) {
     "use server";
     const tempPassword = await createUser(formData);
-    const { redirect } = await import("next/navigation");
-    redirect(`/admin?temp=${tempPassword}`);
+    (await cookies()).set(TEMP_PW_COOKIE, tempPassword, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/admin",
+      maxAge: 30,
+    });
+    redirect("/admin");
   }
 
   return (
@@ -28,15 +44,17 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </li>
         ))}
       </ul>
-      <form action={addUser} style={{ display: "grid", gap: 8 }}>
-        <input name="name" placeholder="Nombre" required style={fld} />
-        <input name="email" type="email" placeholder="Correo" required style={fld} />
-        <select name="role" style={fld} defaultValue="RESIDENT">
-          <option value="ADMIN">Admin</option><option value="MANAGER">Manager</option>
-          <option value="SUPERVISOR">Supervisor</option><option value="RESIDENT">Resident</option>
-        </select>
-        <button style={{ padding: "10px 18px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 3, fontWeight: 700 }}>Crear usuario</button>
-      </form>
+      {user.role === "ADMIN" && (
+        <form action={addUser} style={{ display: "grid", gap: 8 }}>
+          <input name="name" placeholder="Nombre" required style={fld} />
+          <input name="email" type="email" placeholder="Correo" required style={fld} />
+          <select name="role" style={fld} defaultValue="RESIDENT">
+            <option value="ADMIN">Admin</option><option value="MANAGER">Manager</option>
+            <option value="SUPERVISOR">Supervisor</option><option value="RESIDENT">Resident</option>
+          </select>
+          <button style={{ padding: "10px 18px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 3, fontWeight: 700 }}>Crear usuario</button>
+        </form>
+      )}
     </main>
   );
 }
