@@ -41,3 +41,15 @@ export function parseCategory(raw: unknown): RegistroCategory | null {
   }
   return v as RegistroCategory;
 }
+
+/** Parse an optional segment (folder) name. Empty/whitespace → null; otherwise
+ *  trimmed with internal whitespace collapsed, bounded to 80 chars. */
+export function parseSegment(raw: unknown): string | null {
+  if (raw === null || raw === undefined) return null;
+  const v = String(raw).trim().replace(/\s+/g, " ");
+  if (v === "") return null;
+  if (v.length > 80) {
+    throw new Error("El nombre del segmento es demasiado largo (máx. 80 caracteres).");
+  }
+  return v;
+}
