@@ -77,8 +77,10 @@ export const dictionaries = {
       progress: "Avance %",
       gps: "Capturar GPS",
       gpsOk: "GPS ✓",
+      gpsLoading: "Capturando…",
       submit: "Registrar",
       sending: "Registrando…",
+      error: "No se pudo registrar. Inténtalo de nuevo.",
     },
     record: { noGps: "sin GPS", immutable: "inalterable" },
     admin: {
@@ -164,8 +166,10 @@ export const dictionaries = {
       progress: "Progress %",
       gps: "Capture GPS",
       gpsOk: "GPS ✓",
+      gpsLoading: "Capturing…",
       submit: "Log entry",
       sending: "Logging…",
+      error: "Couldn't log entry. Please try again.",
     },
     record: { noGps: "no GPS", immutable: "immutable" },
     admin: {
