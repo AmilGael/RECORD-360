@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useId } from "react";
 import { logRegistro } from "@/app/actions/registro";
 import { SubmitButton } from "@/components/submit-button";
 
@@ -20,6 +20,7 @@ type ComposerT = {
 
 export function LogComposer({ partidaId, t, locations }: { partidaId: string; t: ComposerT; locations: string[] }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const listId = useId();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsPending, setGpsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +74,8 @@ export function LogComposer({ partidaId, t, locations }: { partidaId: string; t:
             <option key={value} value={value}>{label}</option>
           ))}
         </select>
-        <input name="location" list="loc-options" placeholder={t.location} className="input" style={{ maxWidth: 240 }} />
-        <datalist id="loc-options">
+        <input name="location" list={listId} placeholder={t.location} className="input" style={{ maxWidth: 240 }} />
+        <datalist id={listId}>
           {locations.map((l) => <option key={l} value={l} />)}
         </datalist>
         <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif" style={{ fontSize: "0.8rem", maxWidth: 200 }} />

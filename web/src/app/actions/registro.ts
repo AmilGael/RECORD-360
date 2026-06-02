@@ -2,7 +2,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
-import { parseProgressPct, parseCategory } from "@/lib/registro/validate";
+import { parseProgressPct, parseCategory, parseLocation } from "@/lib/registro/validate";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
@@ -31,7 +31,7 @@ export async function logRegistro(formData: FormData) {
   const attachments = await prepareAttachments(photos, storage);
 
   // Pick-or-create the location, scoped to the project; empty label → no location.
-  const locationLabel = (String(formData.get("location") ?? "").trim()) || null;
+  const locationLabel = parseLocation(formData.get("location"));
   let locationId: string | null = null;
   if (locationLabel) {
     const loc = await prisma.location.upsert({

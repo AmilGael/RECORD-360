@@ -24,9 +24,9 @@ export function RecordCard({ r, t, lang }: { r: RegistroWithRelations; t: Record
         {r.text && <p style={{ marginBottom: 8 }}>{r.text}</p>}
         {r.attachments.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginTop: 4 }}>
-            {r.attachments.map((a) => (
+            {r.attachments.map((a, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={a.id} src={a.url} alt="" style={{ width: "100%", borderRadius: "var(--radius-sm)", display: "block" }} />
+              <img key={a.id} src={a.url} alt={`Anexo ${i + 1}`} style={{ width: "100%", borderRadius: "var(--radius-sm)", display: "block" }} />
             ))}
           </div>
         )}

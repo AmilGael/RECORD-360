@@ -60,4 +60,13 @@ describe("prepareAttachments", () => {
     const f = new File([new Uint8Array([1])], "p.png", { type: "image/png" });
     await expect(prepareAttachments([f], failing)).rejects.toThrow(/no se pudo guardar/i);
   });
+
+  it("rejects more than 10 files", async () => {
+    const many = Array.from({ length: 11 }, (_, i) => new File([new Uint8Array([i + 1])], `f${i}.png`, { type: "image/png" }));
+    await expect(prepareAttachments(many, okStorage)).rejects.toThrow(/demasiados|too many|máx/i);
+  });
+  it("rejects a file larger than the per-file limit", async () => {
+    const big = new File([new Uint8Array(6 * 1024 * 1024)], "big.png", { type: "image/png" });
+    await expect(prepareAttachments([big], okStorage)).rejects.toThrow(/grande|large|máx/i);
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseProgressPct } from "@/lib/registro/validate";
+import { parseProgressPct, parseLocation } from "@/lib/registro/validate";
 
 describe("parseProgressPct", () => {
   it("returns null for empty / missing input", () => {
@@ -30,5 +30,19 @@ describe("parseProgressPct", () => {
 
   it("rejects non-numeric input", () => {
     expect(() => parseProgressPct("abc")).toThrow();
+  });
+});
+
+describe("parseLocation", () => {
+  it("returns null for empty / missing / whitespace", () => {
+    expect(parseLocation(null)).toBeNull();
+    expect(parseLocation("")).toBeNull();
+    expect(parseLocation("   ")).toBeNull();
+  });
+  it("trims and returns a normal label", () => {
+    expect(parseLocation("  Piso 3 - Apto 302  ")).toBe("Piso 3 - Apto 302");
+  });
+  it("rejects an over-long label", () => {
+    expect(() => parseLocation("x".repeat(201))).toThrow();
   });
 });

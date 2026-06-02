@@ -1,9 +1,9 @@
 // Server-only. Produces the canonical, deterministic string that feeds the
 // tamper-evidence hash. Field set, key order, and per-field formatting are
 // pinned so create-time and verify-time hashes match. This is ledger format v2.
-import type { RegistroCategory } from "@prisma/client";
+import type { RegistroCategory, AttachmentType } from "@prisma/client";
 
-export type AttachmentDigest = { fileType: string; sha256: string };
+export type AttachmentDigest = { fileType: AttachmentType; sha256: string };
 
 export type RegistroPayload = {
   ledgerVersion: number;

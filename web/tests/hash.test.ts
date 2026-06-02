@@ -19,8 +19,8 @@ describe("verifyChain v2", () => {
   });
 
   it("detects a tampered attachment hash", () => {
-    const r1 = make(GENESIS_PREV_HASH, "r1", { attachments: [{ fileType: "IMAGE", sha256: "aaaa" }] });
-    const tampered = { ...r1, attachments: [{ fileType: "IMAGE", sha256: "ffff" }] };
+    const r1 = make(GENESIS_PREV_HASH, "r1", { attachments: [{ fileType: "IMAGE" as const, sha256: "aaaa" }] });
+    const tampered = { ...r1, attachments: [{ fileType: "IMAGE" as const, sha256: "ffff" }] };
     expect(verifyChain([tampered])).toEqual({ ok: false, brokenAt: "r1" });
   });
 

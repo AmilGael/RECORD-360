@@ -17,6 +17,18 @@ export function parseProgressPct(raw: unknown): number | null {
   return n;
 }
 
+/** Parse an optional location label. Empty/whitespace → null; otherwise trimmed,
+ *  bounded to 200 chars (rejects tampered/oversized input). */
+export function parseLocation(raw: unknown): string | null {
+  if (raw === null || raw === undefined) return null;
+  const v = String(raw).trim();
+  if (v === "") return null;
+  if (v.length > 200) {
+    throw new Error("La ubicación es demasiado larga (máx. 200 caracteres).");
+  }
+  return v;
+}
+
 const VALID_CATEGORIES = new Set<string>(Object.values(RegistroCategory));
 
 /** Parse an optional category form value. Empty → null; a valid enum member →
