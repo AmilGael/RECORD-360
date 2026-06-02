@@ -12,7 +12,10 @@
   --line: rgba(25, 20, 15, 0.14);
   --line-strong: rgba(25, 20, 15, 0.26);
   --grid: rgba(25, 20, 15, 0.045);
-  --radius: 4px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow-soft: 0 1px 2px rgba(25, 20, 15, 0.04);
+  --shadow-card: 0 1px 2px rgba(25, 20, 15, 0.04), 0 12px 30px -14px rgba(25, 20, 15, 0.12);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
@@ -21,6 +24,7 @@
   --color-foreground: var(--ink);
   --font-sans: var(--font-archivo);
   --font-mono: var(--font-mono);
+  --font-serif: var(--font-fraunces);
 }
 
 * { box-sizing: border-box; }
@@ -44,9 +48,9 @@ body {
   font-family: var(--font-mono), monospace;
   font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--steel);
 }
-.h-xl { font-weight: 900; letter-spacing: -0.035em; line-height: 0.92; }
-.h-lg { font-weight: 900; letter-spacing: -0.03em; line-height: 0.98; }
-.h-md { font-weight: 800; letter-spacing: -0.022em; line-height: 1.04; }
+.h-xl { font-family: var(--font-serif), Georgia, serif; font-weight: 600; letter-spacing: -0.02em; line-height: 0.96; }
+.h-lg { font-family: var(--font-serif), Georgia, serif; font-weight: 600; letter-spacing: -0.018em; line-height: 1.0; }
+.h-md { font-family: var(--font-serif), Georgia, serif; font-weight: 600; letter-spacing: -0.012em; line-height: 1.06; }
 .text-soft { color: var(--ink-soft); }
 .text-steel { color: var(--steel); }
 
@@ -73,7 +77,7 @@ body {
 .input {
   width: 100%; padding: 0.7rem 0.8rem; font-size: 0.95rem; font-family: inherit;
   background: var(--paper); color: var(--ink);
-  border: 1px solid var(--line-strong); border-radius: var(--radius);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 .input::placeholder { color: var(--steel); }
@@ -113,7 +117,8 @@ body {
 .appbar { position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 82%, transparent); backdrop-filter: blur(10px); }
 .appbar-inner { max-width: 980px; margin: 0 auto; padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .brand { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--ink); }
-.brand b { font-weight: 900; letter-spacing: -0.02em; font-size: 1.05rem; }
+.brand b { font-family: var(--font-serif), Georgia, serif; font-weight: 600; letter-spacing: -0.01em; font-size: 1.25rem; }
+.brand .dot { color: var(--accent); }
 .brand .tag { font-family: var(--font-mono), monospace; font-size: 0.55rem; letter-spacing: 0.18em; border: 1px solid var(--line-strong); padding: 2px 5px; border-radius: 2px; color: var(--steel); }
 .appnav { display: flex; align-items: center; gap: 22px; }
 .appnav a { font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); text-decoration: none; transition: color 0.18s var(--ease); }
@@ -128,4 +133,4 @@ body {
 .row:hover .row-link { color: var(--accent); }
 
 /* generic card */
-.card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); }
+.card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); box-shadow: var(--shadow-card); }
