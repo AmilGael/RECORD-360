@@ -9,6 +9,12 @@
   --steel: #6B6358;
   --accent: #E14A1F;
   --accent-deep: #B83814;
+  --state-active: #2f7d5b;
+  --state-active-bg: rgba(47, 125, 91, 0.12);
+  --state-merged: #6b4fa0;
+  --state-merged-bg: rgba(107, 79, 160, 0.12);
+  --state-blocked: #a8432f;
+  --state-blocked-bg: rgba(168, 67, 47, 0.10);
   --line: rgba(25, 20, 15, 0.14);
   --line-strong: rgba(25, 20, 15, 0.26);
   --grid: rgba(25, 20, 15, 0.045);
@@ -134,3 +140,32 @@ body {
 
 /* generic card */
 .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); box-shadow: var(--shadow-card); }
+
+/* ---------- project workspace (GitHub structure, warm) ---------- */
+.state-badge {
+  font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.08em;
+  text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+}
+.state-badge.is-active { color: var(--state-active); background: var(--state-active-bg); border: 1px solid rgba(47,125,91,0.35); }
+.state-badge.is-archived { color: var(--steel); background: var(--paper-2); border: 1px solid var(--line-strong); }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 18px 0 0; }
+.tab { font-size: 0.86rem; font-weight: 600; padding: 9px 12px; border-bottom: 2px solid transparent; color: var(--ink-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.tab.is-on { color: var(--ink); border-bottom-color: var(--accent); }
+.tab.is-off { color: var(--steel); opacity: 0.55; cursor: default; }
+.tab .soon { font-family: var(--font-mono), monospace; font-size: 0.5rem; letter-spacing: 0.06em; border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 3px; }
+
+.workspace { display: grid; grid-template-columns: 240px 1fr; gap: 0; border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius); min-height: 360px; }
+@media (max-width: 760px) { .workspace { grid-template-columns: 1fr; } }
+.tree { border-right: 1px solid var(--line); padding: 10px 8px; }
+@media (max-width: 760px) { .tree { border-right: none; border-bottom: 1px solid var(--line); } }
+.tree-folder { font-family: var(--font-mono), monospace; font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.03em; padding: 8px 8px 4px; }
+.tree-file { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 22px; border-radius: var(--radius-sm); color: var(--ink); text-decoration: none; font-size: 0.9rem; }
+.tree-file:hover { background: var(--paper-2); }
+.tree-file.is-active { background: var(--paper-3); box-shadow: inset 2px 0 0 var(--accent); }
+.tree-file .pct { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); }
+.tree-actions { margin-top: 12px; padding: 10px 8px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+
+.viewport { padding: 18px 20px; }
+.viewport .telemetry { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); letter-spacing: 0.02em; }
+.viewport .empty { color: var(--steel); display: flex; align-items: center; min-height: 200px; }
