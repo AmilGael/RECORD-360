@@ -28,7 +28,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <div className="grid-bg" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header className="appbar" style={{ background: "transparent", backdropFilter: "none", borderBottom: "none" }}>
         <div className="appbar-inner" style={{ maxWidth: 1180 }}>
-          <Link href="/" className="brand"><b>RECORD&nbsp;360</b><span className="tag">{t.common.blackBox}</span></Link>
+          <Link href="/" className="brand"><b>Raphl<span className="dot">.</span></b><span className="tag">{t.common.blackBox}</span></Link>
           <LanguageSwitcher current={lang} />
         </div>
       </header>

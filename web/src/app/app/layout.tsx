@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="grid-bg" style={{ minHeight: "100vh" }}>
       <header className="appbar">
         <div className="appbar-inner">
-          <Link href="/app" className="brand"><b>RECORD&nbsp;360</b><span className="tag">{t.common.blackBox}</span></Link>
+          <Link href="/app" className="brand"><b>Raphl<span className="dot">.</span></b><span className="tag">{t.common.blackBox}</span></Link>
           <nav className="appnav">
             <Link href="/app">{t.nav.sites}</Link>
             {isAdmin && <Link href="/app/admin">{t.nav.team}</Link>}

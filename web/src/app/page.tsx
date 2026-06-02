@@ -11,7 +11,7 @@ export default async function Landing() {
       {/* top bar */}
       <header className="appbar">
         <div className="appbar-inner" style={{ maxWidth: 1180 }}>
-          <Link href="/" className="brand"><b>RECORD&nbsp;360</b><span className="tag">{t.common.blackBox}</span></Link>
+          <Link href="/" className="brand"><b>Raphl<span className="dot">.</span></b><span className="tag">{t.common.blackBox}</span></Link>
           <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
             <LanguageSwitcher current={lang} />
             <Link href="/login" className="btn btn-ink" style={{ padding: "0.5rem 1rem", fontSize: "0.82rem" }}>{L.ctaEnter} <span className="arrow">→</span></Link>
@@ -98,7 +98,7 @@ export default async function Landing() {
 
       <footer style={{ borderTop: "1px solid var(--line-strong)", padding: "40px 0" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-          <span className="brand"><b>RECORD&nbsp;360</b></span>
+          <span className="brand"><b>Raphl<span className="dot">.</span></b></span>
           <span className="mono text-steel" style={{ fontSize: "0.66rem", letterSpacing: "0.08em" }}>{L.footerTagline} · SANTO DOMINGO · © 2026</span>
           <LanguageSwitcher current={lang} />
         </div>
