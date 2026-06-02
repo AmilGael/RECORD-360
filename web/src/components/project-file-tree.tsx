@@ -22,15 +22,17 @@ function FileRow({ projectId, pa, selectedId }: { projectId: string; pa: Partida
 }
 
 export function ProjectFileTree({
-  projectId, segments, ungrouped, segmentNames, selectedId, t,
+  projectId, segments, ungrouped, segmentNames, selectedId, isAdmin, t,
 }: {
   projectId: string;
   segments: { id: string; name: string; partidas: PartidaRow[] }[];
   ungrouped: PartidaRow[];
   segmentNames: string[];
   selectedId?: string;
+  isAdmin: boolean;
   t: TreeT;
 }) {
+  const segListId = `segment-opts-${projectId}`;
   return (
     <div className="tree">
       {segments.map((s) => (
@@ -45,22 +47,24 @@ export function ProjectFileTree({
           {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} />)}
         </div>
       )}
-      <div className="tree-actions">
-        <form action={createPartida} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <input type="hidden" name="projectId" value={projectId} />
-          <input name="name" placeholder={t.newPartida} required className="input" />
-          <input name="segment" list="segment-options" placeholder={t.segmentPlaceholder} className="input" />
-          <datalist id="segment-options">
-            {segmentNames.map((n) => <option key={n} value={n} />)}
-          </datalist>
-          <SubmitButton className="btn btn-accent" style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem" }}>{t.add}</SubmitButton>
-        </form>
-        <form action={createSegment} style={{ display: "flex", gap: 6 }}>
-          <input type="hidden" name="projectId" value={projectId} />
-          <input name="name" placeholder={t.newSegment} required className="input" style={{ flex: 1 }} />
-          <SubmitButton className="btn btn-ghost" style={{ padding: "0.5rem 0.7rem", fontSize: "0.78rem" }}>{t.addSegment}</SubmitButton>
-        </form>
-      </div>
+      {isAdmin && (
+        <div className="tree-actions">
+          <form action={createPartida} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <input name="name" placeholder={t.newPartida} required className="input" />
+            <input name="segment" list={segListId} placeholder={t.segmentPlaceholder} className="input" />
+            <datalist id={segListId}>
+              {segmentNames.map((n) => <option key={n} value={n} />)}
+            </datalist>
+            <SubmitButton className="btn btn-accent" style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem" }}>{t.add}</SubmitButton>
+          </form>
+          <form action={createSegment} style={{ display: "flex", gap: 6 }}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <input name="name" placeholder={t.newSegment} required className="input" style={{ flex: 1 }} />
+            <SubmitButton className="btn btn-ghost" style={{ padding: "0.5rem 0.7rem", fontSize: "0.78rem" }}>{t.addSegment}</SubmitButton>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

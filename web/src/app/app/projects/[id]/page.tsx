@@ -15,7 +15,9 @@ export default async function ProjectPage({
   const { id } = await params;
   const { p: selectedId } = await searchParams;
   const session = await auth();
-  const companyId = (session!.user as { companyId: string }).companyId;
+  const sessionUser = session!.user as { companyId: string; role: string };
+  const companyId = sessionUser.companyId;
+  const isAdmin = sessionUser.role === "ADMIN" || sessionUser.role === "MANAGER";
   const { lang, t } = await getDict();
   const P = t.project;
 
@@ -81,6 +83,7 @@ export default async function ProjectPage({
           ungrouped={project.partidas}
           segmentNames={segmentNames}
           selectedId={selectedId}
+          isAdmin={isAdmin}
           t={{ ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add, segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment, addSegment: P.addSegment }}
         />
         {selected ? (
