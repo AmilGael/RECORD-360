@@ -72,6 +72,8 @@ model Partida {
   progressPct Int        @default(0)
   registros   Registro[]
   createdAt   DateTime   @default(now())
+
+  @@index([segmentId])
 }
 
 model Segment {
