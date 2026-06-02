@@ -1,9 +1,11 @@
 import type { Registro } from "@prisma/client";
+import { formatTimestamp } from "@/lib/format/datetime";
+import type { Lang } from "@/i18n/dictionaries";
 
 type RecordT = { noGps: string; immutable: string };
 
-export function RecordCard({ r, t }: { r: Registro; t: RecordT }) {
-  const ts = r.serverCreatedAt.toISOString();
+export function RecordCard({ r, t, lang }: { r: Registro; t: RecordT; lang: Lang }) {
+  const ts = formatTimestamp(r.serverCreatedAt, lang);
   const gps =
     r.gpsLat !== null && r.gpsLng !== null
       ? `${Number(r.gpsLat).toFixed(4)} · ${Number(r.gpsLng).toFixed(4)}`

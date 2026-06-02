@@ -9,7 +9,7 @@ export default async function PartidaPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const session = await auth();
   const companyId = (session!.user as { companyId: string }).companyId;
-  const { t } = await getDict();
+  const { lang, t } = await getDict();
   // Tenant scoping: only return the partida if its project belongs to the caller's company.
   const partida = await prisma.partida.findFirstOrThrow({
     where: { id, project: { companyId } },
@@ -22,7 +22,7 @@ export default async function PartidaPage({ params }: { params: Promise<{ id: st
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 4px" }}>{partida.name}</h1>
       <div className="mono text-steel" style={{ marginBottom: 24, fontSize: "0.8rem" }}>{t.partida.progress} {partida.progressPct}%</div>
       <LogComposer partidaId={partida.id} t={t.composer} />
-      {partida.registros.map((r) => <RecordCard key={r.id} r={r} t={t.record} />)}
+      {partida.registros.map((r) => <RecordCard key={r.id} r={r} t={t.record} lang={lang} />)}
       {partida.registros.length === 0 && <p className="text-steel">{t.partida.empty}</p>}
     </div>
   );
