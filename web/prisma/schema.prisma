@@ -56,6 +56,7 @@ model Project {
   name        String
   description String?
   partidas    Partida[]
+  segments    Segment[]
   locations   Location[]
   archivedAt  DateTime?
   createdAt   DateTime   @default(now())
@@ -65,10 +66,24 @@ model Partida {
   id          String     @id @default(cuid())
   projectId   String
   project     Project    @relation(fields: [projectId], references: [id])
+  segmentId   String?
+  segment     Segment?   @relation(fields: [segmentId], references: [id], onDelete: SetNull)
   name        String
   progressPct Int        @default(0)
   registros   Registro[]
   createdAt   DateTime   @default(now())
+}
+
+model Segment {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id])
+  name      String
+  position  Int       @default(0)
+  partidas  Partida[]
+  createdAt DateTime  @default(now())
+
+  @@unique([projectId, name])
 }
 
 model Location {
