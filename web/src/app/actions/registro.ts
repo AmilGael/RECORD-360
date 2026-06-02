@@ -2,8 +2,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
-import { parseProgressPct } from "@/lib/registro/validate";
-import { prepareMedia } from "@/lib/registro/upload";
+import { parseProgressPct, parseCategory } from "@/lib/registro/validate";
+import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 
@@ -22,13 +22,26 @@ export async function logRegistro(formData: FormData) {
 
   const text = (String(formData.get("text") ?? "").trim()) || null;
   const progressPct = parseProgressPct(formData.get("progressPct"));
+  const category = parseCategory(formData.get("category"));
   const latRaw = formData.get("gpsLat"); const lngRaw = formData.get("gpsLng");
   const gpsLat = latRaw ? Number(latRaw) : null;
   const gpsLng = lngRaw ? Number(lngRaw) : null;
 
-  const photo = formData.get("photo") as File | null;
-  const { mediaUrl, type } = await prepareMedia(photo, storage);
+  const photos = formData.getAll("photos").filter((f): f is File => f instanceof File);
+  const attachments = await prepareAttachments(photos, storage);
 
-  await appendRegistro({ partidaId, authorId, type, text, mediaUrl, progressPct, gpsLat, gpsLng });
+  // Pick-or-create the location, scoped to the project; empty label → no location.
+  const locationLabel = (String(formData.get("location") ?? "").trim()) || null;
+  let locationId: string | null = null;
+  if (locationLabel) {
+    const loc = await prisma.location.upsert({
+      where: { projectId_label: { projectId: partida.projectId, label: locationLabel } },
+      create: { projectId: partida.projectId, label: locationLabel },
+      update: {},
+    });
+    locationId = loc.id;
+  }
+
+  await appendRegistro({ partidaId, authorId, category, text, progressPct, gpsLat, gpsLng, locationId, attachments });
   revalidatePath(`/app/partidas/${partidaId}`);
 }

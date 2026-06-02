@@ -19,10 +19,12 @@ export type StoredRegistro = RegistroPayload & {
 export function verifyChain(registros: StoredRegistro[]): { ok: boolean; brokenAt?: string } {
   let expectedPrev = GENESIS_PREV_HASH;
   for (const r of registros) {
+    if (r.ledgerVersion !== 2) return { ok: false, brokenAt: r.id };
     if (r.prevHash !== expectedPrev) return { ok: false, brokenAt: r.id };
     const recomputed = computeHash(r.prevHash, {
-      type: r.type, text: r.text, mediaUrl: r.mediaUrl, progressPct: r.progressPct,
-      authorId: r.authorId, gpsLat: r.gpsLat, gpsLng: r.gpsLng, serverCreatedAt: r.serverCreatedAt,
+      ledgerVersion: r.ledgerVersion, category: r.category, text: r.text, progressPct: r.progressPct,
+      authorId: r.authorId, locationId: r.locationId, gpsLat: r.gpsLat, gpsLng: r.gpsLng,
+      serverCreatedAt: r.serverCreatedAt, attachments: r.attachments,
     });
     if (recomputed !== r.hash) return { ok: false, brokenAt: r.id };
     expectedPrev = r.hash;
