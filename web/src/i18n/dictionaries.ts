@@ -4,7 +4,7 @@
 
 export const dictionaries = {
   es: {
-    common: { app: "RECORD 360", blackBox: "BLACK BOX" },
+    common: { app: "Raphl", blackBox: "BLACK BOX" },
     nav: { sites: "Obras", team: "Equipo", signOut: "Salir" },
     landing: {
       eyebrow: "Gestión de obra · República Dominicana",
@@ -91,7 +91,7 @@ export const dictionaries = {
     },
   },
   en: {
-    common: { app: "RECORD 360", blackBox: "BLACK BOX" },
+    common: { app: "Raphl", blackBox: "BLACK BOX" },
     nav: { sites: "Sites", team: "Team", signOut: "Sign out" },
     landing: {
       eyebrow: "Construction management · Dominican Republic",
