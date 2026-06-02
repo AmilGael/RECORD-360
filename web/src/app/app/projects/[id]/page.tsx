@@ -51,7 +51,7 @@ export default async function ProjectPage({
   // Registro.authorId has no User relation; resolve the latest author's name directly.
   const latestAuthorId = selected?.registros[0]?.authorId ?? null;
   const authorName = latestAuthorId
-    ? (await prisma.user.findUnique({ where: { id: latestAuthorId }, select: { name: true } }))?.name ?? null
+    ? (await prisma.user.findFirst({ where: { id: latestAuthorId, companyId }, select: { name: true } }))?.name ?? null
     : null;
 
   return (
