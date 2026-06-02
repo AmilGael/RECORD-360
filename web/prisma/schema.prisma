@@ -14,11 +14,6 @@ enum Role {
   RESIDENT
 }
 
-enum RegistroType {
-  NOTE
-  PHOTO
-}
-
 enum RegistroCategory {
   MATERIALES
   PROCESOS
@@ -102,9 +97,7 @@ model Registro {
   id              String            @id @default(cuid())
   partidaId       String
   partida         Partida           @relation(fields: [partidaId], references: [id])
-  type            RegistroType?
   text            String?
-  mediaUrl        String?
   category        RegistroCategory?
   locationId      String?
   location        Location?         @relation(fields: [locationId], references: [id], onDelete: Restrict)
