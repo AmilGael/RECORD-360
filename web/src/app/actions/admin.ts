@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
+import { parseSegment } from "@/lib/registro/validate";
+import { resolveSegment } from "@/lib/project/segments";
 
 const ADMIN_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
 
@@ -41,7 +43,17 @@ export async function createPartida(formData: FormData) {
   // Cross-tenant guard: the project must belong to the caller's company.
   const project = await prisma.project.findFirst({ where: { id: projectId, companyId } });
   if (!project) throw new Error("Forbidden");
-  await prisma.partida.create({ data: { projectId, name: String(formData.get("name")) } });
+  const segmentId = await resolveSegment(projectId, parseSegment(formData.get("segment")));
+  await prisma.partida.create({ data: { projectId, name: String(formData.get("name")), segmentId } });
+  revalidatePath(`/app/projects/${projectId}`);
+}
+
+export async function createSegment(formData: FormData) {
+  const { companyId } = await requireAdmin();
+  const projectId = String(formData.get("projectId"));
+  const project = await prisma.project.findFirst({ where: { id: projectId, companyId } });
+  if (!project) throw new Error("Forbidden");
+  await resolveSegment(projectId, parseSegment(formData.get("name")));
   revalidatePath(`/app/projects/${projectId}`);
 }
 
