@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { computeHash, GENESIS_PREV_HASH } from "./hash";
+import { retryOnConflict } from "./retry";
 import type { RegistroType } from "@prisma/client";
 
 export type AppendInput = {
@@ -15,7 +16,8 @@ export type AppendInput = {
 };
 
 export async function appendRegistro(input: AppendInput) {
-  return prisma.$transaction(async (tx) => {
+  return retryOnConflict(() =>
+    prisma.$transaction(async (tx) => {
     const tip = await tx.registro.findFirst({
       where: { partidaId: input.partidaId },
       orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
@@ -38,5 +40,6 @@ export async function appendRegistro(input: AppendInput) {
       await tx.partida.update({ where: { id: input.partidaId }, data: { progressPct: input.progressPct } });
     }
     return created;
-  });
+    }),
+  );
 }
