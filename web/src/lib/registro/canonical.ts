@@ -21,7 +21,11 @@ export type RegistroPayload = {
 export function canonicalPayload(p: RegistroPayload): string {
   const attachments = p.attachments
     .map((a) => ({ fileType: a.fileType, sha256: a.sha256 }))
-    .sort((a, b) => (a.sha256 < b.sha256 ? -1 : a.sha256 > b.sha256 ? 1 : 0));
+    .sort((a, b) =>
+      a.sha256 !== b.sha256
+        ? a.sha256 < b.sha256 ? -1 : 1
+        : a.fileType < b.fileType ? -1 : a.fileType > b.fileType ? 1 : 0,
+    );
 
   const obj: Record<string, unknown> = {
     attachments,

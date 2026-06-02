@@ -34,4 +34,10 @@ describe("verifyChain v2", () => {
     const r1 = make(GENESIS_PREV_HASH, "r1");
     expect(verifyChain([{ ...r1, ledgerVersion: 1 }])).toEqual({ ok: false, brokenAt: "r1" });
   });
+
+  it("detects a broken prevHash link", () => {
+    const r1 = make(GENESIS_PREV_HASH, "r1");
+    const r2 = make("deadbeef".repeat(8), "r2"); // prevHash does not match r1.hash
+    expect(verifyChain([r1, r2])).toEqual({ ok: false, brokenAt: "r2" });
+  });
 });

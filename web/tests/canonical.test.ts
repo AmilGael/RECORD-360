@@ -43,4 +43,10 @@ describe("canonicalPayload v2", () => {
     expect(s).toContain('"locationId":null');
     expect(s).toContain('"gpsLat":null');
   });
+
+  it("matches the exact canonical string for a fully-populated payload", () => {
+    expect(canonicalPayload(base)).toBe(
+      '{"attachments":[{"fileType":"IMAGE","sha256":"aaaa"},{"fileType":"IMAGE","sha256":"bbbb"}],"authorId":"u1","category":"MATERIALES","gpsLat":"18.486100","gpsLng":"-69.931200","ledgerVersion":2,"locationId":"loc1","progressPct":40,"serverCreatedAt":"2026-06-02T12:00:00.000Z","text":"hola"}',
+    );
+  });
 });

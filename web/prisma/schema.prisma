@@ -107,7 +107,7 @@ model Registro {
   mediaUrl        String?
   category        RegistroCategory?
   locationId      String?
-  location        Location?         @relation(fields: [locationId], references: [id])
+  location        Location?         @relation(fields: [locationId], references: [id], onDelete: Restrict)
   ledgerVersion   Int               @default(2)
   attachments     Attachment[]
   progressPct     Int?
