@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import Link from "next/link";
 import { getDict } from "@/i18n/server";
 import { ProjectFileTree } from "@/components/project-file-tree";
+import { PartidaSummary } from "@/components/partida-summary";
 import { projectProgress } from "@/lib/project/progress";
 
 export default async function ProjectPage({
@@ -15,7 +16,7 @@ export default async function ProjectPage({
   const { p: selectedId } = await searchParams;
   const session = await auth();
   const companyId = (session!.user as { companyId: string }).companyId;
-  const { t } = await getDict();
+  const { lang, t } = await getDict();
   const P = t.project;
 
   // Tenant scoping: only return the project if it belongs to the caller's company.
@@ -34,6 +35,24 @@ export default async function ProjectPage({
   const allPartidas = [...project.segments.flatMap((s) => s.partidas), ...project.partidas];
   const avg = projectProgress(allPartidas);
   const segmentNames = project.segments.map((s) => s.name);
+
+  const selected = selectedId
+    ? await prisma.partida.findFirst({
+        where: { id: selectedId, projectId: id },
+        include: {
+          registros: {
+            orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
+            take: 3,
+            include: { attachments: true, location: true },
+          },
+        },
+      })
+    : null;
+  // Registro.authorId has no User relation; resolve the latest author's name directly.
+  const latestAuthorId = selected?.registros[0]?.authorId ?? null;
+  const authorName = latestAuthorId
+    ? (await prisma.user.findUnique({ where: { id: latestAuthorId }, select: { name: true } }))?.name ?? null
+    : null;
 
   return (
     <div className="reveal">
@@ -64,9 +83,16 @@ export default async function ProjectPage({
           selectedId={selectedId}
           t={{ ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add, segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment, addSegment: P.addSegment }}
         />
-        <div className="viewport">
-          <div className="empty">{P.summaryEmpty}</div>
-        </div>
+        {selected ? (
+          <PartidaSummary
+            partida={selected}
+            authorName={authorName}
+            lang={lang}
+            t={{ noEntries: P.summaryNoEntries, lastUpdate: P.lastUpdate, openLog: P.openLog }}
+          />
+        ) : (
+          <div className="viewport"><div className="empty">{P.summaryEmpty}</div></div>
+        )}
       </div>
     </div>
   );
