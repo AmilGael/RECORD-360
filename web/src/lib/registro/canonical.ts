@@ -2,7 +2,7 @@
 // tamper-evidence hash. Field set, key order, and per-field formatting are
 // pinned (see the M1 design spec) so create-time and verify-time hashes match.
 export type RegistroPayload = {
-  type: "NOTE" | "PHOTO";
+  type: "NOTE" | "PHOTO" | null;
   text: string | null;
   mediaUrl: string | null;
   progressPct: number | null;

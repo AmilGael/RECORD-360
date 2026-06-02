@@ -1,6 +1,7 @@
 {
   "name": "web",
   "version": "0.1.0",
+  "prisma": { "seed": "tsx prisma/seed.ts" },
   "private": true,
   "scripts": {
     "dev": "next dev",

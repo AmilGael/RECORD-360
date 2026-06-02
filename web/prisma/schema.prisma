@@ -19,6 +19,22 @@ enum RegistroType {
   PHOTO
 }
 
+enum RegistroCategory {
+  MATERIALES
+  PROCESOS
+  EVENTUALIDADES
+  OBSERVACIONES
+  COSTOS
+  PERSONAL
+}
+
+enum AttachmentType {
+  IMAGE
+  VIDEO
+  PDF
+  AUDIO
+}
+
 model Company {
   id        String    @id @default(cuid())
   name      String
@@ -39,14 +55,15 @@ model User {
 }
 
 model Project {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   companyId   String
-  company     Company   @relation(fields: [companyId], references: [id])
+  company     Company    @relation(fields: [companyId], references: [id])
   name        String
   description String?
   partidas    Partida[]
+  locations   Location[]
   archivedAt  DateTime?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime   @default(now())
 }
 
 model Partida {
@@ -59,18 +76,45 @@ model Partida {
   createdAt   DateTime   @default(now())
 }
 
+model Location {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id])
+  label     String
+  registros Registro[]
+  createdAt DateTime   @default(now())
+
+  @@unique([projectId, label])
+}
+
+model Attachment {
+  id         String         @id @default(cuid())
+  registroId String
+  registro   Registro       @relation(fields: [registroId], references: [id], onDelete: Cascade)
+  url        String
+  sha256     String
+  fileType   AttachmentType
+
+  @@index([registroId])
+}
+
 model Registro {
-  id              String       @id @default(cuid())
+  id              String            @id @default(cuid())
   partidaId       String
-  partida         Partida      @relation(fields: [partidaId], references: [id])
-  type            RegistroType
+  partida         Partida           @relation(fields: [partidaId], references: [id])
+  type            RegistroType?
   text            String?
   mediaUrl        String?
+  category        RegistroCategory?
+  locationId      String?
+  location        Location?         @relation(fields: [locationId], references: [id])
+  ledgerVersion   Int               @default(2)
+  attachments     Attachment[]
   progressPct     Int?
   authorId        String
   serverCreatedAt DateTime
-  gpsLat          Decimal?     @db.Decimal(9, 6)
-  gpsLng          Decimal?     @db.Decimal(9, 6)
+  gpsLat          Decimal?          @db.Decimal(9, 6)
+  gpsLng          Decimal?          @db.Decimal(9, 6)
   prevHash        String
   hash            String
   correctionOfId  String?
