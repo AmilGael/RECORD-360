@@ -49,10 +49,10 @@ export default async function ProjectPage({
       </div>
 
       <div className="tabs">
-        <span className="tab is-on">📁 {P.tabCode}</span>
-        <span className="tab is-off">🔀 {P.tabChanges} <span className="soon">{P.soon}</span></span>
-        <span className="tab is-off">📊 {P.tabAnalytics} <span className="soon">{P.soon}</span></span>
-        <span className="tab is-off">⚙️ {P.tabSettings} <span className="soon">{P.soon}</span></span>
+        <span className="tab is-on" aria-current="page"><span aria-hidden="true">📁</span> {P.tabCode}</span>
+        <span className="tab is-off" aria-disabled="true"><span aria-hidden="true">🔀</span> {P.tabChanges} <span className="soon">{P.soon}</span></span>
+        <span className="tab is-off" aria-disabled="true"><span aria-hidden="true">📊</span> {P.tabAnalytics} <span className="soon">{P.soon}</span></span>
+        <span className="tab is-off" aria-disabled="true"><span aria-hidden="true">⚙️</span> {P.tabSettings} <span className="soon">{P.soon}</span></span>
       </div>
 
       <div className="workspace">

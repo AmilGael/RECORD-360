@@ -13,6 +13,7 @@ function FileRow({ projectId, pa, selectedId }: { projectId: string; pa: Partida
     <Link
       href={`/app/projects/${projectId}?p=${pa.id}`}
       className={`tree-file${pa.id === selectedId ? " is-active" : ""}`}
+      aria-label={`${pa.name} — ${pa.progressPct}%`}
     >
       <span>{pa.name}</span>
       <span className="pct">{pa.progressPct}%</span>
@@ -34,13 +35,13 @@ export function ProjectFileTree({
     <div className="tree">
       {segments.map((s) => (
         <div key={s.id}>
-          <div className="tree-folder">📂 {s.name}</div>
+          <div className="tree-folder"><span aria-hidden="true">📂</span> {s.name}</div>
           {s.partidas.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} />)}
         </div>
       ))}
       {ungrouped.length > 0 && (
         <div>
-          <div className="tree-folder" style={{ opacity: 0.7 }}>▢ {t.ungrouped}</div>
+          <div className="tree-folder" style={{ opacity: 0.7 }}><span aria-hidden="true">▢</span> {t.ungrouped}</div>
           {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} />)}
         </div>
       )}
