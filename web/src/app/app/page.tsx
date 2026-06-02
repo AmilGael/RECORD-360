@@ -5,6 +5,7 @@ import { getDict } from "@/i18n/server";
 import { createProject, restoreProject } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
 import { ArchiveButton } from "@/components/archive-button";
+import { projectProgress } from "@/lib/project/progress";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -16,6 +17,7 @@ export default async function Dashboard() {
   const projects = await prisma.project.findMany({
     where: { companyId: u.companyId, archivedAt: null },
     orderBy: { createdAt: "desc" },
+    include: { partidas: { select: { progressPct: true } } },
   });
   const archived = isAdmin
     ? await prisma.project.findMany({ where: { companyId: u.companyId, archivedAt: { not: null } }, orderBy: { archivedAt: "desc" } })
@@ -30,11 +32,12 @@ export default async function Dashboard() {
         {projects.map((p) => (
           <li key={p.id} className="row">
             <Link href={`/app/projects/${p.id}`} className="row-link" style={{ fontSize: "1.2rem" }}>{p.name}</Link>
-            {isAdmin ? (
-              <ArchiveButton projectId={p.id} t={{ archive: D.archive, confirm: D.confirm, yes: D.yes, no: D.no }} />
-            ) : (
-              <span className="mono text-steel" style={{ fontSize: "0.8rem" }}>→</span>
-            )}
+            <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span className="mono text-steel" style={{ fontSize: "0.8rem" }}>{projectProgress(p.partidas)}%</span>
+              {isAdmin && (
+                <ArchiveButton projectId={p.id} t={{ archive: D.archive, confirm: D.confirm, yes: D.yes, no: D.no }} />
+              )}
+            </span>
           </li>
         ))}
       </ul>
