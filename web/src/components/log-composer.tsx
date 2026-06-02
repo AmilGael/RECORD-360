@@ -12,9 +12,13 @@ type ComposerT = {
   submit: string;
   sending: string;
   error: string;
+  category: string;
+  noCategory: string;
+  location: string;
+  categories: Record<string, string>;
 };
 
-export function LogComposer({ partidaId, t }: { partidaId: string; t: ComposerT }) {
+export function LogComposer({ partidaId, t, locations }: { partidaId: string; t: ComposerT; locations: string[] }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsPending, setGpsPending] = useState(false);
@@ -47,8 +51,6 @@ export function LogComposer({ partidaId, t }: { partidaId: string; t: ComposerT 
           formRef.current?.reset();
           setCoords(null);
         } catch {
-          // Keep the user's text and surface a message instead of crashing the
-          // form / clearing the entry.
           setError(t.error);
         }
       }}
@@ -65,7 +67,17 @@ export function LogComposer({ partidaId, t }: { partidaId: string; t: ComposerT 
         </p>
       )}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/gif" style={{ fontSize: "0.8rem", maxWidth: 190 }} />
+        <select name="category" className="input" defaultValue="" style={{ width: "auto" }} aria-label={t.category}>
+          <option value="">{t.noCategory}</option>
+          {Object.entries(t.categories).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+        <input name="location" list="loc-options" placeholder={t.location} className="input" style={{ maxWidth: 240 }} />
+        <datalist id="loc-options">
+          {locations.map((l) => <option key={l} value={l} />)}
+        </datalist>
+        <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif" style={{ fontSize: "0.8rem", maxWidth: 200 }} />
         <input type="number" name="progressPct" min={0} max={100} placeholder={t.progress} className="input" style={{ width: 118 }} />
         <button type="button" onClick={captureGps} disabled={gpsPending} className="btn btn-ghost" style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem" }}>
           {gpsLabel}

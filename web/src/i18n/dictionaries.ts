@@ -81,6 +81,13 @@ export const dictionaries = {
       submit: "Registrar",
       sending: "Registrando…",
       error: "No se pudo registrar. Inténtalo de nuevo.",
+      category: "Categoría",
+      noCategory: "Sin categoría",
+      location: "Ubicación (p. ej. Piso 3 - Apto 302)",
+      categories: {
+        MATERIALES: "Materiales", PROCESOS: "Procesos", EVENTUALIDADES: "Eventualidades",
+        OBSERVACIONES: "Observaciones", COSTOS: "Costos", PERSONAL: "Personal",
+      },
     },
     record: { noGps: "sin GPS", immutable: "inalterable" },
     admin: {
@@ -170,6 +177,13 @@ export const dictionaries = {
       submit: "Log entry",
       sending: "Logging…",
       error: "Couldn't log entry. Please try again.",
+      category: "Category",
+      noCategory: "No category",
+      location: "Location (e.g. Floor 3 - Apt 302)",
+      categories: {
+        MATERIALES: "Materials", PROCESOS: "Processes", EVENTUALIDADES: "Incidents",
+        OBSERVACIONES: "Observations", COSTOS: "Costs", PERSONAL: "Labor",
+      },
     },
     record: { noGps: "no GPS", immutable: "immutable" },
     admin: {
