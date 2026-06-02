@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
 import { parseProgressPct } from "@/lib/registro/validate";
+import { prepareMedia } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 
@@ -25,18 +26,8 @@ export async function logRegistro(formData: FormData) {
   const gpsLat = latRaw ? Number(latRaw) : null;
   const gpsLng = lngRaw ? Number(lngRaw) : null;
 
-  let mediaUrl: string | null = null;
-  let type: "NOTE" | "PHOTO" = "NOTE";
   const photo = formData.get("photo") as File | null;
-  if (photo && photo.size > 0) {
-    const buffer = Buffer.from(await photo.arrayBuffer());
-    try {
-      const saved = await storage.put({ buffer, filename: photo.name, contentType: photo.type });
-      mediaUrl = saved.url; type = "PHOTO";
-    } catch {
-      throw new Error("Tipo de archivo no permitido. Usa una imagen JPG, PNG, WEBP o GIF.");
-    }
-  }
+  const { mediaUrl, type } = await prepareMedia(photo, storage);
 
   await appendRegistro({ partidaId, authorId, type, text, mediaUrl, progressPct, gpsLat, gpsLng });
   revalidatePath(`/app/partidas/${partidaId}`);
