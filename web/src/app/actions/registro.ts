@@ -2,6 +2,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
+import { parseProgressPct } from "@/lib/registro/validate";
 import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 
@@ -19,8 +20,7 @@ export async function logRegistro(formData: FormData) {
   if (!partida) throw new Error("Forbidden");
 
   const text = (String(formData.get("text") ?? "").trim()) || null;
-  const progressRaw = formData.get("progressPct");
-  const progressPct = progressRaw ? Number(progressRaw) : null;
+  const progressPct = parseProgressPct(formData.get("progressPct"));
   const latRaw = formData.get("gpsLat"); const lngRaw = formData.get("gpsLng");
   const gpsLat = latRaw ? Number(latRaw) : null;
   const gpsLng = lngRaw ? Number(lngRaw) : null;
