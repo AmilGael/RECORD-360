@@ -76,7 +76,7 @@ export const dictionaries = {
       newPartida: "Nueva partida (p. ej. Vaciado losa N3)",
       add: "Añadir",
       empty: "Sin partidas todavía.",
-      tabCode: "Código",
+      tabCode: "Planos",
       tabChanges: "Cambios",
       tabAnalytics: "Analítica",
       tabSettings: "Ajustes",
@@ -92,6 +92,23 @@ export const dictionaries = {
       summaryNoEntries: "Sin registros todavía.",
       lastUpdate: "última actualización",
       openLog: "Abrir bitácora completa",
+    },
+    // Cambios = the "pull request" surface, in construction terms. A change request
+    // is proposed → revisada → Integrada (merged into the record) / Rechazada.
+    // Tab label lives in `project.tabChanges` ("Cambios"); these are the feature's strings.
+    changes: {
+      item: "Solicitud de cambio",
+      itemPlural: "Solicitudes de cambio",
+      new: "Nueva solicitud",
+      empty: "Sin solicitudes de cambio todavía.",
+      review: "Revisar",
+      integrate: "Integrar",
+      reject: "Rechazar",
+      states: {
+        OPEN: "Abierta",
+        INTEGRATED: "Integrada",
+        REJECTED: "Rechazada",
+      },
     },
     partida: {
       progress: "AVANCE",
@@ -214,7 +231,7 @@ export const dictionaries = {
       newPartida: "New work item (e.g. Slab pour L3)",
       add: "Add",
       empty: "No work items yet.",
-      tabCode: "Code",
+      tabCode: "Blueprints",
       tabChanges: "Changes",
       tabAnalytics: "Analytics",
       tabSettings: "Settings",
@@ -230,6 +247,22 @@ export const dictionaries = {
       summaryNoEntries: "No entries yet.",
       lastUpdate: "last update",
       openLog: "Open full log",
+    },
+    // Changes = the "pull request" surface. A change request is
+    // proposed → reviewed → Integrated (merged into the record) / Rejected.
+    changes: {
+      item: "Change request",
+      itemPlural: "Change requests",
+      new: "New request",
+      empty: "No change requests yet.",
+      review: "Review",
+      integrate: "Integrate",
+      reject: "Reject",
+      states: {
+        OPEN: "Open",
+        INTEGRATED: "Integrated",
+        REJECTED: "Rejected",
+      },
     },
     partida: {
       progress: "PROGRESS",
