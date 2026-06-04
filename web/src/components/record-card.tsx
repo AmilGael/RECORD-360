@@ -1,11 +1,19 @@
 import type { Registro, Attachment, Location } from "@prisma/client";
 import { formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
+import Link from "next/link";
 
-type RecordT = { noGps: string; immutable: string };
+type RecordT = { noGps: string; immutable: string; correct?: string };
 type RegistroWithRelations = Registro & { attachments: Attachment[]; location: Location | null };
 
-export function RecordCard({ r, t, lang }: { r: RegistroWithRelations; t: RecordT; lang: Lang }) {
+export function RecordCard({
+  r, t, lang, correctionHref,
+}: {
+  r: RegistroWithRelations;
+  t: RecordT;
+  lang: Lang;
+  correctionHref?: string;
+}) {
   const ts = formatTimestamp(r.serverCreatedAt, lang);
   const gps =
     r.gpsLat !== null && r.gpsLng !== null
@@ -33,6 +41,11 @@ export function RecordCard({ r, t, lang }: { r: RegistroWithRelations; t: Record
         <div className="mono text-steel" style={{ fontSize: 11, marginTop: 10 }}>
           GPS {gps} · HASH {r.hash.slice(0, 8)}…{r.hash.slice(-4)} · ✓ {t.immutable}
         </div>
+        {correctionHref && (
+          <Link href={correctionHref} className="mono" style={{ display: "inline-flex", marginTop: 8, fontSize: 11, color: "var(--accent-deep)", textDecoration: "none" }}>
+            {t.correct ?? "Correct"}
+          </Link>
+        )}
       </div>
     </div>
   );

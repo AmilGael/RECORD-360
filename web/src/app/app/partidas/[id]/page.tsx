@@ -5,8 +5,14 @@ import { getDict } from "@/i18n/server";
 import { LogComposer } from "@/components/log-composer";
 import { RecordCard } from "@/components/record-card";
 
-export default async function PartidaPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PartidaPage({
+  params, searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ correctionOf?: string }>;
+}) {
   const { id } = await params;
+  const { correctionOf } = await searchParams;
   const session = await auth();
   const companyId = (session!.user as { companyId: string }).companyId;
   const { lang, t } = await getDict();
@@ -22,14 +28,35 @@ export default async function PartidaPage({ params }: { params: Promise<{ id: st
     },
   });
   const locationLabels = partida.project.locations.map((l) => l.label);
+  const correctionTarget = correctionOf ? partida.registros.find((r) => r.id === correctionOf) : null;
+  const correctionCopy =
+    lang === "es"
+      ? { notice: "Corrigiendo", cancelLabel: "Cancelar", correct: "Corregir" }
+      : { notice: "Correcting", cancelLabel: "Cancel", correct: "Correct" };
+  const correction = correctionTarget
+    ? {
+        id: correctionTarget.id,
+        label: `${correctionTarget.hash.slice(0, 8)}…${correctionTarget.hash.slice(-4)}`,
+        notice: correctionCopy.notice,
+        cancelLabel: correctionCopy.cancelLabel,
+      }
+    : null;
 
   return (
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
       <Link href={`/app/projects/${partida.projectId}`} className="kicker" style={{ textDecoration: "none" }}>← {partida.project.name}</Link>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 4px" }}>{partida.name}</h1>
       <div className="mono text-steel" style={{ marginBottom: 24, fontSize: "0.8rem" }}>{t.partida.progress} {partida.progressPct}%</div>
-      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} />
-      {partida.registros.map((r) => <RecordCard key={r.id} r={r} t={t.record} lang={lang} />)}
+      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} />
+      {partida.registros.map((r) => (
+        <RecordCard
+          key={r.id}
+          r={r}
+          t={{ ...t.record, correct: correctionCopy.correct }}
+          lang={lang}
+          correctionHref={`/app/partidas/${partida.id}?correctionOf=${r.id}`}
+        />
+      ))}
       {partida.registros.length === 0 && <p className="text-steel">{t.partida.empty}</p>}
     </div>
   );

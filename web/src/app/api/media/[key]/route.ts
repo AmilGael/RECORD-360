@@ -3,13 +3,12 @@ import { contentTypeForKey } from "@/lib/storage/mime";
 import { Readable } from "node:stream";
 import path from "node:path";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/db";
 
 // SECURITY: media is served inline on the first-party origin, so it must never
 // be sniffable/executable as anything other than a known-safe raster image.
 // The Content-Type comes from the stored extension (which put() derives from a
 // validated MIME allowlist — SVG excluded), with nosniff + a locked-down CSP.
-// Phase 3: auth gate in place — only signed-in users may fetch media.
-// Per-tenant (per-company) authorization remains a later enhancement.
 export async function GET(_req: Request, ctx: { params: Promise<{ key: string }> }) {
   const { key } = await ctx.params;
   const safeKey = path.basename(key); // prevent path traversal
@@ -19,7 +18,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ key: string }>
   // Auth gate: reject unauthenticated requests before touching storage,
   // so we don't leak whether the key exists.
   const session = await auth();
-  if (!session?.user) return new Response("Unauthorized", { status: 401 });
+  const user = session?.user as { companyId?: string } | undefined;
+  if (!user?.companyId) return new Response("Unauthorized", { status: 401 });
+
+  const attachment = await prisma.attachment.findFirst({
+    where: {
+      url: `/api/media/${safeKey}`,
+      registro: { partida: { project: { companyId: user.companyId } } },
+    },
+    select: { id: true },
+  });
+  if (!attachment) return new Response("Not found", { status: 404 });
 
   try {
     const nodeStream = await storage.get(safeKey);

@@ -42,6 +42,16 @@ export async function logRegistro(formData: FormData) {
     locationId = loc.id;
   }
 
-  await appendRegistro({ partidaId, authorId, category, text, progressPct, gpsLat, gpsLng, locationId, attachments });
+  const correctionRaw = formData.get("correctionOfId");
+  const correctionOfId = typeof correctionRaw === "string" && correctionRaw.trim() ? correctionRaw.trim() : null;
+  if (correctionOfId) {
+    const corrected = await prisma.registro.findFirst({
+      where: { id: correctionOfId, partidaId },
+      select: { id: true },
+    });
+    if (!corrected) throw new Error("Invalid correction target");
+  }
+
+  await appendRegistro({ partidaId, authorId, category, text, progressPct, gpsLat, gpsLng, locationId, attachments, correctionOfId });
   revalidatePath(`/app/partidas/${partidaId}`);
 }
