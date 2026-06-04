@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createPartida, createSegment } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
+import { Folder } from "@/components/icons";
 
 type PartidaRow = { id: string; name: string; progressPct: number };
 type TreeT = {
@@ -37,13 +38,13 @@ export function ProjectFileTree({
     <div className="tree">
       {segments.map((s) => (
         <div key={s.id}>
-          <div className="tree-folder"><span aria-hidden="true">📂</span> {s.name}</div>
+          <div className="tree-folder"><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</div>
           {s.partidas.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} />)}
         </div>
       ))}
       {ungrouped.length > 0 && (
         <div>
-          <div className="tree-folder" style={{ opacity: 0.7 }}><span aria-hidden="true">▢</span> {t.ungrouped}</div>
+          <div className="tree-folder" style={{ opacity: 0.7 }}><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{t.ungrouped}</div>
           {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} />)}
         </div>
       )}

@@ -9,6 +9,7 @@ import { projectProgress } from "@/lib/project/progress";
 import { formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
 import { DashboardSearch } from "@/components/dashboard-search";
+import { Folder, Plus } from "@/components/icons";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -102,7 +103,7 @@ export default async function Dashboard() {
               <div key={p.id} className="repo-card" data-name={p.name.toLowerCase()}>
                 <Link href={`/app/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <div className="repo-title">
-                    <span className="folder-icon">📁</span>
+                    <span className="folder-icon"><Folder size={14} /></span>
                     {p.name}
                     <span className="state-badge is-active" style={{ marginLeft: 4 }}>
                       {t.project.statusActive}
@@ -158,7 +159,7 @@ export default async function Dashboard() {
                   <div key={p.id} className="repo-card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div>
                       <div className="repo-title">
-                        <span className="folder-icon" style={{ opacity: 0.4 }}>📁</span>
+                        <span className="folder-icon" style={{ opacity: 0.4 }}><Folder size={14} /></span>
                         <span style={{ color: "var(--steel)" }}>{p.name}</span>
                         <span className="state-badge is-archived">{t.project.statusArchived}</span>
                       </div>
@@ -180,7 +181,7 @@ export default async function Dashboard() {
         {isAdmin && (
           <div className="panel-create">
             <div className="panel-create-head">
-              <span>＋</span> {D.panelTitle}
+              <Plus size={14} /> {D.panelTitle}
             </div>
             <form action={createProject} className="panel-create-body">
               <div className="form-group">

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useRef } from "react";
+import { Search } from "@/components/icons";
 
 /**
  * Client-side live-filter for project cards on the dashboard.
@@ -26,7 +27,7 @@ export function DashboardSearch({ placeholder }: { placeholder: string }) {
 
   return (
     <div className="search-wrap">
-      <span className="icon" aria-hidden="true">🔍</span>
+      <span className="icon" aria-hidden="true"><Search size={15} /></span>
       <input
         type="search"
         className="search-input"

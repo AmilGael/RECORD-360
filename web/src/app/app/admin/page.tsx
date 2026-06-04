@@ -7,6 +7,7 @@ import { createUser } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
 import type { Lang } from "@/i18n/dictionaries";
 import { formatTimestamp } from "@/lib/format/datetime";
+import { Key, Plus } from "@/components/icons";
 
 const TEMP_PW_COOKIE = "r360_temp_pw";
 
@@ -103,7 +104,7 @@ export default async function AdminPage() {
             gap: 12,
           }}
         >
-          <span style={{ fontSize: "1.2rem" }}>🔑</span>
+          <Key size={18} style={{ color: "var(--accent)", flexShrink: 0 }} />
           <p className="mono" style={{ fontSize: "0.78rem", margin: 0 }}>
             {A.tempPre} <strong style={{ color: "var(--accent)" }}>{temp}</strong> {A.tempPost}
           </p>
@@ -136,7 +137,7 @@ export default async function AdminPage() {
       {user.role === "ADMIN" && (
         <div className="invite-panel">
           <div className="invite-panel-head">
-            <span>＋</span> {A.inviteTitle}
+            <Plus size={14} /> {A.inviteTitle}
           </div>
           <form action={addUser} className="invite-panel-body">
             <div className="invite-grid" style={{ marginBottom: 14 }}>

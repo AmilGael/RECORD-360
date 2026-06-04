@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getDict } from "@/i18n/server";
 import { ProjectFileTree } from "@/components/project-file-tree";
 import { PartidaSummary } from "@/components/partida-summary";
+import { Layers, Branch, BarChart, Sliders } from "@/components/icons";
 import { projectProgress } from "@/lib/project/progress";
 
 export default async function ProjectPage({
@@ -70,10 +71,10 @@ export default async function ProjectPage({
       </div>
 
       <div className="tabs">
-        <span className="tab is-on" aria-current="page"><span aria-hidden="true">📁</span> {P.tabCode}</span>
-        <span className="tab is-off" aria-disabled="true"><span aria-hidden="true">🔀</span> {P.tabChanges} <span className="soon">{P.soon}</span></span>
-        <span className="tab is-off" aria-disabled="true"><span aria-hidden="true">📊</span> {P.tabAnalytics} <span className="soon">{P.soon}</span></span>
-        <span className="tab is-off" aria-disabled="true"><span aria-hidden="true">⚙️</span> {P.tabSettings} <span className="soon">{P.soon}</span></span>
+        <span className="tab is-on" aria-current="page"><Layers size={13} />{P.tabCode}</span>
+        <span className="tab is-off" aria-disabled="true"><Branch size={13} />{P.tabChanges} <span className="soon">{P.soon}</span></span>
+        <span className="tab is-off" aria-disabled="true"><BarChart size={13} />{P.tabAnalytics} <span className="soon">{P.soon}</span></span>
+        <span className="tab is-off" aria-disabled="true"><Sliders size={13} />{P.tabSettings} <span className="soon">{P.soon}</span></span>
       </div>
 
       <div className="workspace">

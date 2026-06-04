@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Registro, Attachment, Location } from "@prisma/client";
 import { formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
+import { Pin } from "@/components/icons";
 
 type SummaryT = { noEntries: string; lastUpdate: string; openLog: string };
 type RegistroRow = Registro & { attachments: Attachment[]; location: Location | null };
@@ -31,7 +32,7 @@ export function PartidaSummary({
         <div key={r.id} style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "9px 11px", marginBottom: 8, background: "var(--paper-2)" }}>
           <div className="mono text-steel" style={{ fontSize: "0.62rem", display: "flex", gap: 7, marginBottom: 4 }}>
             {r.category && <span>{r.category}</span>}
-            {r.location && <span><span aria-hidden="true">📍</span> {r.location.label}</span>}
+            {r.location && <span><Pin size={11} style={{ verticalAlign: -2, marginRight: 3 }} />{r.location.label}</span>}
             <span>{formatTimestamp(r.serverCreatedAt, lang)}</span>
           </div>
           {r.text && <p style={{ fontSize: "0.88rem" }}>{r.text}</p>}
