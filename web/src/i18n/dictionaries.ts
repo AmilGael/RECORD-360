@@ -179,6 +179,8 @@ export const dictionaries = {
       noCategory: "Sin categoría",
       location: "Ubicación (p. ej. Piso 3 - Apto 302)",
       reminder: "Recordatorio",
+      dictate: "Dictar",
+      listening: "Escuchando…",
       categories: {
         MATERIALES: "Materiales", PROCESOS: "Procesos", EVENTUALIDADES: "Eventualidades",
         OBSERVACIONES: "Observaciones", COSTOS: "Costos", PERSONAL: "Personal",
@@ -390,6 +392,8 @@ export const dictionaries = {
       noCategory: "No category",
       location: "Location (e.g. Floor 3 - Apt 302)",
       reminder: "Reminder",
+      dictate: "Dictate",
+      listening: "Listening…",
       categories: {
         MATERIALES: "Materials", PROCESOS: "Processes", EVENTUALIDADES: "Incidents",
         OBSERVACIONES: "Observations", COSTOS: "Costs", PERSONAL: "Labor",

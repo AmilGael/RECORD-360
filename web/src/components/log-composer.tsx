@@ -4,6 +4,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logRegistro } from "@/app/actions/registro";
 import { SubmitButton } from "@/components/submit-button";
+import { Mic } from "@/components/icons";
+import type { Lang } from "@/i18n/dictionaries";
+
+// Minimal structural type for the Web Speech API recogniser — avoids `any`.
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((e: { results: { length: number; [i: number]: { 0: { transcript: string } } } }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+};
+
+// The constructor may live under either name depending on the browser vendor.
+type WindowWithSpeech = {
+  SpeechRecognition?: new () => SpeechRecognitionLike;
+  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+};
 
 type ComposerT = {
   placeholder: string;
@@ -17,23 +37,39 @@ type ComposerT = {
   noCategory: string;
   location: string;
   reminder?: string;
+  dictate?: string;
+  listening?: string;
   categories: Record<string, string>;
 };
 
 export function LogComposer({
-  partidaId, t, locations, correction, reply,
+  partidaId, t, locations, correction, reply, lang,
 }: {
   partidaId: string;
   t: ComposerT;
   locations: string[];
   correction?: { id: string; label: string; cancelLabel: string; notice: string } | null;
   reply?: { id: string; label: string; cancelLabel: string; notice: string } | null;
+  lang?: Lang;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const listId = useId();
   const router = useRouter();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [state, formAction] = useActionState(logRegistro, null);
+
+  // Voice dictation state
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<SpeechRecognitionLike | null>(null);
+
+  // Detect Web Speech API support on mount (client-only).
+  useEffect(() => {
+    const w = window as unknown as WindowWithSpeech;
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    setSpeechSupported(Boolean(Ctor));
+  }, []);
 
   // Automatic GPS capture on mount (no button). Silent on denial — the note still saves.
   useEffect(() => {
@@ -52,6 +88,48 @@ export function LogComposer({
       if (correction || reply) router.replace(`/app/partidas/${partidaId}`);
     }
   }, [state, correction, reply, partidaId, router]);
+
+  function toggleDictation() {
+    // If already listening, stop and clean up.
+    if (listening && recRef.current) {
+      recRef.current.stop();
+      recRef.current = null;
+      setListening(false);
+      return;
+    }
+
+    const w = window as unknown as WindowWithSpeech;
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Ctor) return;
+
+    const rec = new Ctor();
+    rec.lang = lang === "es" ? "es-DO" : "en-US";
+    rec.interimResults = false;
+    rec.continuous = false;
+
+    rec.onresult = (e) => {
+      const transcripts: string[] = [];
+      for (let i = 0; i < e.results.length; i++) {
+        transcripts.push(e.results[i][0].transcript);
+      }
+      const appended = transcripts.join(" ");
+      if (textRef.current) {
+        const existing = textRef.current.value;
+        textRef.current.value = existing ? `${existing} ${appended}` : appended;
+      }
+    };
+
+    const finish = () => {
+      recRef.current = null;
+      setListening(false);
+    };
+    rec.onend = finish;
+    rec.onerror = finish;
+
+    recRef.current = rec;
+    rec.start();
+    setListening(true);
+  }
 
   return (
     <form ref={formRef} action={formAction} className="card" style={{ padding: 16, marginBottom: 28 }}>
@@ -72,7 +150,7 @@ export function LogComposer({
           <Link href={`/app/partidas/${partidaId}`} style={{ color: "var(--accent-deep)", textDecoration: "none" }}>{reply.cancelLabel}</Link>
         </div>
       )}
-      <textarea name="text" placeholder={t.placeholder} rows={3} className="input" style={{ marginBottom: 10, resize: "vertical" }} />
+      <textarea ref={textRef} name="text" placeholder={t.placeholder} rows={3} className="input" style={{ marginBottom: 10, resize: "vertical" }} />
       {state && !state.ok && (
         <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
           {state.error || t.error}
@@ -93,6 +171,18 @@ export function LogComposer({
           {t.reminder ?? "Reminder"}
           <input type="datetime-local" name="reminderDueAt" className="input" style={{ width: 190 }} />
         </label>
+        {speechSupported && (
+          <button
+            type="button"
+            onClick={toggleDictation}
+            className="btn btn-ghost"
+            aria-label={listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")}
+            style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
+          >
+            <Mic size={14} />
+            {listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")}
+          </button>
+        )}
         <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/webm" style={{ fontSize: "0.8rem", maxWidth: 220 }} />
         <span className="mono text-steel" style={{ fontSize: "0.72rem" }}>{coords ? t.gpsOk : t.gps}</span>
         <SubmitButton className="btn btn-ink" style={{ marginLeft: "auto" }} pendingLabel={t.sending}>

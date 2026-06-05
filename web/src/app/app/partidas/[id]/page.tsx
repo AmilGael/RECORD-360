@@ -84,7 +84,7 @@ export default async function PartidaPage({
         />
       </div>
       <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
-      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} />
+      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
       {partida.registros.map((r) => (
         <RecordCard
           key={r.id}

@@ -134,3 +134,18 @@ export function MoveRight({ size = 14, className, style }: IconProps) {
     </svg>
   );
 }
+
+export function Mic({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      {/* mic body */}
+      <rect x="9" y="2" width="6" height="11" rx="3" />
+      {/* stand arc */}
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      {/* stem */}
+      <line x1="12" y1="17" x2="12" y2="22" />
+      {/* base */}
+      <line x1="8" y1="22" x2="16" y2="22" />
+    </svg>
+  );
+}
