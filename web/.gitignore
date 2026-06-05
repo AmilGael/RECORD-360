@@ -27,6 +27,12 @@
 # record360 local uploads
 /.uploads/
 
+# ad-hoc upload-test fixtures (not part of the app)
+/test.pdf
+/test_large.png
+/test_error.txt
+/generate_test_files.py
+
 # debug
 npm-debug.log*
 yarn-debug.log*
