@@ -27,6 +27,11 @@ export default async function PartidaPage({
       },
     },
   });
+  const authorIds = [...new Set(partida.registros.map((r) => r.authorId))];
+  const authors = authorIds.length
+    ? await prisma.user.findMany({ where: { id: { in: authorIds }, companyId }, select: { id: true, name: true } })
+    : [];
+  const authorMap = new Map(authors.map((a) => [a.id, a.name]));
   const locationLabels = partida.project.locations.map((l) => l.label);
   const correctionTarget = correctionOf ? partida.registros.find((r) => r.id === correctionOf) : null;
   const correctionCopy =
@@ -54,6 +59,7 @@ export default async function PartidaPage({
           r={r}
           t={{ ...t.record, correct: correctionCopy.correct }}
           lang={lang}
+          authorName={authorMap.get(r.authorId) ?? null}
           correctionHref={`/app/partidas/${partida.id}?correctionOf=${r.id}`}
         />
       ))}
