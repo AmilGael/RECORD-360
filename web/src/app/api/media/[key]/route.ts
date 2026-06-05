@@ -30,6 +30,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ key: string }>
     (await prisma.changeAttachment.findFirst({
       where: { url, changeRequest: { project: { companyId: user.companyId } } },
       select: { id: true },
+    })) ??
+    (await prisma.document.findFirst({
+      where: { url, project: { companyId: user.companyId } },
+      select: { id: true },
     }));
   if (!owned) return new Response("Not found", { status: 404 });
 

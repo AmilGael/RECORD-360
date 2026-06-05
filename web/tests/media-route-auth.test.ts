@@ -123,4 +123,24 @@ describe("GET /api/media/[key]", () => {
     await prisma.changeAttachment.deleteMany({ where: { changeRequestId: cr.id } });
     await prisma.changeRequest.deleteMany({ where: { id: cr.id } });
   });
+
+  it("serves a project's plan document to a same-company user", async () => {
+    const doc = await prisma.document.create({
+      data: { projectId: projectAId, kind: "PLANO", url: "/api/media/plano-x.pdf", sha256: "d".repeat(64), fileType: "PDF", uploadedById: userAId },
+    });
+    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId } });
+    const res = await GET(new Request("http://test.local/api/media/plano-x.pdf"), { params: Promise.resolve({ key: "plano-x.pdf" }) });
+    expect(res.status).toBe(200);
+    await prisma.document.deleteMany({ where: { id: doc.id } });
+  });
+  it("does not serve another company's plan document", async () => {
+    const doc = await prisma.document.create({
+      data: { projectId: projectAId, kind: "PLANO", url: "/api/media/plano-y.pdf", sha256: "e".repeat(64), fileType: "PDF", uploadedById: userAId },
+    });
+    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId } });
+    const res = await GET(new Request("http://test.local/api/media/plano-y.pdf"), { params: Promise.resolve({ key: "plano-y.pdf" }) });
+    expect(res.status).toBe(404);
+    expect(storageGet).not.toHaveBeenCalled();
+    await prisma.document.deleteMany({ where: { id: doc.id } });
+  });
 });
