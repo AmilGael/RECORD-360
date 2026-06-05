@@ -49,7 +49,7 @@ export function parseSegment(raw: unknown): string | null {
   const v = String(raw).trim().replace(/\s+/g, " ");
   if (v === "") return null;
   if (v.length > 80) {
-    throw new Error("El nombre del segmento es demasiado largo (máx. 80 caracteres).");
+    throw new Error("El nombre del bloque es demasiado largo (máx. 80 caracteres).");
   }
   return v;
 }

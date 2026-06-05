@@ -11,7 +11,7 @@ export function PlanosTab({
   projectId, docs, authorMap, lang, isAdmin, t,
 }: {
   projectId: string;
-  docs: (Document & { uploaderName?: string | null })[];
+  docs: Document[];
   authorMap: Map<string, string>;
   lang: Lang;
   isAdmin: boolean;
