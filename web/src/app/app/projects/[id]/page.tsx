@@ -5,7 +5,8 @@ import { getDict } from "@/i18n/server";
 import { ProjectFileTree } from "@/components/project-file-tree";
 import { PartidaSummary } from "@/components/partida-summary";
 import { CambiosList } from "@/components/cambios-list";
-import { Layers, Branch, BarChart, Sliders } from "@/components/icons";
+import { PlanosTab } from "@/components/planos-tab";
+import { Layers, Branch, BarChart, Sliders, Folder } from "@/components/icons";
 import { projectProgress } from "@/lib/project/progress";
 
 export default async function ProjectPage({
@@ -40,7 +41,8 @@ export default async function ProjectPage({
   const avg = projectProgress(allPartidas);
   const segmentNames = project.segments.map((s) => s.name);
 
-  const activeTab = tab === "cambios" ? "cambios" : "code";
+  const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : "code";
+
   const changeRows = activeTab === "cambios"
     ? (await prisma.changeRequest.findMany({
         where: { projectId: id },
@@ -53,6 +55,15 @@ export default async function ProjectPage({
         partidaCount: c._count.partidas,
       }))
     : [];
+
+  const docs = activeTab === "planos"
+    ? await prisma.document.findMany({ where: { projectId: id, kind: "PLANO" }, orderBy: { createdAt: "desc" } })
+    : [];
+  const uploaderIds = [...new Set(docs.map((d) => d.uploadedById))];
+  const uploaders = uploaderIds.length
+    ? await prisma.user.findMany({ where: { id: { in: uploaderIds }, companyId }, select: { id: true, name: true } })
+    : [];
+  const docAuthorMap = new Map(uploaders.map((u) => [u.id, u.name]));
 
   const selected = selectedId
     ? await prisma.partida.findFirst({
@@ -86,7 +97,8 @@ export default async function ProjectPage({
       </div>
 
       <div className="tabs">
-        <Link href={`/app/projects/${id}?tab=code`} className={`tab ${activeTab === "code" ? "is-on" : ""}`} aria-current={activeTab === "code" ? "page" : undefined}><Layers size={13} />{P.tabCode}</Link>
+        <Link href={`/app/projects/${id}?tab=code`} className={`tab ${activeTab === "code" ? "is-on" : ""}`} aria-current={activeTab === "code" ? "page" : undefined}><Layers size={13} />{P.tabPartidas}</Link>
+        <Link href={`/app/projects/${id}?tab=planos`} className={`tab ${activeTab === "planos" ? "is-on" : ""}`} aria-current={activeTab === "planos" ? "page" : undefined}><Folder size={13} />{P.tabPlanos}</Link>
         <Link href={`/app/projects/${id}?tab=cambios`} className={`tab ${activeTab === "cambios" ? "is-on" : ""}`} aria-current={activeTab === "cambios" ? "page" : undefined}><Branch size={13} />{P.tabChanges}</Link>
         <span className="tab is-off" aria-disabled="true"><BarChart size={13} />{P.tabAnalytics} <span className="soon">{P.soon}</span></span>
         <span className="tab is-off" aria-disabled="true"><Sliders size={13} />{P.tabSettings} <span className="soon">{P.soon}</span></span>
@@ -105,6 +117,17 @@ export default async function ProjectPage({
               fieldPartidas: t.changes.fieldPartidas, impactCost: t.changes.impactCost, impactTime: t.changes.impactTime,
               evidence: t.changes.evidence, gps: t.composer.gps, gpsOk: t.composer.gpsOk,
             }}
+          />
+        </div>
+      ) : activeTab === "planos" ? (
+        <div style={{ marginTop: 16 }}>
+          <PlanosTab
+            projectId={project.id}
+            docs={docs}
+            authorMap={docAuthorMap}
+            lang={lang}
+            isAdmin={isAdmin}
+            t={{ empty: t.planos.empty, upload: t.planos.upload, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view }}
           />
         </div>
       ) : (
