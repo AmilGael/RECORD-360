@@ -8,6 +8,7 @@ import { CambiosList } from "@/components/cambios-list";
 import { PlanosTab } from "@/components/planos-tab";
 import { Layers, Branch, BarChart, Sliders, Folder } from "@/components/icons";
 import { projectProgress } from "@/lib/project/progress";
+import { PartidaRecycle } from "@/components/partida-recycle";
 
 export default async function ProjectPage({
   params, searchParams,
@@ -83,6 +84,19 @@ export default async function ProjectPage({
     ? (await prisma.user.findFirst({ where: { id: latestAuthorId, companyId }, select: { name: true } }))?.name ?? null
     : null;
 
+  const deletedPartidas = activeTab === "code" && isAdmin
+    ? await prisma.partida.findMany({
+        where: { projectId: id, deletedAt: { not: null } },
+        include: { _count: { select: { registros: true } } },
+        orderBy: { deletedAt: "desc" },
+      })
+    : [];
+  const deleterIds = [...new Set(deletedPartidas.map((p) => p.deletedById).filter((x): x is string => !!x))];
+  const deleters = deleterIds.length
+    ? await prisma.user.findMany({ where: { id: { in: deleterIds }, companyId }, select: { id: true, name: true } })
+    : [];
+  const deleterMap = new Map(deleters.map((u) => [u.id, u.name]));
+
   return (
     <div className="reveal">
       <Link href="/app" className="kicker" style={{ textDecoration: "none" }}>← {P.back}</Link>
@@ -131,27 +145,35 @@ export default async function ProjectPage({
           />
         </div>
       ) : (
-        <div className="workspace">
-          <ProjectFileTree
-            projectId={project.id}
-            segments={project.segments}
-            ungrouped={project.partidas}
-            segmentNames={segmentNames}
-            selectedId={selectedId}
-            isAdmin={isAdmin}
-            t={{ ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add, segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment, addSegment: P.addSegment }}
-          />
-          {selected ? (
-            <PartidaSummary
-              partida={selected}
-              authorName={authorName}
-              lang={lang}
-              t={{ noEntries: P.summaryNoEntries, lastUpdate: P.lastUpdate, openLog: P.openLog }}
+        <>
+          <div className="workspace">
+            <ProjectFileTree
+              projectId={project.id}
+              segments={project.segments}
+              ungrouped={project.partidas}
+              segmentNames={segmentNames}
+              selectedId={selectedId}
+              isAdmin={isAdmin}
+              t={{ ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add, segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment, addSegment: P.addSegment }}
             />
-          ) : (
-            <div className="viewport"><div className="empty">{P.summaryEmpty}</div></div>
-          )}
-        </div>
+            {selected ? (
+              <PartidaSummary
+                partida={selected}
+                authorName={authorName}
+                lang={lang}
+                t={{ noEntries: P.summaryNoEntries, lastUpdate: P.lastUpdate, openLog: P.openLog }}
+              />
+            ) : (
+              <div className="viewport"><div className="empty">{P.summaryEmpty}</div></div>
+            )}
+          </div>
+          <PartidaRecycle
+            rows={deletedPartidas}
+            deleterMap={deleterMap}
+            lang={lang}
+            t={{ recycleTitle: P.recycleTitle, restore: P.restore, deleteForever: P.deleteForever, deletedBy: P.deletedBy, hasRecords: P.hasRecords }}
+          />
+        </>
       )}
     </div>
   );
