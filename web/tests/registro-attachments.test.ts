@@ -65,8 +65,9 @@ describe("prepareAttachments", () => {
     const many = Array.from({ length: 11 }, (_, i) => new File([new Uint8Array([i + 1])], `f${i}.png`, { type: "image/png" }));
     await expect(prepareAttachments(many, okStorage)).rejects.toThrow(/demasiados|too many|máx/i);
   });
-  it("rejects a file larger than the per-file limit", async () => {
-    const big = new File([new Uint8Array(6 * 1024 * 1024)], "big.png", { type: "image/png" });
+  it("rejects a file larger than the per-type limit", async () => {
+    // IMAGE cap is 15 MB (multimodal per-type caps); 16 MB must be rejected.
+    const big = new File([new Uint8Array(16 * 1024 * 1024)], "big.png", { type: "image/png" });
     await expect(prepareAttachments([big], okStorage)).rejects.toThrow(/grande|large|máx/i);
   });
 });
