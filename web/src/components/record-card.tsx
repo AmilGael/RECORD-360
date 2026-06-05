@@ -4,15 +4,31 @@ import type { Lang } from "@/i18n/dictionaries";
 import Link from "next/link";
 import { Pin, Check } from "@/components/icons";
 
-type RecordT = { noGps: string; immutable: string; correct?: string };
+type RecordT = { noGps: string; immutable: string; correct?: string; by?: string; document?: string };
 type RegistroWithRelations = Registro & { attachments: Attachment[]; location: Location | null };
 
+function Media({ a, t }: { a: Attachment; t: RecordT }) {
+  const s = { width: "100%", borderRadius: "var(--radius-sm)", display: "block" } as const;
+  if (a.fileType === "IMAGE") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={a.url} alt="" style={s} />;
+  }
+  if (a.fileType === "VIDEO") return <video src={a.url} controls style={s} />;
+  if (a.fileType === "AUDIO") return <audio src={a.url} controls style={{ width: "100%" }} />;
+  return (
+    <a href={a.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ display: "inline-flex", alignItems: "center", fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px" }}>
+      {t.document ?? "Document"}
+    </a>
+  );
+}
+
 export function RecordCard({
-  r, t, lang, correctionHref,
+  r, t, lang, authorName, correctionHref,
 }: {
   r: RegistroWithRelations;
   t: RecordT;
   lang: Lang;
+  authorName?: string | null;
   correctionHref?: string;
 }) {
   const ts = formatTimestamp(r.serverCreatedAt, lang);
@@ -27,16 +43,16 @@ export function RecordCard({
         <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>{ts}</span>
       </div>
       <div style={{ padding: 14 }}>
+        {authorName && (
+          <div className="mono text-steel" style={{ fontSize: 11, marginBottom: 8 }}>{t.by ?? "by"} {authorName}</div>
+        )}
         {r.location && (
           <div className="mono text-steel" style={{ fontSize: 11, marginBottom: 8 }}><Pin size={12} style={{ verticalAlign: -2, marginRight: 4 }} />{r.location.label}</div>
         )}
         {r.text && <p style={{ marginBottom: 8 }}>{r.text}</p>}
         {r.attachments.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginTop: 4 }}>
-            {r.attachments.map((a, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={a.id} src={a.url} alt={`Anexo ${i + 1}`} style={{ width: "100%", borderRadius: "var(--radius-sm)", display: "block" }} />
-            ))}
+            {r.attachments.map((a) => <Media key={a.id} a={a} t={t} />)}
           </div>
         )}
         <div className="mono text-steel" style={{ fontSize: 11, marginTop: 10 }}>
