@@ -102,6 +102,10 @@ export const dictionaries = {
       deleteForever: "Borrar definitivamente",
       deletedBy: "borrado por",
       hasRecords: "Contiene registros (no se puede borrar)",
+      rename: "Renombrar",
+      save: "Guardar",
+      move: "Mover",
+      moveTo: "Mover a",
     },
     // Cambios = the "pull request" surface, in construction terms. A change request
     // is proposed → revisada → Integrada (merged into the record) / Rechazada.
@@ -282,6 +286,10 @@ export const dictionaries = {
       deleteForever: "Delete permanently",
       deletedBy: "deleted by",
       hasRecords: "Has entries (cannot delete)",
+      rename: "Rename",
+      save: "Save",
+      move: "Move",
+      moveTo: "Move to",
     },
     // Changes = the "pull request" surface. A change request is
     // proposed → reviewed → Integrated (merged into the record) / Rejected.

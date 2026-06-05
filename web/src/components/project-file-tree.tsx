@@ -2,23 +2,44 @@ import Link from "next/link";
 import { createPartida, createSegment } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
 import { Folder } from "@/components/icons";
+import { MovePartidaForm, RenamePartidaForm, RenameSegmentForm } from "@/components/project-edit-controls";
 
-type PartidaRow = { id: string; name: string; progressPct: number };
+type PartidaRow = { id: string; name: string; progressPct: number; segmentId?: string | null };
 type TreeT = {
   ungrouped: string; newPartida: string; add: string;
   segmentPlaceholder: string; newSegment: string; addSegment: string;
+  rename: string; save: string; move: string; moveTo: string;
 };
 
-function FileRow({ projectId, pa, selectedId }: { projectId: string; pa: PartidaRow; selectedId?: string }) {
+type SegmentOption = { id: string; name: string };
+
+function FileRow({
+  projectId, pa, selectedId, isAdmin, segments, t,
+}: {
+  projectId: string;
+  pa: PartidaRow;
+  selectedId?: string;
+  isAdmin: boolean;
+  segments: SegmentOption[];
+  t: TreeT;
+}) {
   return (
-    <Link
-      href={`/app/projects/${projectId}?p=${pa.id}`}
-      className={`tree-file${pa.id === selectedId ? " is-active" : ""}`}
-      aria-label={`${pa.name} — ${pa.progressPct}%`}
-    >
-      <span>{pa.name}</span>
-      <span className="pct">{pa.progressPct}%</span>
-    </Link>
+    <div className={`tree-row${pa.id === selectedId ? " is-active" : ""}`}>
+      <Link
+        href={`/app/projects/${projectId}?p=${pa.id}`}
+        className="tree-file"
+        aria-label={`${pa.name} — ${pa.progressPct}%`}
+      >
+        <span>{pa.name}</span>
+        <span className="pct">{pa.progressPct}%</span>
+      </Link>
+      {isAdmin && (
+        <div className="tree-row-actions">
+          <RenamePartidaForm partidaId={pa.id} currentName={pa.name} t={t} />
+          <MovePartidaForm partidaId={pa.id} currentSegmentId={pa.segmentId ?? null} segments={segments} t={t} />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -34,18 +55,22 @@ export function ProjectFileTree({
   t: TreeT;
 }) {
   const segListId = `segment-opts-${projectId}`;
+  const segmentOptions = segments.map((s) => ({ id: s.id, name: s.name }));
   return (
     <div className="tree">
       {segments.map((s) => (
         <div key={s.id}>
-          <div className="tree-folder"><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</div>
-          {s.partidas.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} />)}
+          <div className="tree-folder">
+            <span><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</span>
+            {isAdmin && <RenameSegmentForm segmentId={s.id} currentName={s.name} t={t} />}
+          </div>
+          {s.partidas.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} />)}
         </div>
       ))}
       {ungrouped.length > 0 && (
         <div>
           <div className="tree-folder" style={{ opacity: 0.7 }}><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{t.ungrouped}</div>
-          {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} />)}
+          {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} />)}
         </div>
       )}
       {isAdmin && (

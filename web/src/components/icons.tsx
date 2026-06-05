@@ -114,3 +114,23 @@ export function Key({ size = 14, className, style }: IconProps) {
     </svg>
   );
 }
+
+export function Pencil({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M4 20h4.5L19 9.5 14.5 5 4 15.5z" />
+      <path d="M13.5 6 18 10.5" />
+    </svg>
+  );
+}
+
+export function MoveRight({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M4 12h14" />
+      <path d="m13 7 5 5-5 5" />
+      <path d="M4 6h6" />
+      <path d="M4 18h6" />
+    </svg>
+  );
+}

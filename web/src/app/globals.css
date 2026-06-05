@@ -159,12 +159,21 @@ body {
 @media (max-width: 760px) { .workspace { grid-template-columns: 1fr; } }
 .tree { border-right: 1px solid var(--line); padding: 10px 8px; }
 @media (max-width: 760px) { .tree { border-right: none; border-bottom: 1px solid var(--line); } }
-.tree-folder { font-family: var(--font-mono), monospace; font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.03em; padding: 8px 8px 4px; }
-.tree-file { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 22px; border-radius: var(--radius-sm); color: var(--ink); text-decoration: none; font-size: 0.9rem; }
-.tree-file:hover { background: var(--paper-2); }
-.tree-file.is-active { background: var(--paper-3); box-shadow: inset 2px 0 0 var(--accent); }
+.tree-folder { font-family: var(--font-mono), monospace; font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.03em; padding: 8px 8px 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tree-row { border-radius: var(--radius-sm); }
+.tree-row:hover { background: var(--paper-2); }
+.tree-row.is-active { background: var(--paper-3); box-shadow: inset 2px 0 0 var(--accent); }
+.tree-file { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 22px; color: var(--ink); text-decoration: none; font-size: 0.9rem; }
 .tree-file .pct { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); }
+.tree-row-actions { display: flex; gap: 8px; padding: 0 8px 7px 22px; flex-wrap: wrap; }
 .tree-actions { margin-top: 12px; padding: 10px 8px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.inline-edit { display: inline-flex; align-items: center; color: var(--steel); font-family: var(--font-mono), monospace; font-size: 0.68rem; }
+.inline-edit summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px; color: var(--steel); }
+.inline-edit summary::-webkit-details-marker { display: none; }
+.inline-edit form { margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.inline-edit .input { min-height: 30px; padding: 0.35rem 0.5rem; font-size: 0.76rem; width: min(220px, 100%); }
+.inline-edit .btn { padding: 0.35rem 0.62rem; font-size: 0.72rem; }
+.tree-edit { font-size: 0.62rem; }
 
 .viewport { padding: 18px 20px; }
 .viewport .telemetry { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); letter-spacing: 0.02em; }

@@ -9,6 +9,7 @@ import { PlanosTab } from "@/components/planos-tab";
 import { Layers, Branch, BarChart, Sliders, Folder } from "@/components/icons";
 import { projectProgress } from "@/lib/project/progress";
 import { PartidaRecycle } from "@/components/partida-recycle";
+import { RenameProjectForm } from "@/components/project-edit-controls";
 
 export default async function ProjectPage({
   params, searchParams,
@@ -105,6 +106,7 @@ export default async function ProjectPage({
         <span className={`state-badge ${project.archivedAt ? "is-archived" : "is-active"}`}>
           {project.archivedAt ? P.statusArchived : P.statusActive}
         </span>
+        {isAdmin && <RenameProjectForm projectId={project.id} currentName={project.name} t={{ rename: P.rename, save: P.save, move: P.move, moveTo: P.moveTo, ungrouped: P.ungrouped }} />}
       </div>
       <div className="mono text-steel" style={{ fontSize: "0.78rem" }}>
         {project.company.name} · {allPartidas.length} {P.partidasWord} · {avg}%
@@ -154,7 +156,12 @@ export default async function ProjectPage({
               segmentNames={segmentNames}
               selectedId={selectedId}
               isAdmin={isAdmin}
-              t={{ ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add, segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment, addSegment: P.addSegment }}
+              t={{
+                ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add,
+                segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment,
+                addSegment: P.addSegment, rename: P.rename, save: P.save,
+                move: P.move, moveTo: P.moveTo,
+              }}
             />
             {selected ? (
               <PartidaSummary
