@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { verifyChain } from "@/lib/registro/hash";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -57,5 +58,52 @@ describe("createChangeRequest", () => {
   it("rejects when no partida is selected", async () => {
     authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
     await expect(createChangeRequest(fd({ projectId, title: "x", partidaIds: [] }))).rejects.toThrow();
+  });
+});
+
+async function openCR(authorId: string, partidaIds: string[]) {
+  authMock.mockResolvedValue({ user: { id: authorId, companyId, role: "RESIDENT" } });
+  await createChangeRequest(fd({ projectId, title: `T-${Math.random()}`, costImpact: "1000", daysImpact: "2", partidaIds }));
+  return prisma.changeRequest.findFirstOrThrow({ orderBy: { createdAt: "desc" }, where: { projectId } });
+}
+
+describe("resolveChangeRequest", () => {
+  it("INTEGRATE seals the request and appends a linked marker per partida (chain stays valid)", async () => {
+    const cr = await openCR(residentId, [pA, pB]);
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    await resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE" }));
+
+    const after = await prisma.changeRequest.findUniqueOrThrow({ where: { id: cr.id } });
+    expect(after.status).toBe("INTEGRATED");
+    expect(after.seal).toMatch(/^[0-9a-f]{64}$/);
+
+    for (const partidaId of [pA, pB]) {
+      const marker = await prisma.registro.findFirst({ where: { partidaId, changeRequestId: cr.id } });
+      expect(marker).not.toBeNull();
+      const chain = await prisma.registro.findMany({ where: { partidaId }, orderBy: [{ serverCreatedAt: "asc" }, { id: "asc" }] });
+      expect(verifyChain(chain.map((r) => ({ ...r, gpsLat: r.gpsLat ? Number(r.gpsLat) : null, gpsLng: r.gpsLng ? Number(r.gpsLng) : null, attachments: [] }))).ok).toBe(true);
+    }
+  });
+
+  it("REJECT marks rejected with no seal and no markers", async () => {
+    const cr = await openCR(residentId, [pA]);
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    await resolveChangeRequest(fd({ changeRequestId: cr.id, action: "REJECT" }));
+    const after = await prisma.changeRequest.findUniqueOrThrow({ where: { id: cr.id } });
+    expect(after.status).toBe("REJECTED");
+    expect(after.seal).toBeNull();
+    expect(await prisma.registro.count({ where: { changeRequestId: cr.id } })).toBe(0);
+  });
+
+  it("rejects a non-manager", async () => {
+    const cr = await openCR(residentId, [pA]);
+    authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
+    await expect(resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE" }))).rejects.toThrow();
+  });
+
+  it("forbids resolving your own request", async () => {
+    const cr = await openCR(managerId, [pA]); // opened by the manager
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    await expect(resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE" }))).rejects.toThrow(/propia/i);
   });
 });
