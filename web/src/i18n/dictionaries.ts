@@ -93,6 +93,15 @@ export const dictionaries = {
       summaryNoEntries: "Sin registros todavía.",
       lastUpdate: "última actualización",
       openLog: "Abrir Cuaderno completo",
+      del: "Borrar partida",
+      delConfirm: "¿Borrar?",
+      yes: "Sí",
+      no: "No",
+      recycleTitle: "Reciclaje",
+      restore: "Restaurar",
+      deleteForever: "Borrar definitivamente",
+      deletedBy: "borrado por",
+      hasRecords: "Contiene registros (no se puede borrar)",
     },
     // Cambios = the "pull request" surface, in construction terms. A change request
     // is proposed → revisada → Integrada (merged into the record) / Rechazada.
@@ -264,6 +273,15 @@ export const dictionaries = {
       summaryNoEntries: "No entries yet.",
       lastUpdate: "last update",
       openLog: "Open full notebook",
+      del: "Delete work item",
+      delConfirm: "Delete?",
+      yes: "Yes",
+      no: "No",
+      recycleTitle: "Recycle bin",
+      restore: "Restore",
+      deleteForever: "Delete permanently",
+      deletedBy: "deleted by",
+      hasRecords: "Has entries (cannot delete)",
     },
     // Changes = the "pull request" surface. A change request is
     // proposed → reviewed → Integrated (merged into the record) / Rejected.
