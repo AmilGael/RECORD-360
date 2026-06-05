@@ -95,4 +95,5 @@ export async function resolveChangeRequest(formData: FormData) {
     throw new Error("Acción inválida.");
   }
   revalidatePath(`/app/projects/${cr.projectId}`);
+  revalidatePath(`/app/projects/${cr.projectId}/cambios/${cr.id}`);
 }
