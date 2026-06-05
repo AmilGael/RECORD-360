@@ -1,30 +1,38 @@
 import type { Storage } from "@/lib/storage/types";
-import { extensionForType } from "@/lib/storage/mime";
+import { attachmentKindForType } from "@/lib/storage/mime";
+import type { AttachmentType } from "@prisma/client";
 import { createHash } from "node:crypto";
 
-export type PreparedAttachment = { fileType: "IMAGE"; url: string; sha256: string };
+export type PreparedAttachment = { fileType: AttachmentType; url: string; sha256: string };
+
+const MAX_FILES = 10;
+const SIZE_CAP: Record<AttachmentType, number> = {
+  IMAGE: 15 * 1024 * 1024,
+  PDF: 30 * 1024 * 1024,
+  AUDIO: 30 * 1024 * 1024,
+  VIDEO: 200 * 1024 * 1024,
+};
 
 /**
- * Validate, content-hash, and store a list of uploaded images.
+ * Validate, content-hash, and store uploaded files (image / pdf / video / audio).
  * - Empty / 0-byte files are skipped.
  * - Disallowed MIME type → rejected before any bytes are stored.
+ * - Over the per-type size cap → rejected.
  * - Storage failure → a generic error (never blamed on the file type).
- * Only IMAGE is wired this slice; large/other types come with presigned uploads.
  */
 export async function prepareAttachments(files: File[], storage: Storage): Promise<PreparedAttachment[]> {
-  const MAX_FILES = 10;
-  const MAX_BYTES = 5 * 1024 * 1024; // 5 MB per file
   if (files.length > MAX_FILES) {
-    throw new Error("Demasiados archivos (máx. 10).");
+    throw new Error(`Demasiados archivos (máx. ${MAX_FILES}).`);
   }
   const out: PreparedAttachment[] = [];
   for (const file of files) {
     if (!file || file.size === 0) continue;
-    if (file.size > MAX_BYTES) {
-      throw new Error("Archivo demasiado grande (máx. 5 MB).");
+    const kind = attachmentKindForType(file.type);
+    if (!kind) {
+      throw new Error("Tipo de archivo no permitido. Usa imagen, PDF, video o audio.");
     }
-    if (!extensionForType(file.type)) {
-      throw new Error("Tipo de archivo no permitido. Usa una imagen JPG, PNG, WEBP o GIF.");
+    if (file.size > SIZE_CAP[kind]) {
+      throw new Error("Archivo demasiado grande.");
     }
     const buffer = Buffer.from(await file.arrayBuffer());
     const sha256 = createHash("sha256").update(buffer).digest("hex");
@@ -34,7 +42,7 @@ export async function prepareAttachments(files: File[], storage: Storage): Promi
     } catch {
       throw new Error("No se pudo guardar el archivo. Inténtalo de nuevo.");
     }
-    out.push({ fileType: "IMAGE", url: saved.url, sha256 });
+    out.push({ fileType: kind, url: saved.url, sha256 });
   }
   return out;
 }
