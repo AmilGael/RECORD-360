@@ -27,6 +27,10 @@ export async function appendRegistroTx(tx: Prisma.TransactionClient, input: Appe
   });
   const prevHash = tip ? tip.hash : GENESIS_PREV_HASH;
   const serverCreatedAt = new Date();
+  // LEDGER CONTRACT: relational back-pointers (correctionOfId, changeRequestId)
+  // are metadata, NOT ledger content — they MUST stay out of this hash payload.
+  // Adding them would change every recomputed hash and break verifyChain for all
+  // existing records.
   const hash = computeHash(prevHash, {
     ledgerVersion: LEDGER_VERSION, category: input.category, text: input.text,
     progressPct: input.progressPct, authorId: input.authorId, locationId: input.locationId,
