@@ -1,0 +1,81 @@
+import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
+import Link from "next/link";
+import { getDict } from "@/i18n/server";
+import { formatTimestamp } from "@/lib/format/datetime";
+import { resolveChangeRequest } from "@/app/actions/cambios";
+import { SubmitButton } from "@/components/submit-button";
+import { Pin } from "@/components/icons";
+import type { Lang } from "@/i18n/dictionaries";
+
+export default async function CambioDetail({ params }: { params: Promise<{ id: string; crId: string }> }) {
+  const { id, crId } = await params;
+  const session = await auth();
+  const u = session!.user as { id: string; companyId: string; role: string };
+  const { lang, t } = await getDict();
+  const C = t.changes;
+
+  const cr = await prisma.changeRequest.findFirstOrThrow({
+    where: { id: crId, projectId: id, project: { companyId: u.companyId } },
+    include: { partidas: { include: { partida: { select: { name: true } } } }, attachments: true },
+  });
+
+  const isManager = u.role === "ADMIN" || u.role === "MANAGER";
+  const canResolve = isManager && cr.status === "OPEN" && cr.authorId !== u.id;
+  const dot = cr.status === "OPEN" ? "open" : cr.status === "INTEGRATED" ? "merged" : "rej";
+
+  return (
+    <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
+      <Link href={`/app/projects/${id}?tab=cambios`} className="kicker" style={{ textDecoration: "none" }}>← {C.itemPlural}</Link>
+      <div className="cr-detail card" style={{ marginTop: 12 }}>
+        <div className="cr-detail-head">
+          <span className="mono" style={{ fontSize: "0.7rem", letterSpacing: "0.1em" }}>{cr.code}</span>
+          <span className="state-badge" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span className={`pdot ${dot}`} aria-hidden="true" /> {C.states[cr.status]}
+          </span>
+        </div>
+        <Field label={C.fieldTitle}><span className="h-md" style={{ fontSize: "1.05rem" }}>{cr.title}</span></Field>
+        {cr.description && <Field label={C.fieldDescription}>{cr.description}</Field>}
+        <Field label={C.fieldPartidas}>
+          {cr.partidas.map((p) => <span key={p.partidaId} className="chip">{p.partida.name}</span>)}
+        </Field>
+        <Field label={`${C.impactCost} / ${C.impactTime}`}>
+          <span className="cr-cost">{cr.costImpact ? `RD$${cr.costImpact.toString()}` : "—"}</span>
+          {" · "}
+          <span>{cr.daysImpact != null ? `${cr.daysImpact} ${C.days}` : "—"}</span>
+        </Field>
+        <Field label={C.requester}>
+          {cr.gpsLat != null && <><Pin size={11} style={{ verticalAlign: -2, marginRight: 3 }} />{`${Number(cr.gpsLat).toFixed(4)} · `}</>}
+          {formatTimestamp(cr.createdAt, lang as Lang)}
+        </Field>
+        {cr.status === "INTEGRATED" && cr.seal && (
+          <Field label={C.seal}><span className="mono">{cr.seal.slice(0, 8)}…{cr.seal.slice(-4)}</span> · {cr.resolvedAt ? formatTimestamp(cr.resolvedAt, lang as Lang) : ""}</Field>
+        )}
+        {canResolve && (
+          <div className="cr-actions">
+            <form action={resolveChangeRequest}>
+              <input type="hidden" name="changeRequestId" value={cr.id} />
+              <input type="hidden" name="action" value="INTEGRATE" />
+              <SubmitButton className="btn" style={{ background: "var(--state-merged)", color: "#fff" }}>{C.integrate}</SubmitButton>
+            </form>
+            <form action={resolveChangeRequest}>
+              <input type="hidden" name="changeRequestId" value={cr.id} />
+              <input type="hidden" name="action" value="REJECT" />
+              <SubmitButton className="btn btn-ghost">{C.reject}</SubmitButton>
+            </form>
+            <span className="mono text-steel" style={{ fontSize: "0.62rem", marginLeft: "auto", alignSelf: "center" }}>{C.managerOnly}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="cr-field">
+      <div className="form-label">{label}</div>
+      <div style={{ marginTop: 3, fontSize: "0.88rem" }}>{children}</div>
+    </div>
+  );
+}
