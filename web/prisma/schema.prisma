@@ -131,7 +131,7 @@ model Registro {
   hash            String
   correctionOfId  String?
   changeRequestId String?
-  changeRequest   ChangeRequest? @relation("RegistroChange", fields: [changeRequestId], references: [id], onDelete: SetNull)
+  changeRequest   ChangeRequest?    @relation("RegistroChange", fields: [changeRequestId], references: [id], onDelete: SetNull)
 
   @@unique([partidaId, prevHash])
   @@index([partidaId, serverCreatedAt])
@@ -163,7 +163,7 @@ model ChangeRequest {
 
   partidas    ChangeRequestPartida[]
   attachments ChangeAttachment[]
-  markers     Registro[]   @relation("RegistroChange")
+  markers     Registro[]             @relation("RegistroChange")
 
   @@unique([projectId, code])
   @@index([projectId, status])
@@ -176,6 +176,7 @@ model ChangeRequestPartida {
   partida         Partida       @relation(fields: [partidaId], references: [id])
 
   @@id([changeRequestId, partidaId])
+  @@index([partidaId])
 }
 
 model ChangeAttachment {
