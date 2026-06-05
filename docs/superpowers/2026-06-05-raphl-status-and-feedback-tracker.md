@@ -40,14 +40,14 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 - **Reciclaje** section in the Partidas tab: shows *borrado por <nombre> · fecha*, Restore, and **Borrar definitivamente only when the Partida has 0 Registros** (immutability preserved). 
 - Deleted Partidas excluded from **all read paths** (project page, partida page → 404, dashboard counts) **and write paths** (`logRegistro`, `createChangeRequest`).
 
----
-
-## 3. LEFT (detailed)
-
 ### Phase 1c — Rename + Move + AuditLog
 - Generalized **`AuditLog`** model (companyId, actorId, action, targetType, targetId, summary, createdAt) — backbone for delete/rename/move history.
 - **Rename** Project, Bloque, Partida (inline, role-gated, audited; names aren't hash-committed so safe).
 - **Move** a Partida between Bloques (update `segmentId`; audited). UI in the file tree.
+
+---
+
+## 3. LEFT (detailed)
 
 ### Phase 1d — Partida search + filters (architect: "crítico")
 - Search Partidas by name; filters by Bloque, tag/type (after P3 tags), progress range, has-open-Cambios, date, author, text-in-notes. Server-side `ILIKE`/Prisma first; DB full-text later.
@@ -89,7 +89,7 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 - [x] **Carpeta de reciclaje** para partidas borradas; borrar definitivamente desde ahí; registro de qué se borró y cuándo (P1b).
 - [x] **Planos ≠ partidas**; planos muestran los planos subidos por fecha; partidas aparte (P1a).
 - [ ] **% de avance junto a la partida, no en las notas; ajustable manualmente** (P2).
-- [ ] **Mover partidas entre bloques** (P1c).
+- [x] **Mover partidas entre bloques** (P1c).
 - [ ] **Buscador de partidas + opciones de búsqueda (crítico)** (P1d).
 - [x] **Subir fotos/videos/documentos sin error** (P0) — note: video ≤50 MB until S3/R2.
 - [x] **Nombre del usuario en las notas** (P0).
@@ -100,7 +100,7 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 - [ ] **Cambios: quitar Costo y Tiempo** (P3).
 - [ ] **Cambios: selección múltiple de bloques afectados** (P3).
 - [~] **Cambios: gerente aprueba/rechaza con marcador; aprobado aparece en partidas afectadas; rechazado con campo de motivo/observaciones** — approve/reject + propagate-to-partidas mechanic exists (Cambios slice); rework adds bloque-scope + rejection reason (P3).
-- [ ] **Editar nombres de partidas, bloques y proyectos** (P1c).
+- [x] **Editar nombres de partidas, bloques y proyectos** (P1c).
 
 ### De lo conversado anteriormente falta
 - [ ] **Menú lateral indicativo de ubicación** (P4).
@@ -124,9 +124,9 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 - [x] **Bug de subir archivos** (P0).
 - [x] **GPS automático al crear la nota, no por botón** (P0).
 
-**Score:** 11 done · 1 base-exists (Cambios approve/reject) · ~17 planned across P1c→P4. Cross-check this list after each phase.
+**Score:** 13 done · 1 base-exists (Cambios approve/reject) · ~15 planned across P1d→P4. Cross-check this list after each phase.
 
 ---
 
 ## 5. Suggested next action
-Continue with **P1c (rename + move + AuditLog)** — smallest remaining slice that clears three feedback items ("editar nombres", "mover partidas", audit trail). Then **P1d (search, critical)**, then **P2 (roles + progress)**, **P3 (Cambios rework + tags + replies)**, **P4 (spaces/charts/reminders)**. Use writing-plans → subagent-driven for each, and re-check §4 after every phase.
+Continue with **P1d (search + filters, critical)**. Then **P2 (roles + progress)**, **P3 (Cambios rework + tags + replies)**, **P4 (spaces/charts/reminders)**. Use writing-plans → subagent-driven for each, and re-check §4 after every phase.
