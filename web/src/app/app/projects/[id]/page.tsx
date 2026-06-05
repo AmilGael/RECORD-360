@@ -6,6 +6,7 @@ import { ProjectFileTree } from "@/components/project-file-tree";
 import { PartidaSummary } from "@/components/partida-summary";
 import { CambiosList } from "@/components/cambios-list";
 import { PlanosTab } from "@/components/planos-tab";
+import { AnaliticaTab } from "@/components/analitica-tab";
 import { Layers, Branch, BarChart, Sliders, Folder } from "@/components/icons";
 import { projectProgress } from "@/lib/project/progress";
 import { filterPartidaGroups } from "@/lib/project/partida-filter";
@@ -70,7 +71,7 @@ export default async function ProjectPage({
     count: s.partidas.length,
   }));
 
-  const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : "code";
+  const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : tab === "analitica" ? "analitica" : "code";
   const selectedSpaceBlock = segmentSummaries.some((s) => s.id === spaceBlock) ? String(spaceBlock) : (segmentSummaries[0]?.id ?? null);
   const selectedSpace = (["cuaderno", "planos", "actualizados", "levantamientos", "ideas", "media", "recordatorios", "indicadores"].includes(String(space))
     ? String(space)
@@ -128,6 +129,17 @@ export default async function ProjectPage({
       })).map((a) => ({ id: a.id, url: a.url, fileType: a.fileType, text: a.registro.text, createdAt: a.registro.serverCreatedAt }))
     : [];
   const now = new Date();
+  const openCambios = activeTab === "analitica"
+    ? await prisma.changeRequest.count({ where: { projectId: id, status: "OPEN" } })
+    : 0;
+  const overdueReminders = activeTab === "analitica"
+    ? await prisma.registro.count({ where: { partida: { projectId: id, deletedAt: null }, reminderDueAt: { lt: now }, reminderResolvedAt: null } })
+    : 0;
+  const analiticaBloques = project.segments.map((s) => ({
+    id: s.id, name: s.name, progress: projectProgress(s.partidas),
+    partidas: s.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct })),
+  }));
+  const analiticaUngrouped = project.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct }));
   const reminderRows = activeTab === "code" && selectedSpaceBlock
     ? await prisma.registro.findMany({
         where: {
@@ -224,7 +236,7 @@ export default async function ProjectPage({
         <Link href={`/app/projects/${id}?tab=code`} className={`tab ${activeTab === "code" ? "is-on" : ""}`} aria-current={activeTab === "code" ? "page" : undefined}><Layers size={13} />{P.tabPartidas}</Link>
         <Link href={`/app/projects/${id}?tab=planos`} className={`tab ${activeTab === "planos" ? "is-on" : ""}`} aria-current={activeTab === "planos" ? "page" : undefined}><Folder size={13} />{P.tabPlanos}</Link>
         <Link href={`/app/projects/${id}?tab=cambios`} className={`tab ${activeTab === "cambios" ? "is-on" : ""}`} aria-current={activeTab === "cambios" ? "page" : undefined}><Branch size={13} />{P.tabChanges}</Link>
-        <span className="tab is-off" aria-disabled="true"><BarChart size={13} />{P.tabAnalytics} <span className="soon">{P.soon}</span></span>
+        <Link href={`/app/projects/${id}?tab=analitica`} className={`tab ${activeTab === "analitica" ? "is-on" : ""}`} aria-current={activeTab === "analitica" ? "page" : undefined}><BarChart size={13} />{P.tabAnalytics}</Link>
         <span className="tab is-off" aria-disabled="true"><Sliders size={13} />{P.tabSettings} <span className="soon">{P.soon}</span></span>
       </div>
 
@@ -254,6 +266,13 @@ export default async function ProjectPage({
             t={{ empty: t.planos.empty, upload: t.planos.upload, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view }}
           />
         </div>
+      ) : activeTab === "analitica" ? (
+        <AnaliticaTab
+          general={{ progress: avg, partidas: allPartidas.length, openCambios, overdueReminders }}
+          bloques={analiticaBloques}
+          ungrouped={analiticaUngrouped}
+          t={{ general: P.analiticaGeneral, byBloque: P.analiticaByBloque, openChanges: P.analiticaOpenChanges, overdue: P.analiticaOverdue, partidasWord: P.partidasWord, noBloques: P.analiticaNoBloques }}
+        />
       ) : (
         <>
           <div className="workspace">

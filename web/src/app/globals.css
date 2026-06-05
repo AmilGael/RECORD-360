@@ -440,3 +440,17 @@ body {
   .space-panel { grid-template-columns: 1fr; }
   .space-nav { position: static; }
 }
+
+/* ---------- analitica (health dashboard) ---------- */
+.health-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.health-dot.green { background: var(--state-active); }
+.health-dot.yellow { background: #b08a2e; }
+.health-dot.red { background: var(--state-blocked); }
+.analitica-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.analitica-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.analitica-card .health-dot { margin-bottom: 4px; }
+.analitica-card strong { font-family: var(--font-serif), Georgia, serif; font-size: 1.5rem; }
+.analitica-card span { font-family: var(--font-mono), monospace; font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--steel); }
+.analitica-row { display: flex; align-items: center; gap: 10px; }
+.analitica-row-name { font-size: 0.88rem; min-width: 120px; }
+.analitica-pct { font-size: 0.72rem; color: var(--steel); min-width: 38px; text-align: right; }
