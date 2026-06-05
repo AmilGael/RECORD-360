@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useId } from "react";
+import { useEffect, useRef, useState, useId, useActionState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logRegistro } from "@/app/actions/registro";
@@ -32,43 +32,28 @@ export function LogComposer({
   const listId = useId();
   const router = useRouter();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [gpsPending, setGpsPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, formAction] = useActionState(logRegistro, null);
 
-  function captureGps() {
+  // Automatic GPS capture on mount (no button). Silent on denial — the note still saves.
+  useEffect(() => {
     if (!navigator.geolocation) return;
-    setGpsPending(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setGpsPending(false);
-      },
-      () => {
-        setCoords(null);
-        setGpsPending(false);
-      },
+      (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setCoords(null),
     );
-  }
+  }, []);
 
-  const gpsLabel = gpsPending ? t.gpsLoading : coords ? t.gpsOk : t.gps;
+  // On success: clear the form and (if correcting) return to the partida. On
+  // error: keep everything the user typed and show the message.
+  useEffect(() => {
+    if (state?.ok) {
+      formRef.current?.reset();
+      if (correction) router.replace(`/app/partidas/${partidaId}`);
+    }
+  }, [state, correction, partidaId, router]);
 
   return (
-    <form
-      ref={formRef}
-      action={async (fd) => {
-        setError(null);
-        try {
-          await logRegistro(fd);
-          formRef.current?.reset();
-          setCoords(null);
-          if (correction) router.replace(`/app/partidas/${partidaId}`);
-        } catch {
-          setError(t.error);
-        }
-      }}
-      className="card"
-      style={{ padding: 16, marginBottom: 28 }}
-    >
+    <form ref={formRef} action={formAction} className="card" style={{ padding: 16, marginBottom: 28 }}>
       <input type="hidden" name="partidaId" value={partidaId} />
       {correction && <input type="hidden" name="correctionOfId" value={correction.id} />}
       <input type="hidden" name="gpsLat" value={coords?.lat ?? ""} />
@@ -80,9 +65,9 @@ export function LogComposer({
         </div>
       )}
       <textarea name="text" placeholder={t.placeholder} rows={3} className="input" style={{ marginBottom: 10, resize: "vertical" }} />
-      {error && (
+      {state && !state.ok && (
         <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
-          {error}
+          {state.error || t.error}
         </p>
       )}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -96,11 +81,9 @@ export function LogComposer({
         <datalist id={listId}>
           {locations.map((l) => <option key={l} value={l} />)}
         </datalist>
-        <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif" style={{ fontSize: "0.8rem", maxWidth: 200 }} />
+        <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/webm" style={{ fontSize: "0.8rem", maxWidth: 220 }} />
         <input type="number" name="progressPct" min={0} max={100} placeholder={t.progress} className="input" style={{ width: 118 }} />
-        <button type="button" onClick={captureGps} disabled={gpsPending} className="btn btn-ghost" style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem" }}>
-          {gpsLabel}
-        </button>
+        <span className="mono text-steel" style={{ fontSize: "0.72rem" }}>{coords ? t.gpsOk : t.gps}</span>
         <SubmitButton className="btn btn-ink" style={{ marginLeft: "auto" }} pendingLabel={t.sending}>
           {t.submit} <span className="arrow">→</span>
         </SubmitButton>
