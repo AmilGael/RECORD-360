@@ -25,4 +25,5 @@ export async function updatePartidaProgress(formData: FormData) {
   await prisma.partida.update({ where: { id: partida.id }, data: { progressPct } });
   revalidatePath(`/app/projects/${partida.projectId}`);
   revalidatePath(`/app/partidas/${partida.id}`);
+  revalidatePath("/app");
 }

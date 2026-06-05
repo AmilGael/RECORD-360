@@ -105,7 +105,7 @@ describe("logRegistro corrections", () => {
     fd.set("correctionOfId", otherRegistroId);
     const res = await logRegistro(null, fd);
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toMatch(/correction/i);
+    if (!res.ok) expect(res.error).toMatch(/corrección/i);
     await expect(prisma.registro.count({ where: { partidaId } })).resolves.toBe(before);
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
@@ -133,7 +133,7 @@ describe("logRegistro corrections", () => {
     fd.set("replyToId", otherRegistroId);
     const res = await logRegistro(null, fd);
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toMatch(/reply/i);
+    if (!res.ok) expect(res.error).toMatch(/respuesta/i);
     await expect(prisma.registro.count({ where: { partidaId } })).resolves.toBe(before);
   });
 

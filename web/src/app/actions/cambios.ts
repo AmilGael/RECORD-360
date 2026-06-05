@@ -104,6 +104,9 @@ export async function resolveChangeRequest(formData: FormData) {
         });
       }
     }));
+    for (const partidaId of markerPartidaIds) {
+      revalidatePath(`/app/partidas/${partidaId}`);
+    }
   } else {
     throw new Error("Acción inválida.");
   }
