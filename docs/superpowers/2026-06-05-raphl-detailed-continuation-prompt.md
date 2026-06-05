@@ -40,14 +40,13 @@ Use this prompt to continue the work in a fresh session. It is intentionally exp
 
 ## Current Verified State
 
-Latest completed code includes P0, P1a, P1b, and P1c. Reported verification after P1c:
+Latest completed code includes P0, P1a, P1b, P1c, P1d, and P2. Reported verification after P2:
 
-- 23 test files passing.
-- 98 tests passing.
+- 25 test files passing.
+- 107 tests passing.
 - ESLint clean.
 - TypeScript clean.
 - Production build clean.
-- No emoji found in `web/src`.
 
 If continuing, verify again before making changes.
 
@@ -160,98 +159,54 @@ P1c is complete.
    - Partida move selector in the Partidas tree.
 11. Tests cover rename, move, duplicate blocking, role blocking, deleted Partida blocking, audit rows, and hash-chain preservation.
 
-## What Remains
-
 ### P1d: Partida Search + Filters
 
-Goal: clear the critical search feedback.
-
-Build these pieces:
+P1d is complete for the architect's critical request.
 
 1. Search UI in the Partidas tab.
    - Search by Partida name.
-   - Search should not require full page reload if simple client-side filtering is enough for current dataset.
-   - If server-side is used, keep query params stable.
+   - Server-driven query params are stable (`q`, `block`).
 2. Filters.
-   - Bloque filter.
+   - Bloque filter exists.
+   - Ungrouped/Sin bloque filter exists.
    - Deleted/active should remain separate: active tab does not show deleted; Reciclaje handles deleted.
-   - Progress range filter can be added now if low risk.
-   - Tags filter waits for P3 tags unless a placeholder is harmless.
 3. Empty states.
-   - "No results" distinct from "no partidas yet".
+   - "No results" is distinct from "no partidas yet".
 4. Tests.
-   - Search component filters by name.
-   - Bloque filter works.
-   - Deleted Partidas do not appear in active search results.
+   - Pure filter helper covers name, Bloque, Sin bloque, combined filters, and active empty results.
 
-Acceptance criteria:
-
-- Architect feedback item "Buscador de partidas + opciones de búsqueda (crítico)" is checked done for name + Bloque filtering.
-- Future advanced filters are documented if not built yet.
-- Full verification passes.
+Future advanced filters by tag/type, progress, date, author, note text, and open-Cambios remain dependent on P2/P3 data work.
 
 ### P2: Roles, Assignments, and Progress Rollup
 
-Goal: align permissions and progress with how construction teams actually operate.
+P2 is complete.
 
-Build these pieces:
-
-1. `ProjectAssignment` model.
-   - Multiple users per role per project.
+1. `ProjectAssignment` model exists.
+   - Multiple supervisors/residents per project.
    - A user can belong to multiple projects.
-   - Suggested fields:
-     - `id`
-     - `projectId`
-     - `userId`
-     - `roleOnProject` or assignment type if needed
-     - `createdAt`
-   - Unique constraint likely `[projectId, userId]`.
-2. Assignment UI.
+   - Unique `[projectId, userId]`.
+2. Assignment UI exists.
    - Admin/Manager assign supervisor(s) and resident(s) to a project.
-   - Project page/dashboard shows supervisor and resident names.
-3. Visibility rules.
+   - Project page shows assigned supervisor/resident names.
+3. Visibility rules are assignment-aware.
    - Admin/Manager see company projects.
    - Supervisor/Resident see only assigned projects.
-   - Enforce in:
-     - dashboard
-     - project page
-     - partida page
-     - media route
-     - document route/actions
-     - registro actions
-     - cambio actions
-     - delete/restore/purge actions
-4. Resident permissions.
-   - Resident can create/edit/delete/move Partidas and Bloques only on assigned projects.
-   - Decide whether Resident can upload Planos. If not decided, keep Admin/Manager only and document it.
-5. Progress refactor.
-   - Remove progress input from note composer.
-   - Add manual progress control on Partida.
-   - Progress lives with Partida, not each note.
-   - Keep existing `Registro.progressPct` only for historical compatibility unless migration removes it later.
-6. Bottom-up rollup.
+   - Enforced in dashboard, project page, partida page, media route, document uploads, registro actions, cambio actions, and Partida structure actions.
+4. Resident/Supervisor project permissions are widened only on assigned projects.
+   - Assigned members can create/edit/delete/restore/move Partidas and Bloques.
+   - Permanent Partida purge remains Admin-only and only when empty.
+   - Assigned members can upload project-level Planos.
+5. Progress refactor is complete.
+   - Progress input removed from note composer.
+   - Manual progress control added on Partida.
+   - Progress lives with Partida; `Registro.progressPct` is preserved only for historical compatibility.
+6. Bottom-up rollup is active.
    - Partida progress is manual.
-   - Bloque progress is equal-weight average of active Partidas in that Bloque.
-   - Project progress is equal-weight average of active Partidas across the project, or average of Bloques if explicitly chosen. Current locked decision says equal Partida weight.
-   - Deleted Partidas excluded.
-7. Tests.
-   - Assigned Resident sees assigned project.
-   - Resident cannot see unassigned project.
-   - Supervisor cannot see unassigned project.
-   - Admin still sees all company projects.
-   - Cross-company assignment impossible.
-   - Resident CRUD allowed only on assigned project.
-   - Progress rollup excludes deleted Partidas.
+   - Bloque and Project progress use active Partidas.
+   - Deleted Partidas are excluded.
+7. Tests cover project assignment, assigned/unassigned Resident access, document access, media authorization, cambio access, structure CRUD, and progress updates.
 
-Acceptance criteria:
-
-- Architect feedback items checked:
-   - "Ver supervisor y residente por proyecto"
-   - "Residente puede agregar/quitar/editar partidas"
-   - "Residente/Supervisor solo ven su proyecto asignado"
-   - "% total de la partida visible y modificable ahí mismo"
-   - "Avance bottom-up partida→bloque→proyecto"
-- Full verification passes.
+## What Remains
 
 ### P3: Cambios Rework + Tags + Replies
 
@@ -416,6 +371,15 @@ Use this as the source of truth. Update after every phase.
 - [x] Editar nombres de Obras, Bloques, Partidas.
 - [x] Mover Partidas entre Bloques.
 - [x] General AuditLog for rename/move/delete/restore/purge.
+- [x] Buscador de Partidas by name.
+- [x] Partida filter by Bloque / Sin bloque.
+- [x] Resident/Supervisor project assignment model.
+- [x] Supervisor/resident displayed per project.
+- [x] Resident/Supervisor only see assigned projects.
+- [x] Resident can create/edit/delete/move Partidas on assigned project.
+- [x] % avance next to Partida, manually editable there.
+- [x] Remove progress editing from note composer.
+- [x] Bottom-up progress rollup Partida -> Bloque -> Obra.
 
 ### Partial
 
@@ -431,15 +395,7 @@ Use this as the source of truth. Update after every phase.
 
 ### Not Done
 
-- [ ] Buscador de Partidas.
-- [ ] Partida filters.
-- [ ] % avance next to Partida, manually editable there.
-- [ ] Remove progress editing from note composer.
-- [ ] Bottom-up progress rollup Partida -> Bloque -> Obra.
-- [ ] Supervisor/resident displayed per project.
-- [ ] Resident/Supervisor project assignment model.
-- [ ] Resident/Supervisor only see assigned projects.
-- [ ] Resident can create/edit/delete/move Partidas on assigned project.
+- [ ] Advanced Partida filters by tag/type, progress, date, author, note text, and open-Cambios.
 - [ ] Cambios as note-like entries.
 - [ ] Cambios no cost/time.
 - [ ] Cambios multiselect Bloques affected.
@@ -464,13 +420,9 @@ Use this as the source of truth. Update after every phase.
 
 ## Recommended Next Sequence
 
-Do not jump to P2/P3 before finishing P1d unless the user explicitly changes priority.
-
-1. P1d: Partida search + filters.
-2. P2: Project assignments, scoped visibility, resident permissions, progress rollup.
-3. P3: Cambios rework, tags, replies.
-4. P4: Per-Bloque spaces, media submenus, lateral nav, charts, reminders, plan viewer.
-5. Production hardening: S3/R2, pagination, chain verification UI, password reset, offline/PWA, PDF export, legal signatures, analytics.
+1. P3: Cambios rework, tags, replies.
+2. P4: Per-Bloque spaces, media submenus, lateral nav, charts, reminders, plan viewer.
+3. Production hardening: S3/R2, pagination, chain verification UI, password reset, offline/PWA, PDF export, legal signatures, analytics.
 
 ## First Command Checklist For A Fresh Session
 

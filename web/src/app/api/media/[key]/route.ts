@@ -4,6 +4,8 @@ import { Readable } from "node:stream";
 import path from "node:path";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { projectAccessWhere } from "@/lib/authz/projects";
+import type { Role } from "@prisma/client";
 
 // SECURITY: media is served inline on the first-party origin. The Content-Type
 // comes from the stored extension (which put() derives from a validated MIME
@@ -18,24 +20,27 @@ export async function GET(_req: Request, ctx: { params: Promise<{ key: string }>
   // Auth gate: reject unauthenticated requests before touching storage,
   // so we don't leak whether the key exists.
   const session = await auth();
-  const user = session?.user as { companyId?: string } | undefined;
-  if (!user?.companyId) return new Response("Unauthorized", { status: 401 });
+  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
+  if (!user?.id || !user.companyId || !user.role) return new Response("Unauthorized", { status: 401 });
+  const sessionUser = { id: user.id, companyId: user.companyId, role: user.role };
 
   const url = `/api/media/${safeKey}`;
-  const owned =
-    (await prisma.attachment.findFirst({
-      where: { url, registro: { partida: { project: { companyId: user.companyId } } } },
+  const accessWhere = projectAccessWhere(sessionUser);
+  const [attachment, changeAttachment, document] = await Promise.all([
+    prisma.attachment.findFirst({
+      where: { url, registro: { partida: { project: accessWhere } } },
       select: { id: true },
-    })) ??
-    (await prisma.changeAttachment.findFirst({
-      where: { url, changeRequest: { project: { companyId: user.companyId } } },
+    }),
+    prisma.changeAttachment.findFirst({
+      where: { url, changeRequest: { project: accessWhere } },
       select: { id: true },
-    })) ??
-    (await prisma.document.findFirst({
-      where: { url, project: { companyId: user.companyId } },
+    }),
+    prisma.document.findFirst({
+      where: { url, project: accessWhere },
       select: { id: true },
-    }));
-  if (!owned) return new Response("Not found", { status: 404 });
+    }),
+  ]);
+  if (!attachment && !changeAttachment && !document) return new Response("Not found", { status: 404 });
 
   try {
     const nodeStream = await storage.get(safeKey);

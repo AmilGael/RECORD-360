@@ -7,7 +7,6 @@ import { SubmitButton } from "@/components/submit-button";
 
 type ComposerT = {
   placeholder: string;
-  progress: string;
   gps: string;
   gpsOk: string;
   gpsLoading: string;
@@ -82,7 +81,6 @@ export function LogComposer({
           {locations.map((l) => <option key={l} value={l} />)}
         </datalist>
         <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/webm" style={{ fontSize: "0.8rem", maxWidth: 220 }} />
-        <input type="number" name="progressPct" min={0} max={100} placeholder={t.progress} className="input" style={{ width: 118 }} />
         <span className="mono text-steel" style={{ fontSize: "0.72rem" }}>{coords ? t.gpsOk : t.gps}</span>
         <SubmitButton className="btn btn-ink" style={{ marginLeft: "auto" }} pendingLabel={t.sending}>
           {t.submit} <span className="arrow">→</span>

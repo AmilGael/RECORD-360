@@ -9,14 +9,15 @@ import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { appendRegistroTx } from "@/lib/registro/append";
 import { retryOnConflict } from "@/lib/registro/retry";
+import { projectAccessWhere } from "@/lib/authz/projects";
 
 export async function createChangeRequest(formData: FormData) {
   const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string } | undefined;
-  if (!user?.id || !user.companyId) throw new Error("Unauthorized");
+  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
+  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
 
   const projectId = String(formData.get("projectId"));
-  const project = await prisma.project.findFirst({ where: { id: projectId, companyId: user.companyId } });
+  const project = await prisma.project.findFirst({ where: { id: projectId, ...projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) } });
   if (!project) throw new Error("Forbidden");
 
   const title = parseChangeTitle(formData.get("title"));

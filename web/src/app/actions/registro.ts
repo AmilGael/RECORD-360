@@ -2,28 +2,29 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
-import { parseProgressPct, parseCategory, parseLocation } from "@/lib/registro/validate";
+import { parseCategory, parseLocation } from "@/lib/registro/validate";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
+import { projectAccessWhere } from "@/lib/authz/projects";
+import type { Role } from "@prisma/client";
 
 export type LogResult = { ok: true } | { ok: false; error: string };
 
 export async function logRegistro(_prev: LogResult | null, formData: FormData): Promise<LogResult> {
   try {
     const session = await auth();
-    const user = session?.user as { id?: string; companyId?: string } | undefined;
-    if (!user?.id || !user.companyId) return { ok: false, error: "No autorizado." };
+    const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
+    if (!user?.id || !user.companyId || !user.role) return { ok: false, error: "No autorizado." };
     const authorId = user.id;
 
     const partidaId = String(formData.get("partidaId"));
     const partida = await prisma.partida.findFirst({
-      where: { id: partidaId, deletedAt: null, project: { companyId: user.companyId } },
+      where: { id: partidaId, deletedAt: null, project: projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) },
     });
     if (!partida) return { ok: false, error: "No autorizado." };
 
     const text = (String(formData.get("text") ?? "").trim()) || null;
-    const progressPct = parseProgressPct(formData.get("progressPct"));
     const category = parseCategory(formData.get("category"));
     const latRaw = formData.get("gpsLat"); const lngRaw = formData.get("gpsLng");
     const gpsLat = latRaw ? Number(latRaw) : null;
@@ -50,7 +51,7 @@ export async function logRegistro(_prev: LogResult | null, formData: FormData): 
       if (!corrected) return { ok: false, error: "Invalid correction target" };
     }
 
-    await appendRegistro({ partidaId, authorId, category, text, progressPct, gpsLat, gpsLng, locationId, attachments, correctionOfId });
+    await appendRegistro({ partidaId, authorId, category, text, progressPct: null, gpsLat, gpsLng, locationId, attachments, correctionOfId });
     revalidatePath(`/app/partidas/${partidaId}`);
     return { ok: true };
   } catch (e) {

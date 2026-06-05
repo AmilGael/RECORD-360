@@ -21,7 +21,7 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 
 ---
 
-## 2. DONE (shipped to `feat/web-m1-core-loop`, each reviewed + green: 22 test files / 91 tests, lint/tsc/build clean, no emoji)
+## 2. DONE (shipped to `feat/web-m1-core-loop`, verified green: 25 test files / 107 tests, lint/tsc/build clean)
 
 ### Phase 0 — Hotfixes
 - Multimodal uploads fixed: root cause was the **1 MB server-action body limit** (now 60 MB) + images-only allowlist. Now image/PDF/video/audio upload, type derived from MIME, rendered by type (img/video/audio/doc-link); per-type caps 15/30/30/50 MB (caps sit under the 60 MB body limit so oversize gives a graceful message). Larger video needs the S3/R2 phase.
@@ -33,7 +33,7 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 ### Phase 1a — IA (Bloque + Partidas/Planos split + Planos upload)
 - **Segmento → Bloque** everywhere (UI).
 - Work-item tab is now **Partidas**; a new **Planos** tab holds uploaded plan files (PDF/image) **by date** with uploader + "Ver plano".
-- New `Document` model + `createDocument` action (ADMIN/MANAGER for now) + media-route authorization for plan files.
+- New `Document` model + `createDocument` action + media-route authorization for plan files.
 
 ### Phase 1b — Delete Partidas + Recycle bin
 - Soft-delete (`Partida.deletedAt` + `deletedById`); **deletePartida/restorePartida/purgePartida** actions (tenant + role gated).
@@ -47,16 +47,21 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 
 ---
 
-## 3. LEFT (detailed)
-
 ### Phase 1d — Partida search + filters (architect: "crítico")
-- Search Partidas by name; filters by Bloque, tag/type (after P3 tags), progress range, has-open-Cambios, date, author, text-in-notes. Server-side `ILIKE`/Prisma first; DB full-text later.
+- Search Partidas by name; filter by Bloque or Sin bloque; active and deleted results remain separated from Reciclaje.
+- Advanced filters by tag/type, progress range, has-open-Cambios, date, author, and text-in-notes remain planned because they depend on P2/P3 data surfaces.
 
 ### Phase 2 — Roles/tenancy + Progress
-- **`ProjectAssignment`** (multiple members per role; user on multiple projects) → show **supervisor & resident** per project.
-- **Project-scoped visibility:** Resident/Supervisor see only assigned projects (Admin/Manager see all). Enforce server-side on every project/partida/registro/document query + **tests**.
-- **Resident can create/edit/delete Partidas & Bloques** on their project (widen the role gates added in P1a/P1b/P1c).
-- **Progress moved to the Partida** (manual, editable there, not in the note composer) + **bottom-up rollup**: Partida → Bloque (equal-weighted proportional total) → Project. Update `lib/project/progress.ts`.
+- New **`ProjectAssignment`** model for multiple supervisors/residents per project; users can belong to multiple projects.
+- Project page shows assigned supervisor/resident members and Admin/Manager assignment controls.
+- Project-scoped visibility enforced for Resident/Supervisor: dashboard, project page, partida page, registro action, document uploads, Cambios, media route, and Partida structure actions use assignment-aware access.
+- Assigned Resident/Supervisor can create/edit/delete/restore/move Partidas and Bloques inside their assigned project; permanent Partida purge remains Admin-only and only when empty.
+- Progress input was removed from the note composer. Progress now lives on the Partida via an inline manual progress control.
+- Bottom-up progress display uses active Partida progress: Partida -> Bloque -> Obra/project. Deleted Partidas are excluded.
+
+---
+
+## 3. LEFT (detailed)
 
 ### Phase 3 — Cambios rework + Tags + Replies
 - **Cambios rework:** affected unit becomes **Bloque** (multiselect, not Partida); **remove Costo + Tiempo**; add a **rejection-reason/observations** field; render entries **like notes**. Keep the seal + approve/reject + propagate-to-affected-Partidas mechanic.
@@ -88,9 +93,9 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 - [x] **Borrar partidas** — soft-delete + recycle (P1b). `[~]` *Borrar proyectos*: projects have archive/restore (pre-existing); a project recycle/delete-forever is not built — fold into P1c if wanted.
 - [x] **Carpeta de reciclaje** para partidas borradas; borrar definitivamente desde ahí; registro de qué se borró y cuándo (P1b).
 - [x] **Planos ≠ partidas**; planos muestran los planos subidos por fecha; partidas aparte (P1a).
-- [ ] **% de avance junto a la partida, no en las notas; ajustable manualmente** (P2).
+- [x] **% de avance junto a la partida, no en las notas; ajustable manualmente** (P2).
 - [x] **Mover partidas entre bloques** (P1c).
-- [ ] **Buscador de partidas + opciones de búsqueda (crítico)** (P1d).
+- [x] **Buscador de partidas + opciones de búsqueda (crítico)** (P1d: nombre + Bloque; filtros avanzados dependen de P2/P3).
 - [x] **Subir fotos/videos/documentos sin error** (P0) — note: video ≤50 MB until S3/R2.
 - [x] **Nombre del usuario en las notas** (P0).
 - [x] **"Abrir Bitácora completa" → "Abrir Cuaderno completo"** (P0).
@@ -109,11 +114,11 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 - [ ] **Etiquetas de tipo de partida + agrupar + crear propias** (P3).
 - [ ] **Levantamientos / Ideas / Planos Actualizados por bloque (+ observaciones a planos por fecha)** (P4).
 - [ ] **Alarmas/recordatorios obligatorios (lapso; avisar si no hay; alertar si vence)** (P4).
-- [ ] **Ver supervisor y residente por proyecto** (P2).
-- [ ] **Residente puede agregar/quitar/editar partidas** (P2).
-- [ ] **Residente/Supervisor solo ven su proyecto asignado** (P2).
-- [ ] **% total de la partida visible y modificable ahí mismo, no en cada nota** (P2).
-- [ ] **Avance bottom-up: partida → bloque (total proporcional) → proyecto** (P2).
+- [x] **Ver supervisor y residente por proyecto** (P2).
+- [x] **Residente puede agregar/quitar/editar partidas** (P2).
+- [x] **Residente/Supervisor solo ven su proyecto asignado** (P2).
+- [x] **% total de la partida visible y modificable ahí mismo, no en cada nota** (P2).
+- [x] **Avance bottom-up: partida → bloque (total proporcional) → proyecto** (P2).
 - [x] **Espacio para subir planos** (P1a — project-level; per-Bloque in P4).
 - [x] **No borrar lo escrito cuando algo no se registra; mostrar error sin borrar** (P0).
 
@@ -124,9 +129,9 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 - [x] **Bug de subir archivos** (P0).
 - [x] **GPS automático al crear la nota, no por botón** (P0).
 
-**Score:** 13 done · 1 base-exists (Cambios approve/reject) · ~15 planned across P1d→P4. Cross-check this list after each phase.
+**Score:** 20 done · 1 base-exists (Cambios approve/reject) · ~9 planned across P3→P4. Cross-check this list after each phase.
 
 ---
 
 ## 5. Suggested next action
-Continue with **P1d (search + filters, critical)**. Then **P2 (roles + progress)**, **P3 (Cambios rework + tags + replies)**, **P4 (spaces/charts/reminders)**. Use writing-plans → subagent-driven for each, and re-check §4 after every phase.
+Continue with **P3 (Cambios rework + tags + replies)**, then **P4 (spaces/charts/reminders)**. Use writing-plans → subagent-driven for each, and re-check §4 after every phase.

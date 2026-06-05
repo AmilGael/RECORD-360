@@ -10,17 +10,19 @@ import { formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
 import { DashboardSearch } from "@/components/dashboard-search";
 import { Folder, Plus } from "@/components/icons";
+import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
+import type { Role } from "@prisma/client";
 
 export default async function Dashboard() {
   const session = await auth();
-  const u = session!.user as { companyId: string; role: string };
-  const isAdmin = u.role === "ADMIN" || u.role === "MANAGER";
+  const u = session!.user as { id: string; companyId: string; role: Role };
+  const isAdmin = hasCompanyWideAccess(u.role);
   const { lang, t } = await getDict();
   const D = t.dash;
 
   // Fetch active projects with their partidas AND the single most-recent registro per project
   const projects = await prisma.project.findMany({
-    where: { companyId: u.companyId, archivedAt: null },
+    where: { ...projectAccessWhere(u), archivedAt: null },
     orderBy: { createdAt: "desc" },
     include: {
       partidas: {

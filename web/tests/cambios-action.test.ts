@@ -18,6 +18,7 @@ beforeAll(async () => {
   managerId = (await prisma.user.create({ data: { email: `mgr-${s}@x.do`, name: "Mgr", role: "MANAGER", companyId, passwordHash: "x" } })).id;
   residentId = (await prisma.user.create({ data: { email: `res-${s}@x.do`, name: "Res", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
   projectId = (await prisma.project.create({ data: { companyId, name: `CR Project ${s}` } })).id;
+  await prisma.projectAssignment.create({ data: { projectId, userId: residentId, role: "RESIDENT" } });
   pA = (await prisma.partida.create({ data: { projectId, name: "Cimentación N1" } })).id;
   pB = (await prisma.partida.create({ data: { projectId, name: "Instalaciones N2" } })).id;
 });
@@ -27,6 +28,7 @@ afterAll(async () => {
   await prisma.changeRequestPartida.deleteMany({ where: { partidaId: { in: [pA, pB] } } });
   await prisma.changeAttachment.deleteMany({ where: { changeRequest: { projectId } } });
   await prisma.changeRequest.deleteMany({ where: { projectId } });
+  await prisma.projectAssignment.deleteMany({ where: { projectId } });
   await prisma.partida.deleteMany({ where: { id: { in: [pA, pB] } } });
   await prisma.project.deleteMany({ where: { id: projectId } });
   await prisma.user.deleteMany({ where: { id: { in: [managerId, residentId] } } });
@@ -62,7 +64,7 @@ describe("createChangeRequest", () => {
 });
 
 async function openCR(authorId: string, partidaIds: string[]) {
-  authMock.mockResolvedValue({ user: { id: authorId, companyId, role: "RESIDENT" } });
+  authMock.mockResolvedValue({ user: { id: authorId, companyId, role: authorId === managerId ? "MANAGER" : "RESIDENT" } });
   await createChangeRequest(fd({ projectId, title: `T-${Math.random()}`, costImpact: "1000", daysImpact: "2", partidaIds }));
   return prisma.changeRequest.findFirstOrThrow({ orderBy: { createdAt: "desc" }, where: { projectId } });
 }

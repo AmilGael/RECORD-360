@@ -1,20 +1,34 @@
 import Link from "next/link";
 import { createPartida, createSegment } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
-import { Folder } from "@/components/icons";
+import { Folder, Search } from "@/components/icons";
 import { MovePartidaForm, RenamePartidaForm, RenameSegmentForm } from "@/components/project-edit-controls";
+import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
+import { projectProgress } from "@/lib/project/progress";
 
 type PartidaRow = { id: string; name: string; progressPct: number; segmentId?: string | null };
 type TreeT = {
   ungrouped: string; newPartida: string; add: string;
   segmentPlaceholder: string; newSegment: string; addSegment: string;
   rename: string; save: string; move: string; moveTo: string;
+  searchPartidas: string; allBlocks: string; filter: string; clear: string; noResults: string;
 };
 
 type SegmentOption = { id: string; name: string };
 
+type FilterState = { q: string; block: string; total: number; hasFilters: boolean };
+
+function projectHref(projectId: string, params: Record<string, string | undefined>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value);
+  }
+  const qs = search.toString();
+  return `/app/projects/${projectId}${qs ? `?${qs}` : ""}`;
+}
+
 function FileRow({
-  projectId, pa, selectedId, isAdmin, segments, t,
+  projectId, pa, selectedId, isAdmin, segments, t, filters,
 }: {
   projectId: string;
   pa: PartidaRow;
@@ -22,11 +36,12 @@ function FileRow({
   isAdmin: boolean;
   segments: SegmentOption[];
   t: TreeT;
+  filters: FilterState;
 }) {
   return (
     <div className={`tree-row${pa.id === selectedId ? " is-active" : ""}`}>
       <Link
-        href={`/app/projects/${projectId}?p=${pa.id}`}
+        href={projectHref(projectId, { p: pa.id, q: filters.q, block: filters.block })}
         className="tree-file"
         aria-label={`${pa.name} — ${pa.progressPct}%`}
       >
@@ -44,33 +59,53 @@ function FileRow({
 }
 
 export function ProjectFileTree({
-  projectId, segments, ungrouped, segmentNames, selectedId, isAdmin, t,
+  projectId, segments, ungrouped, segmentNames, segmentOptions, selectedId, isAdmin, filters, t,
 }: {
   projectId: string;
   segments: { id: string; name: string; partidas: PartidaRow[] }[];
   ungrouped: PartidaRow[];
   segmentNames: string[];
+  segmentOptions: SegmentOption[];
   selectedId?: string;
   isAdmin: boolean;
+  filters: FilterState;
   t: TreeT;
 }) {
   const segListId = `segment-opts-${projectId}`;
-  const segmentOptions = segments.map((s) => ({ id: s.id, name: s.name }));
   return (
     <div className="tree">
+      <form action={`/app/projects/${projectId}`} className="tree-filter">
+        <input type="hidden" name="tab" value="code" />
+        <label className="search-wrap" style={{ marginBottom: 0 }}>
+          <span className="icon"><Search size={13} /></span>
+          <input name="q" defaultValue={filters.q} placeholder={t.searchPartidas} className="search-input" />
+        </label>
+        <select name="block" defaultValue={filters.block} className="input" aria-label={t.filter}>
+          <option value="">{t.allBlocks}</option>
+          <option value={UNGROUPED_FILTER}>{t.ungrouped}</option>
+          {segmentOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <div style={{ display: "flex", gap: 8 }}>
+          <SubmitButton className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.filter}</SubmitButton>
+          {filters.hasFilters && <Link href={`/app/projects/${projectId}?tab=code`} className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.clear}</Link>}
+        </div>
+      </form>
+      {filters.hasFilters && filters.total === 0 && (
+        <div className="tree-empty">{t.noResults}</div>
+      )}
       {segments.map((s) => (
         <div key={s.id}>
           <div className="tree-folder">
-            <span><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</span>
+            <span><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name} <span className="pct">{projectProgress(s.partidas)}%</span></span>
             {isAdmin && <RenameSegmentForm segmentId={s.id} currentName={s.name} t={t} />}
           </div>
-          {s.partidas.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} />)}
+          {s.partidas.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} filters={filters} />)}
         </div>
       ))}
       {ungrouped.length > 0 && (
         <div>
           <div className="tree-folder" style={{ opacity: 0.7 }}><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{t.ungrouped}</div>
-          {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} />)}
+          {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} filters={filters} />)}
         </div>
       )}
       {isAdmin && (

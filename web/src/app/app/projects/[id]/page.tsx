@@ -8,29 +8,37 @@ import { CambiosList } from "@/components/cambios-list";
 import { PlanosTab } from "@/components/planos-tab";
 import { Layers, Branch, BarChart, Sliders, Folder } from "@/components/icons";
 import { projectProgress } from "@/lib/project/progress";
+import { filterPartidaGroups } from "@/lib/project/partida-filter";
 import { PartidaRecycle } from "@/components/partida-recycle";
 import { RenameProjectForm } from "@/components/project-edit-controls";
+import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel";
+import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
+import type { Role } from "@prisma/client";
 
 export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ p?: string; tab?: string }>;
+  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string }>;
 }) {
   const { id } = await params;
-  const { p: selectedId, tab } = await searchParams;
+  const { p: selectedId, tab, q, block } = await searchParams;
   const session = await auth();
-  const sessionUser = session!.user as { companyId: string; role: string };
+  const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
-  const isAdmin = sessionUser.role === "ADMIN" || sessionUser.role === "MANAGER";
+  const isAdmin = hasCompanyWideAccess(sessionUser.role);
   const { lang, t } = await getDict();
   const P = t.project;
 
   // Tenant scoping: only return the project if it belongs to the caller's company.
   const project = await prisma.project.findFirstOrThrow({
-    where: { id, companyId },
+    where: { id, ...projectAccessWhere(sessionUser) },
     include: {
       company: { select: { name: true } },
+      assignments: {
+        include: { user: { select: { name: true, email: true } } },
+        orderBy: { createdAt: "asc" },
+      },
       segments: {
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
         include: { partidas: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } } },
@@ -40,10 +48,20 @@ export default async function ProjectPage({
   });
 
   const allPartidas = [...project.segments.flatMap((s) => s.partidas), ...project.partidas];
+  const canEditStructure = isAdmin || project.assignments.some((a) => a.userId === sessionUser.id);
   const avg = projectProgress(allPartidas);
   const segmentNames = project.segments.map((s) => s.name);
+  const segmentOptions = project.segments.map((s) => ({ id: s.id, name: s.name }));
 
   const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : "code";
+  const partidaFilters = {
+    q: String(q ?? "").trim(),
+    block: String(block ?? ""),
+  };
+  const filteredPartidas = filterPartidaGroups(project.segments, project.partidas, {
+    query: partidaFilters.q,
+    segmentId: partidaFilters.block,
+  });
 
   const changeRows = activeTab === "cambios"
     ? (await prisma.changeRequest.findMany({
@@ -85,7 +103,7 @@ export default async function ProjectPage({
     ? (await prisma.user.findFirst({ where: { id: latestAuthorId, companyId }, select: { name: true } }))?.name ?? null
     : null;
 
-  const deletedPartidas = activeTab === "code" && isAdmin
+  const deletedPartidas = activeTab === "code" && canEditStructure
     ? await prisma.partida.findMany({
         where: { projectId: id, deletedAt: { not: null } },
         include: { _count: { select: { registros: true } } },
@@ -97,6 +115,13 @@ export default async function ProjectPage({
     ? await prisma.user.findMany({ where: { id: { in: deleterIds }, companyId }, select: { id: true, name: true } })
     : [];
   const deleterMap = new Map(deleters.map((u) => [u.id, u.name]));
+  const assignableUsers = isAdmin
+    ? await prisma.user.findMany({
+        where: { companyId, role: { in: ["SUPERVISOR", "RESIDENT"] } },
+        orderBy: [{ role: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, email: true, role: true },
+      })
+    : [];
 
   return (
     <div className="reveal">
@@ -111,6 +136,17 @@ export default async function ProjectPage({
       <div className="mono text-steel" style={{ fontSize: "0.78rem" }}>
         {project.company.name} · {allPartidas.length} {P.partidasWord} · {avg}%
       </div>
+      <ProjectAssignmentsPanel
+        projectId={project.id}
+        assignments={project.assignments}
+        users={assignableUsers}
+        canManage={isAdmin}
+        t={{
+          title: P.assignmentsTitle, supervisor: P.supervisor, resident: P.resident,
+          noAssigned: P.noAssigned, assign: P.assign, remove: P.remove,
+          chooseUser: P.chooseUser,
+        }}
+      />
 
       <div className="tabs">
         <Link href={`/app/projects/${id}?tab=code`} className={`tab ${activeTab === "code" ? "is-on" : ""}`} aria-current={activeTab === "code" ? "page" : undefined}><Layers size={13} />{P.tabPartidas}</Link>
@@ -151,16 +187,20 @@ export default async function ProjectPage({
           <div className="workspace">
             <ProjectFileTree
               projectId={project.id}
-              segments={project.segments}
-              ungrouped={project.partidas}
+              segments={filteredPartidas.segments}
+              ungrouped={filteredPartidas.ungrouped}
               segmentNames={segmentNames}
+              segmentOptions={segmentOptions}
               selectedId={selectedId}
-              isAdmin={isAdmin}
+              isAdmin={canEditStructure}
+              filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters }}
               t={{
                 ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add,
                 segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment,
                 addSegment: P.addSegment, rename: P.rename, save: P.save,
-                move: P.move, moveTo: P.moveTo,
+                move: P.move, moveTo: P.moveTo, searchPartidas: P.searchPartidas,
+                allBlocks: P.allBlocks, filter: P.filter, clear: P.clear,
+                noResults: P.noResults,
               }}
             />
             {selected ? (
@@ -168,7 +208,8 @@ export default async function ProjectPage({
                 partida={selected}
                 authorName={authorName}
                 lang={lang}
-                t={{ noEntries: P.summaryNoEntries, lastUpdate: P.lastUpdate, openLog: P.openLog }}
+                canEdit={canEditStructure}
+                t={{ noEntries: P.summaryNoEntries, lastUpdate: P.lastUpdate, openLog: P.openLog, progress: t.partida.progress, save: P.save }}
               />
             ) : (
               <div className="viewport"><div className="empty">{P.summaryEmpty}</div></div>
@@ -178,6 +219,7 @@ export default async function ProjectPage({
             rows={deletedPartidas}
             deleterMap={deleterMap}
             lang={lang}
+            canPurge={sessionUser.role === "ADMIN"}
             t={{ recycleTitle: P.recycleTitle, restore: P.restore, deleteForever: P.deleteForever, deletedBy: P.deletedBy, hasRecords: P.hasRecords }}
           />
         </>

@@ -5,6 +5,9 @@ import { getDict } from "@/i18n/server";
 import { LogComposer } from "@/components/log-composer";
 import { RecordCard } from "@/components/record-card";
 import { PartidaDeleteButton } from "@/components/partida-delete-button";
+import { PartidaProgressForm } from "@/components/partida-progress-form";
+import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
+import type { Role } from "@prisma/client";
 
 export default async function PartidaPage({
   params, searchParams,
@@ -15,15 +18,20 @@ export default async function PartidaPage({
   const { id } = await params;
   const { correctionOf } = await searchParams;
   const session = await auth();
-  const sessionUser = session!.user as { companyId: string; role: string };
+  const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
-  const isAdmin = sessionUser.role === "ADMIN" || sessionUser.role === "MANAGER";
+  const isAdmin = hasCompanyWideAccess(sessionUser.role);
   const { lang, t } = await getDict();
   // Tenant scoping: only return the partida if its project belongs to the caller's company.
   const partida = await prisma.partida.findFirstOrThrow({
-    where: { id, project: { companyId }, deletedAt: null },
+    where: { id, project: projectAccessWhere(sessionUser), deletedAt: null },
     include: {
-      project: { include: { locations: { orderBy: { label: "asc" } } } },
+      project: {
+        include: {
+          locations: { orderBy: { label: "asc" } },
+          assignments: { select: { userId: true } },
+        },
+      },
       registros: {
         include: { attachments: true, location: true },
         orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
@@ -35,6 +43,7 @@ export default async function PartidaPage({
     ? await prisma.user.findMany({ where: { id: { in: authorIds }, companyId }, select: { id: true, name: true } })
     : [];
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
+  const canEditStructure = isAdmin || partida.project.assignments.some((a) => a.userId === sessionUser.id);
   const locationLabels = partida.project.locations.map((l) => l.label);
   const correctionTarget = correctionOf ? partida.registros.find((r) => r.id === correctionOf) : null;
   const correctionCopy =
@@ -54,12 +63,12 @@ export default async function PartidaPage({
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
       <Link href={`/app/projects/${partida.projectId}`} className="kicker" style={{ textDecoration: "none" }}>← {partida.project.name}</Link>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 4px" }}>{partida.name}</h1>
-      {isAdmin && (
+      {canEditStructure && (
         <div style={{ marginBottom: 8 }}>
           <PartidaDeleteButton partidaId={partida.id} projectId={partida.projectId} t={{ del: t.project.del, delConfirm: t.project.delConfirm, yes: t.project.yes, no: t.project.no }} />
         </div>
       )}
-      <div className="mono text-steel" style={{ marginBottom: 24, fontSize: "0.8rem" }}>{t.partida.progress} {partida.progressPct}%</div>
+      <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
       <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} />
       {partida.registros.map((r) => (
         <RecordCard

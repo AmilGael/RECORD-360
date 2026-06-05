@@ -159,7 +159,12 @@ body {
 @media (max-width: 760px) { .workspace { grid-template-columns: 1fr; } }
 .tree { border-right: 1px solid var(--line); padding: 10px 8px; }
 @media (max-width: 760px) { .tree { border-right: none; border-bottom: 1px solid var(--line); } }
+.tree-filter { display: flex; flex-direction: column; gap: 7px; padding: 2px 8px 10px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.tree-filter .search-input { min-height: 34px; font-size: 0.78rem; }
+.tree-filter .input { min-height: 34px; padding: 0.42rem 0.55rem; font-size: 0.76rem; }
+.tree-empty { color: var(--steel); font-size: 0.82rem; padding: 12px 8px; }
 .tree-folder { font-family: var(--font-mono), monospace; font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.03em; padding: 8px 8px 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tree-folder .pct { color: var(--steel); font-size: 0.62rem; margin-left: 4px; }
 .tree-row { border-radius: var(--radius-sm); }
 .tree-row:hover { background: var(--paper-2); }
 .tree-row.is-active { background: var(--paper-3); box-shadow: inset 2px 0 0 var(--accent); }
@@ -174,6 +179,17 @@ body {
 .inline-edit .input { min-height: 30px; padding: 0.35rem 0.5rem; font-size: 0.76rem; width: min(220px, 100%); }
 .inline-edit .btn { padding: 0.35rem 0.62rem; font-size: 0.72rem; }
 .tree-edit { font-size: 0.62rem; }
+
+.assignment-panel { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--paper-2); max-width: 720px; }
+.assignment-head { font-family: var(--font-mono), monospace; font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--steel); font-weight: 700; margin-bottom: 8px; }
+.assignment-group { margin-top: 8px; }
+.assignment-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 8px; align-items: center; padding: 5px 0; font-size: 0.84rem; border-top: 1px solid var(--line); }
+.assignment-row .btn, .assignment-form .btn { padding: 0.35rem 0.65rem; font-size: 0.72rem; }
+.assignment-form { margin-top: 10px; display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+@media (max-width: 680px) { .assignment-row, .assignment-form { grid-template-columns: 1fr; } }
+.progress-edit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 14px; }
+.progress-edit .input { width: 92px; min-height: 34px; padding: 0.4rem 0.55rem; }
+.progress-edit .btn { padding: 0.38rem 0.7rem; font-size: 0.74rem; }
 
 .viewport { padding: 18px 20px; }
 .viewport .telemetry { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); letter-spacing: 0.02em; }

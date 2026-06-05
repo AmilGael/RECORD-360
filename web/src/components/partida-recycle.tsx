@@ -8,11 +8,12 @@ type RecycleT = { recycleTitle: string; restore: string; deleteForever: string; 
 type DeletedRow = Partida & { _count: { registros: number } };
 
 export function PartidaRecycle({
-  rows, deleterMap, lang, t,
+  rows, deleterMap, lang, canPurge, t,
 }: {
   rows: DeletedRow[];
   deleterMap: Map<string, string>;
   lang: Lang;
+  canPurge: boolean;
   t: RecycleT;
 }) {
   if (rows.length === 0) return null;
@@ -31,14 +32,14 @@ export function PartidaRecycle({
                 <input type="hidden" name="partidaId" value={p.id} />
                 <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.74rem" }}>{t.restore}</SubmitButton>
               </form>
-              {p._count.registros === 0 ? (
+              {canPurge && p._count.registros === 0 ? (
                 <form action={purgePartida}>
                   <input type="hidden" name="partidaId" value={p.id} />
                   <SubmitButton className="btn btn-accent" style={{ padding: "0.3rem 0.7rem", fontSize: "0.74rem" }}>{t.deleteForever}</SubmitButton>
                 </form>
-              ) : (
+              ) : p._count.registros > 0 ? (
                 <span className="mono text-steel" style={{ fontSize: "0.66rem" }}>{t.hasRecords}</span>
-              )}
+              ) : null}
             </span>
           </div>
         ))}

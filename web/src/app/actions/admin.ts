@@ -7,15 +7,16 @@ import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
 import { parseSegment } from "@/lib/registro/validate";
 import { resolveSegment } from "@/lib/project/segments";
+import { requireProjectStructureAccess } from "@/lib/authz/projects";
 
 const ADMIN_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
 
 /** Require a signed-in user; returns their tenant + role. */
 async function requireSession() {
   const session = await auth();
-  const user = session?.user as { companyId?: string; role?: Role } | undefined;
-  if (!user?.companyId || !user.role) throw new Error("Unauthorized");
-  return { companyId: user.companyId, role: user.role };
+  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
+  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
+  return { id: user.id, companyId: user.companyId, role: user.role };
 }
 
 /** Require a user who may administer the company (ADMIN or MANAGER). */
@@ -38,21 +39,18 @@ export async function createProject(formData: FormData) {
 }
 
 export async function createPartida(formData: FormData) {
-  const { companyId } = await requireAdmin();
+  const user = await requireSession();
   const projectId = String(formData.get("projectId"));
-  // Cross-tenant guard: the project must belong to the caller's company.
-  const project = await prisma.project.findFirst({ where: { id: projectId, companyId } });
-  if (!project) throw new Error("Forbidden");
+  await requireProjectStructureAccess(user, projectId);
   const segmentId = await resolveSegment(projectId, parseSegment(formData.get("segment")));
   await prisma.partida.create({ data: { projectId, name: String(formData.get("name")), segmentId } });
   revalidatePath(`/app/projects/${projectId}`);
 }
 
 export async function createSegment(formData: FormData) {
-  const { companyId } = await requireAdmin();
+  const user = await requireSession();
   const projectId = String(formData.get("projectId"));
-  const project = await prisma.project.findFirst({ where: { id: projectId, companyId } });
-  if (!project) throw new Error("Forbidden");
+  await requireProjectStructureAccess(user, projectId);
   await resolveSegment(projectId, parseSegment(formData.get("name")));
   revalidatePath(`/app/projects/${projectId}`);
 }

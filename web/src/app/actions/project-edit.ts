@@ -5,15 +5,21 @@ import { writeAudit } from "@/lib/audit/log";
 import { parseSegment } from "@/lib/registro/validate";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { requireProjectStructureAccess } from "@/lib/authz/projects";
 
 const MANAGER_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
 
-async function requireManager() {
+async function requireSession() {
   const session = await auth();
   const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
   if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
-  if (!MANAGER_ROLES.includes(user.role)) throw new Error("Forbidden");
   return { id: user.id, companyId: user.companyId, role: user.role };
+}
+
+async function requireManager() {
+  const user = await requireSession();
+  if (!MANAGER_ROLES.includes(user.role)) throw new Error("Forbidden");
+  return user;
 }
 
 function parseName(raw: FormDataEntryValue | null, label: string, max = 120) {
@@ -52,7 +58,7 @@ export async function renameProject(formData: FormData) {
 }
 
 export async function renameSegment(formData: FormData) {
-  const user = await requireManager();
+  const user = await requireSession();
   const segmentId = String(formData.get("segmentId"));
   const name = parseSegment(formData.get("name"));
   if (!name) throw new Error("El nombre del bloque es obligatorio.");
@@ -62,6 +68,7 @@ export async function renameSegment(formData: FormData) {
     select: { id: true, projectId: true, name: true },
   });
   if (!segment) throw new Error("Forbidden");
+  await requireProjectStructureAccess(user, segment.projectId);
   if (segment.name === name) return;
 
   const duplicate = await prisma.segment.findFirst({
@@ -90,7 +97,7 @@ export async function renameSegment(formData: FormData) {
 }
 
 export async function renamePartida(formData: FormData) {
-  const user = await requireManager();
+  const user = await requireSession();
   const partidaId = String(formData.get("partidaId"));
   const name = parseName(formData.get("name"), "El nombre de la partida");
 
@@ -99,6 +106,7 @@ export async function renamePartida(formData: FormData) {
     select: { id: true, projectId: true, name: true },
   });
   if (!partida) throw new Error("Forbidden");
+  await requireProjectStructureAccess(user, partida.projectId);
   if (partida.name === name) return;
 
   await prisma.$transaction(async (tx) => {
@@ -118,7 +126,7 @@ export async function renamePartida(formData: FormData) {
 }
 
 export async function movePartida(formData: FormData) {
-  const user = await requireManager();
+  const user = await requireSession();
   const partidaId = String(formData.get("partidaId"));
   const rawSegmentId = String(formData.get("segmentId") ?? "");
   const segmentId = rawSegmentId ? rawSegmentId : null;
@@ -128,6 +136,7 @@ export async function movePartida(formData: FormData) {
     select: { id: true, projectId: true, name: true, segmentId: true },
   });
   if (!partida) throw new Error("Forbidden");
+  await requireProjectStructureAccess(user, partida.projectId);
   if (partida.segmentId === segmentId) return;
 
   if (segmentId) {

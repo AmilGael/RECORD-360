@@ -32,10 +32,10 @@ beforeAll(async () => {
   companyBId = companyB.id;
 
   const userA = await prisma.user.create({
-    data: { email: `media-a-${suffix}@x.do`, name: "Media A", role: "RESIDENT", companyId: companyAId, passwordHash: "x" },
+    data: { email: `media-a-${suffix}@x.do`, name: "Media A", role: "ADMIN", companyId: companyAId, passwordHash: "x" },
   });
   const userB = await prisma.user.create({
-    data: { email: `media-b-${suffix}@x.do`, name: "Media B", role: "RESIDENT", companyId: companyBId, passwordHash: "x" },
+    data: { email: `media-b-${suffix}@x.do`, name: "Media B", role: "ADMIN", companyId: companyBId, passwordHash: "x" },
   });
   userAId = userA.id;
   userBId = userB.id;
@@ -60,6 +60,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.changeAttachment.deleteMany({ where: { changeRequest: { projectId: projectAId } } });
+  await prisma.changeRequest.deleteMany({ where: { projectId: projectAId } });
+  await prisma.document.deleteMany({ where: { projectId: projectAId } });
   await prisma.attachment.deleteMany({ where: { registroId: registroAId } });
   await prisma.registro.deleteMany({ where: { id: registroAId } });
   await prisma.partida.deleteMany({ where: { id: partidaAId } });
@@ -77,7 +80,7 @@ beforeEach(() => {
 
 describe("GET /api/media/[key]", () => {
   it("serves an attachment for a user in the owning company", async () => {
-    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId } });
+    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId, role: "ADMIN" } });
 
     const response = await GET(new Request("http://test.local/api/media/owned.png"), {
       params: Promise.resolve({ key: "owned.png" }),
@@ -89,7 +92,7 @@ describe("GET /api/media/[key]", () => {
   });
 
   it("does not serve another company's attachment", async () => {
-    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId } });
+    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId, role: "ADMIN" } });
 
     const response = await GET(new Request("http://test.local/api/media/owned.png"), {
       params: Promise.resolve({ key: "owned.png" }),
@@ -104,8 +107,9 @@ describe("GET /api/media/[key]", () => {
       data: { projectId: projectAId, code: "SC-EV", title: "ev", authorId: userAId,
         attachments: { create: [{ url: "/api/media/cr-evid.png", sha256: "b".repeat(64), fileType: "IMAGE" }] } },
     });
-    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId } });
+    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId, role: "ADMIN" } });
     const res = await GET(new Request("http://test.local/api/media/cr-evid.png"), { params: Promise.resolve({ key: "cr-evid.png" }) });
+    expect(storageGet).toHaveBeenCalledWith("cr-evid.png");
     expect(res.status).toBe(200);
     await prisma.changeAttachment.deleteMany({ where: { changeRequestId: cr.id } });
     await prisma.changeRequest.deleteMany({ where: { id: cr.id } });
@@ -116,7 +120,7 @@ describe("GET /api/media/[key]", () => {
       data: { projectId: projectAId, code: "SC-EVX", title: "evx", authorId: userAId,
         attachments: { create: [{ url: "/api/media/cr-evid-x.png", sha256: "c".repeat(64), fileType: "IMAGE" }] } },
     });
-    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId } });
+    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId, role: "ADMIN" } });
     const res = await GET(new Request("http://test.local/api/media/cr-evid-x.png"), { params: Promise.resolve({ key: "cr-evid-x.png" }) });
     expect(res.status).toBe(404);
     expect(storageGet).not.toHaveBeenCalled();
@@ -128,8 +132,9 @@ describe("GET /api/media/[key]", () => {
     const doc = await prisma.document.create({
       data: { projectId: projectAId, kind: "PLANO", url: "/api/media/plano-x.pdf", sha256: "d".repeat(64), fileType: "PDF", uploadedById: userAId },
     });
-    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId } });
+    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId, role: "ADMIN" } });
     const res = await GET(new Request("http://test.local/api/media/plano-x.pdf"), { params: Promise.resolve({ key: "plano-x.pdf" }) });
+    expect(storageGet).toHaveBeenCalledWith("plano-x.pdf");
     expect(res.status).toBe(200);
     await prisma.document.deleteMany({ where: { id: doc.id } });
   });
@@ -137,7 +142,7 @@ describe("GET /api/media/[key]", () => {
     const doc = await prisma.document.create({
       data: { projectId: projectAId, kind: "PLANO", url: "/api/media/plano-y.pdf", sha256: "e".repeat(64), fileType: "PDF", uploadedById: userAId },
     });
-    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId } });
+    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId, role: "ADMIN" } });
     const res = await GET(new Request("http://test.local/api/media/plano-y.pdf"), { params: Promise.resolve({ key: "plano-y.pdf" }) });
     expect(res.status).toBe(404);
     expect(storageGet).not.toHaveBeenCalled();

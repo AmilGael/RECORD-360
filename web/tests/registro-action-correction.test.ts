@@ -77,7 +77,7 @@ afterAll(async () => {
 beforeEach(() => {
   authMock.mockReset();
   revalidatePathMock.mockReset();
-  authMock.mockResolvedValue({ user: { id: userId, companyId } });
+  authMock.mockResolvedValue({ user: { id: userId, companyId, role: "ADMIN" } });
 });
 
 describe("logRegistro corrections", () => {

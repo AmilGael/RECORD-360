@@ -23,6 +23,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.document.deleteMany({ where: { projectId } });
+  await prisma.projectAssignment.deleteMany({ where: { projectId } });
   await prisma.project.deleteMany({ where: { id: projectId } });
   await prisma.user.deleteMany({ where: { id: { in: [adminId, residentId] } } });
   await prisma.company.deleteMany({ where: { id: companyId } });
@@ -52,10 +53,22 @@ describe("createDocument", () => {
     expect(doc.fileType).toBe("PDF");
     expect(doc.url).toBe("/api/media/plano.pdf");
   });
-  it("rejects a resident (role gate, P2 widens this)", async () => {
+  it("rejects an unassigned resident", async () => {
     authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
     const res = await createDocument(null, fdWithFile());
     expect(res.ok).toBe(false);
+  });
+  it("stores a PLANO document for an assigned resident", async () => {
+    await prisma.projectAssignment.create({
+      data: { projectId, userId: residentId, role: "RESIDENT" },
+    });
+    authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
+
+    const res = await createDocument(null, fdWithFile());
+
+    expect(res.ok).toBe(true);
+    const doc = await prisma.document.findFirstOrThrow({ where: { projectId, uploadedById: residentId } });
+    expect(doc.fileType).toBe("PDF");
   });
   it("rejects when no file is provided", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });

@@ -4,12 +4,12 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
 import { writeAudit } from "@/lib/audit/log";
+import { requireProjectStructureAccess } from "@/lib/authz/projects";
 
-async function requireManager() {
+async function requireSession() {
   const session = await auth();
   const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
   if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
-  if (user.role !== Role.ADMIN && user.role !== Role.MANAGER) throw new Error("Forbidden");
   return { id: user.id, companyId: user.companyId, role: user.role };
 }
 
@@ -23,8 +23,9 @@ async function ownedPartida(partidaId: string, companyId: string) {
 }
 
 export async function deletePartida(formData: FormData) {
-  const { id: uid, companyId } = await requireManager();
+  const { id: uid, companyId, role } = await requireSession();
   const p = await ownedPartida(String(formData.get("partidaId")), companyId);
+  await requireProjectStructureAccess({ id: uid, companyId, role }, p.projectId);
   const deletedAt = new Date();
   await prisma.$transaction(async (tx) => {
     await tx.partida.update({ where: { id: p.id }, data: { deletedAt, deletedById: uid } });
@@ -42,8 +43,9 @@ export async function deletePartida(formData: FormData) {
 }
 
 export async function restorePartida(formData: FormData) {
-  const { id: uid, companyId } = await requireManager();
+  const { id: uid, companyId, role } = await requireSession();
   const p = await ownedPartida(String(formData.get("partidaId")), companyId);
+  await requireProjectStructureAccess({ id: uid, companyId, role }, p.projectId);
   await prisma.$transaction(async (tx) => {
     await tx.partida.update({ where: { id: p.id }, data: { deletedAt: null, deletedById: null } });
     await writeAudit(tx, {
@@ -60,7 +62,7 @@ export async function restorePartida(formData: FormData) {
 }
 
 export async function purgePartida(formData: FormData) {
-  const { id: uid, role, companyId } = await requireManager();
+  const { id: uid, role, companyId } = await requireSession();
   if (role !== Role.ADMIN) throw new Error("Forbidden");
   const p = await ownedPartida(String(formData.get("partidaId")), companyId);
   const records = await prisma.registro.count({ where: { partidaId: p.id } });
