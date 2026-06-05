@@ -110,4 +110,17 @@ describe("GET /api/media/[key]", () => {
     await prisma.changeAttachment.deleteMany({ where: { changeRequestId: cr.id } });
     await prisma.changeRequest.deleteMany({ where: { id: cr.id } });
   });
+
+  it("does not serve another company's change-request evidence", async () => {
+    const cr = await prisma.changeRequest.create({
+      data: { projectId: projectAId, code: "SC-EVX", title: "evx", authorId: userAId,
+        attachments: { create: [{ url: "/api/media/cr-evid-x.png", sha256: "c".repeat(64), fileType: "IMAGE" }] } },
+    });
+    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId } });
+    const res = await GET(new Request("http://test.local/api/media/cr-evid-x.png"), { params: Promise.resolve({ key: "cr-evid-x.png" }) });
+    expect(res.status).toBe(404);
+    expect(storageGet).not.toHaveBeenCalled();
+    await prisma.changeAttachment.deleteMany({ where: { changeRequestId: cr.id } });
+    await prisma.changeRequest.deleteMany({ where: { id: cr.id } });
+  });
 });
