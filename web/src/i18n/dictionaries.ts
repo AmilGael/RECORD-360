@@ -119,6 +119,11 @@ export const dictionaries = {
       assign: "Asignar",
       remove: "Quitar",
       chooseUser: "Seleccionar usuario",
+      analiticaGeneral: "Salud general",
+      analiticaByBloque: "Por bloque",
+      analiticaOpenChanges: "Cambios abiertos",
+      analiticaOverdue: "Recordatorios vencidos",
+      analiticaNoBloques: "Sin bloques todavía.",
     },
     // Cambios = the "pull request" surface, in construction terms. A change request
     // is proposed → revisada → Integrada (merged into the record) / Rechazada.
@@ -318,6 +323,11 @@ export const dictionaries = {
       assign: "Assign",
       remove: "Remove",
       chooseUser: "Select user",
+      analiticaGeneral: "Overall health",
+      analiticaByBloque: "By block",
+      analiticaOpenChanges: "Open change requests",
+      analiticaOverdue: "Overdue reminders",
+      analiticaNoBloques: "No blocks yet.",
     },
     // Changes = the "pull request" surface. A change request is
     // proposed → reviewed → Integrated (merged into the record) / Rejected.
