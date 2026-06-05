@@ -20,6 +20,10 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
     include: { partidas: { include: { partida: { select: { name: true } } } }, attachments: true },
   });
 
+  const resolverName = cr.resolvedById
+    ? (await prisma.user.findFirst({ where: { id: cr.resolvedById, companyId: u.companyId }, select: { name: true } }))?.name ?? null
+    : null;
+
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";
   const canResolve = isManager && cr.status === "OPEN" && cr.authorId !== u.id;
   const dot = cr.status === "OPEN" ? "open" : cr.status === "INTEGRATED" ? "merged" : "rej";
@@ -48,6 +52,19 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
           {cr.gpsLat != null && <><Pin size={11} style={{ verticalAlign: -2, marginRight: 3 }} />{`${Number(cr.gpsLat).toFixed(4)} · `}</>}
           {formatTimestamp(cr.createdAt, lang as Lang)}
         </Field>
+        {cr.attachments.length > 0 && (
+          <Field label={C.evidence}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 8 }}>
+              {cr.attachments.map((a, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={a.id} src={a.url} alt={`${C.evidence} ${i + 1}`} style={{ width: "100%", borderRadius: "var(--radius-sm)", display: "block" }} />
+              ))}
+            </div>
+          </Field>
+        )}
+        {cr.status !== "OPEN" && resolverName && (
+          <Field label={C.resolvedBy}>{resolverName}</Field>
+        )}
         {cr.status === "INTEGRATED" && cr.seal && (
           <Field label={C.seal}><span className="mono">{cr.seal.slice(0, 8)}…{cr.seal.slice(-4)}</span> · {cr.resolvedAt ? formatTimestamp(cr.resolvedAt, lang as Lang) : ""}</Field>
         )}

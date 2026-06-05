@@ -79,7 +79,7 @@ export async function resolveChangeRequest(formData: FormData) {
       authorId: cr.authorId, resolvedById: user.id, resolvedAt,
     });
     const markerText = `Cambio ${cr.code} integrado` +
-      (cr.costImpact ? ` · ${cr.costImpact.toString()}` : "") +
+      (cr.costImpact ? ` · RD$${cr.costImpact.toString()}` : "") +
       (cr.daysImpact != null ? ` · ${cr.daysImpact}d` : "");
     await retryOnConflict(() => prisma.$transaction(async (tx) => {
       await tx.changeRequest.update({ where: { id: cr.id }, data: { status: "INTEGRATED", resolvedById: user.id!, resolvedAt, seal } });
