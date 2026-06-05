@@ -36,7 +36,7 @@ export async function createChangeRequest(formData: FormData) {
   const photos = formData.getAll("evidence").filter((f): f is File => f instanceof File);
   const prepared = await prepareAttachments(photos, storage);
 
-  await prisma.$transaction(async (tx) => {
+  await retryOnConflict(() => prisma.$transaction(async (tx) => {
     const count = await tx.changeRequest.count({ where: { projectId } });
     await tx.changeRequest.create({
       data: {
@@ -46,7 +46,7 @@ export async function createChangeRequest(formData: FormData) {
         attachments: { create: prepared.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })) },
       },
     });
-  });
+  }));
   revalidatePath(`/app/projects/${projectId}`);
 }
 
@@ -58,6 +58,7 @@ export async function resolveChangeRequest(formData: FormData) {
 
   const crId = String(formData.get("changeRequestId"));
   const action = String(formData.get("action"));
+  if (action !== "INTEGRATE" && action !== "REJECT") throw new Error("Acción inválida.");
 
   const cr = await prisma.changeRequest.findFirst({
     where: { id: crId, project: { companyId: user.companyId } },
