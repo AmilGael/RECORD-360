@@ -21,14 +21,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ key: string }>
   const user = session?.user as { companyId?: string } | undefined;
   if (!user?.companyId) return new Response("Unauthorized", { status: 401 });
 
-  const attachment = await prisma.attachment.findFirst({
-    where: {
-      url: `/api/media/${safeKey}`,
-      registro: { partida: { project: { companyId: user.companyId } } },
-    },
-    select: { id: true },
-  });
-  if (!attachment) return new Response("Not found", { status: 404 });
+  const url = `/api/media/${safeKey}`;
+  const owned =
+    (await prisma.attachment.findFirst({
+      where: { url, registro: { partida: { project: { companyId: user.companyId } } } },
+      select: { id: true },
+    })) ??
+    (await prisma.changeAttachment.findFirst({
+      where: { url, changeRequest: { project: { companyId: user.companyId } } },
+      select: { id: true },
+    }));
+  if (!owned) return new Response("Not found", { status: 404 });
 
   try {
     const nodeStream = await storage.get(safeKey);

@@ -98,4 +98,16 @@ describe("GET /api/media/[key]", () => {
     expect(response.status).toBe(404);
     expect(storageGet).not.toHaveBeenCalled();
   });
+
+  it("serves change-request evidence for a user in the owning company", async () => {
+    const cr = await prisma.changeRequest.create({
+      data: { projectId: projectAId, code: "SC-EV", title: "ev", authorId: userAId,
+        attachments: { create: [{ url: "/api/media/cr-evid.png", sha256: "b".repeat(64), fileType: "IMAGE" }] } },
+    });
+    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId } });
+    const res = await GET(new Request("http://test.local/api/media/cr-evid.png"), { params: Promise.resolve({ key: "cr-evid.png" }) });
+    expect(res.status).toBe(200);
+    await prisma.changeAttachment.deleteMany({ where: { changeRequestId: cr.id } });
+    await prisma.changeRequest.deleteMany({ where: { id: cr.id } });
+  });
 });
