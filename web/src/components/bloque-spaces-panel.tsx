@@ -3,6 +3,8 @@ import type { AttachmentType, Document, DocumentKind, Registro } from "@prisma/c
 import type { Lang } from "@/i18n/dictionaries";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { PlanosUpload } from "@/components/planos-upload";
+import { SubmitButton } from "@/components/submit-button";
+import { resolveReminder } from "@/app/actions/reminders";
 
 type SegmentSummary = { id: string; name: string; progress: number; count: number };
 type SpaceKey = "cuaderno" | "planos" | "actualizados" | "levantamientos" | "ideas" | "media" | "recordatorios" | "indicadores";
@@ -25,7 +27,7 @@ function href(projectId: string, segmentId: string, space: SpaceKey) {
 }
 
 export function BloqueSpacesPanel({
-  projectId, segments, selectedSegmentId, selectedSpace, docs, notes, media, reminders, overdueCount, noReminderCount, canUpload, lang, t,
+  projectId, segments, selectedSegmentId, selectedSpace, docs, notes, media, reminders, overdueCount, noReminderCount, canUpload, canResolve, lang, t,
 }: {
   projectId: string;
   segments: SegmentSummary[];
@@ -38,8 +40,9 @@ export function BloqueSpacesPanel({
   overdueCount: number;
   noReminderCount: number;
   canUpload: boolean;
+  canResolve: boolean;
   lang: Lang;
-  t: { emptyDocs: string; upload: string; title: string; error: string; uploadedBy: string; view: string };
+  t: { emptyDocs: string; upload: string; title: string; error: string; uploadedBy: string; view: string; resolve: string };
 }) {
   if (segments.length === 0 || !selectedSegmentId) return null;
   const selected = segments.find((s) => s.id === selectedSegmentId) ?? segments[0];
@@ -82,7 +85,7 @@ export function BloqueSpacesPanel({
         )}
         {space.key === "cuaderno" && <NotesList notes={notes} lang={lang} />}
         {space.key === "media" && <MediaGroups grouped={grouped} />}
-        {space.key === "recordatorios" && <NotesList notes={reminders} lang={lang} empty="Sin recordatorios vencidos o próximos." />}
+        {space.key === "recordatorios" && <RemindersList reminders={reminders} lang={lang} canResolve={canResolve} resolveLabel={t.resolve} />}
         {space.key === "indicadores" && (
           <div className="indicator-grid">
             <div><strong>{selected.progress}%</strong><span>Avance medio</span></div>
@@ -128,6 +131,29 @@ function NotesList({ notes, lang, empty = "Sin registros en este bloque." }: { n
             <span style={{ display: "block", marginTop: 5 }}>{n.text ?? "Registro sin texto"}</span>
           </span>
         </Link>
+      ))}
+    </div>
+  );
+}
+
+function RemindersList({ reminders, lang, canResolve, resolveLabel }: { reminders: NoteItem[]; lang: Lang; canResolve: boolean; resolveLabel: string }) {
+  return (
+    <div className="repo-list">
+      {reminders.length === 0 && <div className="repo-list-empty">Sin recordatorios vencidos o próximos.</div>}
+      {reminders.map((n) => (
+        <div key={n.id} className="cr-row" style={{ justifyContent: "space-between" }}>
+          <Link href={`/app/partidas/${n.partidaId}`} className="cr-main">
+            <span className="cr-title">{n.partidaName}</span>
+            <span className="cr-meta">{formatTimestamp(n.serverCreatedAt, lang)} · HASH {n.hash.slice(0, 8)}…</span>
+            <span style={{ display: "block", marginTop: 5 }}>{n.text ?? "Registro sin texto"}</span>
+          </Link>
+          {canResolve && (
+            <form action={resolveReminder}>
+              <input type="hidden" name="registroId" value={n.id} />
+              <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.74rem", whiteSpace: "nowrap" }}>{resolveLabel}</SubmitButton>
+            </form>
+          )}
+        </div>
       ))}
     </div>
   );
