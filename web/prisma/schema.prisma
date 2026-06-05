@@ -63,6 +63,7 @@ model Project {
   changeRequests ChangeRequest[]
   documents      Document[]
   assignments    ProjectAssignment[]
+  tags           PartidaTag[]
   archivedAt     DateTime?
   createdAt      DateTime        @default(now())
 }
@@ -93,6 +94,7 @@ model Partida {
   progressPct    Int                    @default(0)
   registros      Registro[]
   changeRequests ChangeRequestPartida[]
+  tags           PartidaTagOnPartida[]
   createdAt      DateTime               @default(now())
 
   @@index([segmentId])
@@ -105,9 +107,32 @@ model Segment {
   name      String
   position  Int       @default(0)
   partidas  Partida[]
+  changes   ChangeRequestSegment[]
   createdAt DateTime  @default(now())
 
   @@unique([projectId, name])
+}
+
+model PartidaTag {
+  id        String                @id @default(cuid())
+  projectId String
+  project   Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  partidas  PartidaTagOnPartida[]
+  createdAt DateTime              @default(now())
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model PartidaTagOnPartida {
+  partidaId String
+  partida   Partida    @relation(fields: [partidaId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       PartidaTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([partidaId, tagId])
+  @@index([tagId])
 }
 
 model Location {
@@ -150,11 +175,17 @@ model Registro {
   prevHash        String
   hash            String
   correctionOfId  String?
+  replyToId       String?
+  replyTo         Registro?         @relation("RegistroReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         Registro[]        @relation("RegistroReplies")
+  reminderDueAt   DateTime?
+  reminderResolvedAt DateTime?
   changeRequestId String?
   changeRequest   ChangeRequest?    @relation("RegistroChange", fields: [changeRequestId], references: [id], onDelete: SetNull)
 
   @@unique([partidaId, prevHash])
   @@index([partidaId, serverCreatedAt])
+  @@index([replyToId])
 }
 
 enum ChangeStatus {
@@ -178,15 +209,27 @@ model ChangeRequest {
   gpsLng       Decimal?     @db.Decimal(9, 6)
   resolvedById String?
   resolvedAt   DateTime?
+  rejectionReason String?
   seal         String?
   createdAt    DateTime     @default(now())
 
   partidas    ChangeRequestPartida[]
+  segments    ChangeRequestSegment[]
   attachments ChangeAttachment[]
   markers     Registro[]             @relation("RegistroChange")
 
   @@unique([projectId, code])
   @@index([projectId, status])
+}
+
+model ChangeRequestSegment {
+  changeRequestId String
+  changeRequest   ChangeRequest @relation(fields: [changeRequestId], references: [id], onDelete: Cascade)
+  segmentId       String
+  segment         Segment       @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@id([changeRequestId, segmentId])
+  @@index([segmentId])
 }
 
 model ChangeRequestPartida {

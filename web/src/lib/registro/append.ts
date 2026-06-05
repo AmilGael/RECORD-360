@@ -17,6 +17,8 @@ export type AppendInput = {
   locationId: string | null;
   attachments: { fileType: AttachmentType; url: string; sha256: string }[];
   correctionOfId?: string | null;
+  replyToId?: string | null;
+  reminderDueAt?: Date | null;
   changeRequestId?: string | null;
 };
 
@@ -27,7 +29,7 @@ export async function appendRegistroTx(tx: Prisma.TransactionClient, input: Appe
   });
   const prevHash = tip ? tip.hash : GENESIS_PREV_HASH;
   const serverCreatedAt = new Date();
-  // LEDGER CONTRACT: relational back-pointers (correctionOfId, changeRequestId)
+  // LEDGER CONTRACT: relational back-pointers (correctionOfId, replyToId, changeRequestId)
   // are metadata, NOT ledger content — they MUST stay out of this hash payload.
   // Adding them would change every recomputed hash and break verifyChain for all
   // existing records.
@@ -44,6 +46,8 @@ export async function appendRegistroTx(tx: Prisma.TransactionClient, input: Appe
       gpsLat: input.gpsLat, gpsLng: input.gpsLng, locationId: input.locationId,
       ledgerVersion: LEDGER_VERSION, serverCreatedAt, prevHash, hash,
       correctionOfId: input.correctionOfId ?? null,
+      replyToId: input.replyToId ?? null,
+      reminderDueAt: input.reminderDueAt ?? null,
       changeRequestId: input.changeRequestId ?? null,
       attachments: {
         create: input.attachments.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })),

@@ -36,3 +36,10 @@ export function parseDaysImpact(raw: unknown): number | null {
   if (!Number.isInteger(n)) throw new Error("El impacto en tiempo debe ser un número entero de días.");
   return n;
 }
+
+export function parseRejectionReason(raw: unknown): string {
+  const v = String(raw ?? "").trim();
+  if (v === "") throw new Error("Indica el motivo del rechazo.");
+  if (v.length > 1000) throw new Error("El motivo del rechazo es demasiado largo (máx. 1000 caracteres).");
+  return v;
+}

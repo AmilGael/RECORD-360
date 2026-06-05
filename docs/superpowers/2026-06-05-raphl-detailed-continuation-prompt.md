@@ -40,10 +40,10 @@ Use this prompt to continue the work in a fresh session. It is intentionally exp
 
 ## Current Verified State
 
-Latest completed code includes P0, P1a, P1b, P1c, P1d, and P2. Reported verification after P2:
+Latest completed code includes P0, P1a, P1b, P1c, P1d, P2, P3, and P4. Reported verification after P4:
 
-- 25 test files passing.
-- 107 tests passing.
+- 26 test files passing.
+- 114 tests passing.
 - ESLint clean.
 - TypeScript clean.
 - Production build clean.
@@ -206,117 +206,36 @@ P2 is complete.
    - Deleted Partidas are excluded.
 7. Tests cover project assignment, assigned/unassigned Resident access, document access, media authorization, cambio access, structure CRUD, and progress updates.
 
-## What Remains
-
 ### P3: Cambios Rework + Tags + Replies
 
-Goal: make Cambios match architect feedback and add note-level discussion.
+P3 is complete.
 
-Build these pieces:
-
-1. Cambios scope changes from Partida to Bloque.
-   - User selects one or more Bloques affected.
-   - On approval, marker Registro fans out to all active Partidas under selected Bloques.
-   - If a Bloque has no active Partidas, decide whether to allow and show a warning. Prefer allow with clear note, but no marker rows are created.
-2. Remove cost/time fields from UI.
-   - Existing DB columns can remain nullable for compatibility.
-   - Do not show Costo/Tiempo in create form or list.
-3. Rejection reason.
-   - Add field to ChangeRequest or separate audit metadata.
-   - Required when rejecting.
-   - Show in change detail.
-4. Cambios render like notes.
-   - In affected Partidas, integrated change markers should visually read as Cuaderno entries.
-   - Change detail can remain separate.
-5. Tags.
-   - Add tags for Partida type:
-     - Mamposteria/Mampostería
-     - Diseño
-     - Ebanistería
-     - Construcción ligera
-     - Custom tags
-   - Tags should support grouping and filters.
-6. Replies.
-   - Add append-only `Registro.replyToId`.
-   - Reply UI similar to WhatsApp quote/reply.
-   - A reply is a new Registro, not an edit.
-   - Same-partida validation.
-   - Replies must not alter the hash payload unless explicitly intended. Prefer metadata outside hash payload to preserve chain contract.
-7. Tests.
-   - Cambio can select multiple Bloques.
-   - Approval fans out to active Partidas under selected Bloques.
-   - Deleted Partidas do not receive markers.
-   - Reject requires reason.
-   - Cost/time absent from UI create path.
-   - Tags create/reuse/filter.
-   - Reply validates same Partida and stores `replyToId`.
-
-Acceptance criteria:
-
-- Architect feedback items checked:
-   - "Cambios: entradas como notas"
-   - "Cambios: quitar Costo y Tiempo"
-   - "Cambios: multiselección de bloques afectados"
-   - "Cambios: gerente aprueba/rechaza, motivo al rechazar"
-   - "Etiquetas de tipo de partida + propias"
-   - "Reply tipo WhatsApp a una nota"
-- Full verification passes.
+1. Cambios are Bloque-scoped through `ChangeRequestSegment`.
+2. Create form selects one or more Bloques.
+3. Approval fans out note-style Registro markers to active Partidas under selected Bloques.
+4. Deleted Partidas do not receive markers.
+5. Cost/time fields are removed from the active UI path; old nullable DB fields remain for compatibility.
+6. Reject requires `rejectionReason`, stores it on `ChangeRequest`, and shows it in detail.
+7. Partida tags exist (`PartidaTag`, `PartidaTagOnPartida`) with inline comma-separated editing and project-scoped custom tags.
+8. Note replies exist (`Registro.replyToId`) with same-Partida validation and a reply affordance.
+9. Reply/correction/Cambio pointers remain metadata outside the hash payload.
+10. Tests cover Bloque multiselect, approval fan-out, deleted Partida exclusion, reject reason, tags, replies, and hash-chain validity.
 
 ### P4: Per-Bloque Spaces, Media Views, Charts, Reminders
 
-Goal: build the richer project navigation and operational views.
+P4 base is complete.
 
-Build these pieces:
+1. Project Partidas view includes a per-Bloque spaces panel with lateral navigation.
+2. Spaces: Cuaderno, Planos, Planos Actualizados, Levantamientos, Ideas, Media, Recordatorios, Indicadores.
+3. `Document.segmentId` is wired for per-Bloque uploads and listings.
+4. `DocumentKind` powers Planos, Planos Actualizados, Levantamientos, Ideas, Minutas, and Documentos.
+5. Media view groups Bloque attachments by IMAGE, VIDEO, AUDIO, PDF.
+6. Indicators show Bloque progress, active Partidas, recent Registros, overdue reminders, and no-reminder counts.
+7. `Registro.reminderDueAt` / `reminderResolvedAt` exist; composer can set due dates.
+8. Recordatorios space lists due reminders; active notification delivery remains cross-cutting.
+9. Plan files still open by external media link; a true in-app PDF/large-image viewer remains open.
 
-1. Per-Bloque spaces.
-   - Cuaderno.
-   - Planos.
-   - Planos Actualizados.
-   - Levantamientos.
-   - Ideas.
-2. Planos per Bloque.
-   - Current Planos are project-level.
-   - Add optional `segmentId`/Bloque scope to Document or create a scoped model.
-   - UI should show Planos under each Bloque.
-3. Planos Actualizados.
-   - Dated observations/corrections on plans.
-   - Link to original plan if relevant.
-4. Media submenus.
-   - Fotos.
-   - Videos.
-   - Notas de voz.
-   - Minutas.
-   - Documentos.
-   - Planos.
-   - Notas.
-   - These are filtered/grouped views of existing attachments/documents/entries, not necessarily new storage models.
-5. Lateral navigation.
-   - Shows location/context: Obra > Bloque > Partida > Space.
-   - Should be useful on mobile and desktop.
-6. Charts and indicators.
-   - Micro = Partida.
-   - Medio = Bloque.
-   - General = Project.
-   - Add Red/Yellow/Green health once P2 progress and reminders exist.
-7. Reminders/alarms.
-   - Every relevant observation can have a required timeframe.
-   - Items without reminders are flagged.
-   - Overdue items create in-app alerts.
-   - Notification system may be needed.
-8. Plan viewer.
-   - In-app PDF/large-image viewing.
-   - External link can remain as fallback.
-
-Acceptance criteria:
-
-- Architect feedback items checked:
-   - "Segmento de planos dentro de cada bloque"
-   - "Menú lateral indicativo de ubicación"
-   - "Submenús por tipo"
-   - "Charts micro/medio/general"
-   - "Levantamientos / Ideas / Planos Actualizados por bloque"
-   - "Alarmas/recordatorios obligatorios"
-- Full verification passes.
+## What Remains
 
 ## Cross-Cutting Work Still Open
 
@@ -380,33 +299,32 @@ Use this as the source of truth. Update after every phase.
 - [x] % avance next to Partida, manually editable there.
 - [x] Remove progress editing from note composer.
 - [x] Bottom-up progress rollup Partida -> Bloque -> Obra.
+- [x] Cambios as note-like entries.
+- [x] Cambios no cost/time.
+- [x] Cambios multiselect Bloques affected.
+- [x] Cambios rejection reason/observations.
+- [x] Tags for Partida type and custom tags.
+- [x] Reply to note like WhatsApp.
+- [x] Lateral location navigation.
+- [x] Media submenus by type.
+- [x] Per-Bloque spaces: Cuaderno, Planos, Planos Actualizados, Levantamientos, Ideas.
+- [x] Charts/indicators base views.
+- [x] Reminder due dates plus overdue/no-reminder counts.
 
 ### Partial
 
 - [~] Borrar proyectos.
   - Existing: archive/restore project.
   - Missing: project Reciclaje/delete-forever equivalent.
-- [~] Cambios approval/rejection.
-  - Existing: manager/admin can approve/reject, integrated change creates markers in affected Partidas, seal exists.
-  - Missing: rejection reason, Bloque multiselect, remove cost/time, note-like presentation.
-- [~] Planos dentro de cada Bloque.
-  - Existing: project-level Planos tab.
-  - Missing: per-Bloque Planos space.
+- [~] Reminders/alarms.
+  - Existing: due dates, Recordatorios space, overdue/no-reminder counts.
+  - Missing: active notification delivery.
 
 ### Not Done
 
 - [ ] Advanced Partida filters by tag/type, progress, date, author, note text, and open-Cambios.
-- [ ] Cambios as note-like entries.
-- [ ] Cambios no cost/time.
-- [ ] Cambios multiselect Bloques affected.
-- [ ] Cambios rejection reason/observations.
-- [ ] Tags for Partida type and custom tags.
-- [ ] Reply to note like WhatsApp.
-- [ ] Lateral location navigation.
-- [ ] Media submenus by type.
-- [ ] Per-Bloque spaces: Cuaderno, Planos, Planos Actualizados, Levantamientos, Ideas.
-- [ ] Charts/indicators micro/medio/general.
-- [ ] Reminders/alarms with required timeframe and overdue alerts.
+- [ ] Full analytics traffic-light dashboard.
+- [ ] Active reminder/Cambio notification system.
 - [ ] In-app plan viewer.
 - [ ] S3/R2 storage.
 - [ ] Pagination for Cuaderno/Registros.
@@ -420,9 +338,8 @@ Use this as the source of truth. Update after every phase.
 
 ## Recommended Next Sequence
 
-1. P3: Cambios rework, tags, replies.
-2. P4: Per-Bloque spaces, media submenus, lateral nav, charts, reminders, plan viewer.
-3. Production hardening: S3/R2, pagination, chain verification UI, password reset, offline/PWA, PDF export, legal signatures, analytics.
+1. Production hardening: S3/R2, pagination, chain verification UI, password reset, offline/PWA, PDF export, legal signatures, analytics.
+2. Finish product-depth items: in-app plan viewer, active notification delivery, advanced filters, voice transcription.
 
 ## First Command Checklist For A Fresh Session
 

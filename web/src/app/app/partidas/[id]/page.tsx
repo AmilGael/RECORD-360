@@ -13,10 +13,10 @@ export default async function PartidaPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ correctionOf?: string }>;
+  searchParams: Promise<{ correctionOf?: string; replyTo?: string }>;
 }) {
   const { id } = await params;
-  const { correctionOf } = await searchParams;
+  const { correctionOf, replyTo } = await searchParams;
   const session = await auth();
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
@@ -33,7 +33,7 @@ export default async function PartidaPage({
         },
       },
       registros: {
-        include: { attachments: true, location: true },
+        include: { attachments: true, location: true, replyTo: { select: { id: true, text: true, hash: true } } },
         orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
       },
     },
@@ -46,15 +46,24 @@ export default async function PartidaPage({
   const canEditStructure = isAdmin || partida.project.assignments.some((a) => a.userId === sessionUser.id);
   const locationLabels = partida.project.locations.map((l) => l.label);
   const correctionTarget = correctionOf ? partida.registros.find((r) => r.id === correctionOf) : null;
+  const replyTarget = replyTo ? partida.registros.find((r) => r.id === replyTo) : null;
   const correctionCopy =
     lang === "es"
-      ? { notice: "Corrigiendo", cancelLabel: "Cancelar", correct: "Corregir" }
-      : { notice: "Correcting", cancelLabel: "Cancel", correct: "Correct" };
+      ? { notice: "Corrigiendo", cancelLabel: "Cancelar", correct: "Corregir", replyNotice: "Respondiendo a", reply: "Responder" }
+      : { notice: "Correcting", cancelLabel: "Cancel", correct: "Correct", replyNotice: "Replying to", reply: "Reply" };
   const correction = correctionTarget
     ? {
         id: correctionTarget.id,
         label: `${correctionTarget.hash.slice(0, 8)}…${correctionTarget.hash.slice(-4)}`,
         notice: correctionCopy.notice,
+        cancelLabel: correctionCopy.cancelLabel,
+      }
+    : null;
+  const reply = replyTarget
+    ? {
+        id: replyTarget.id,
+        label: `${replyTarget.hash.slice(0, 8)}…${replyTarget.hash.slice(-4)}`,
+        notice: correctionCopy.replyNotice,
         cancelLabel: correctionCopy.cancelLabel,
       }
     : null;
@@ -69,15 +78,16 @@ export default async function PartidaPage({
         </div>
       )}
       <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
-      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} />
+      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} />
       {partida.registros.map((r) => (
         <RecordCard
           key={r.id}
           r={r}
-          t={{ ...t.record, correct: correctionCopy.correct }}
+          t={{ ...t.record, correct: correctionCopy.correct, reply: correctionCopy.reply }}
           lang={lang}
           authorName={authorMap.get(r.authorId) ?? null}
           correctionHref={`/app/partidas/${partida.id}?correctionOf=${r.id}`}
+          replyHref={`/app/partidas/${partida.id}?replyTo=${r.id}`}
         />
       ))}
       {partida.registros.length === 0 && <p className="text-steel">{t.partida.empty}</p>}

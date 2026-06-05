@@ -5,8 +5,15 @@ import { Folder, Search } from "@/components/icons";
 import { MovePartidaForm, RenamePartidaForm, RenameSegmentForm } from "@/components/project-edit-controls";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 import { projectProgress } from "@/lib/project/progress";
+import { setPartidaTags } from "@/app/actions/partida-tags";
 
-type PartidaRow = { id: string; name: string; progressPct: number; segmentId?: string | null };
+type PartidaRow = {
+  id: string;
+  name: string;
+  progressPct: number;
+  segmentId?: string | null;
+  tags?: { tag: { name: string } }[];
+};
 type TreeT = {
   ungrouped: string; newPartida: string; add: string;
   segmentPlaceholder: string; newSegment: string; addSegment: string;
@@ -52,6 +59,16 @@ function FileRow({
         <div className="tree-row-actions">
           <RenamePartidaForm partidaId={pa.id} currentName={pa.name} t={t} />
           <MovePartidaForm partidaId={pa.id} currentSegmentId={pa.segmentId ?? null} segments={segments} t={t} />
+          <form action={setPartidaTags} className="tag-edit">
+            <input type="hidden" name="partidaId" value={pa.id} />
+            <input name="tags" defaultValue={(pa.tags ?? []).map((x) => x.tag.name).join(", ")} className="input" aria-label="Tags" />
+            <SubmitButton className="btn btn-ghost">{t.save}</SubmitButton>
+          </form>
+        </div>
+      )}
+      {pa.tags && pa.tags.length > 0 && (
+        <div className="tag-line">
+          {pa.tags.map((x) => <span key={x.tag.name} className="chip">{x.tag.name}</span>)}
         </div>
       )}
     </div>

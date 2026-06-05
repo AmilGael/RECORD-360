@@ -4,8 +4,12 @@ import type { Lang } from "@/i18n/dictionaries";
 import Link from "next/link";
 import { Pin, Check } from "@/components/icons";
 
-type RecordT = { noGps: string; immutable: string; correct?: string; by?: string; document?: string };
-type RegistroWithRelations = Registro & { attachments: Attachment[]; location: Location | null };
+type RecordT = { noGps: string; immutable: string; correct?: string; reply?: string; by?: string; document?: string };
+type RegistroWithRelations = Registro & {
+  attachments: Attachment[];
+  location: Location | null;
+  replyTo?: Pick<Registro, "id" | "text" | "hash"> | null;
+};
 
 function Media({ a, t }: { a: Attachment; t: RecordT }) {
   const s = { width: "100%", borderRadius: "var(--radius-sm)", display: "block" } as const;
@@ -23,13 +27,14 @@ function Media({ a, t }: { a: Attachment; t: RecordT }) {
 }
 
 export function RecordCard({
-  r, t, lang, authorName, correctionHref,
+  r, t, lang, authorName, correctionHref, replyHref,
 }: {
   r: RegistroWithRelations;
   t: RecordT;
   lang: Lang;
   authorName?: string | null;
   correctionHref?: string;
+  replyHref?: string;
 }) {
   const ts = formatTimestamp(r.serverCreatedAt, lang);
   const gps =
@@ -49,6 +54,12 @@ export function RecordCard({
         {r.location && (
           <div className="mono text-steel" style={{ fontSize: 11, marginBottom: 8 }}><Pin size={12} style={{ verticalAlign: -2, marginRight: 4 }} />{r.location.label}</div>
         )}
+        {r.replyTo && (
+          <div className="reply-quote">
+            <span className="mono">HASH {r.replyTo.hash.slice(0, 8)}…</span>
+            <span>{r.replyTo.text ?? "Registro"}</span>
+          </div>
+        )}
         {r.text && <p style={{ marginBottom: 8 }}>{r.text}</p>}
         {r.attachments.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginTop: 4 }}>
@@ -61,6 +72,11 @@ export function RecordCard({
         {correctionHref && (
           <Link href={correctionHref} className="mono" style={{ display: "inline-flex", marginTop: 8, fontSize: 11, color: "var(--accent-deep)", textDecoration: "none" }}>
             {t.correct ?? "Correct"}
+          </Link>
+        )}
+        {replyHref && (
+          <Link href={replyHref} className="mono" style={{ display: "inline-flex", marginTop: 8, marginLeft: correctionHref ? 12 : 0, fontSize: 11, color: "var(--accent-deep)", textDecoration: "none" }}>
+            {t.reply ?? "Reply"}
           </Link>
         )}
       </div>

@@ -109,4 +109,44 @@ describe("logRegistro corrections", () => {
     await expect(prisma.registro.count({ where: { partidaId } })).resolves.toBe(before);
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
+
+  it("stores replyToId when the target registro belongs to the same partida", async () => {
+    const fd = new FormData();
+    fd.set("partidaId", partidaId);
+    fd.set("text", "reply note");
+    fd.set("replyToId", baseRegistroId);
+
+    const res = await logRegistro(null, fd);
+    expect(res.ok).toBe(true);
+    const reply = await prisma.registro.findFirstOrThrow({
+      where: { partidaId, text: "reply note" },
+      orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
+    });
+    expect(reply.replyToId).toBe(baseRegistroId);
+  });
+
+  it("rejects reply targets from another partida", async () => {
+    const before = await prisma.registro.count({ where: { partidaId } });
+    const fd = new FormData();
+    fd.set("partidaId", partidaId);
+    fd.set("text", "bad reply");
+    fd.set("replyToId", otherRegistroId);
+    const res = await logRegistro(null, fd);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toMatch(/reply/i);
+    await expect(prisma.registro.count({ where: { partidaId } })).resolves.toBe(before);
+  });
+
+  it("stores reminderDueAt as registro metadata", async () => {
+    const due = "2026-06-12T09:30";
+    const fd = new FormData();
+    fd.set("partidaId", partidaId);
+    fd.set("text", "reminder note");
+    fd.set("reminderDueAt", due);
+
+    const res = await logRegistro(null, fd);
+    expect(res.ok).toBe(true);
+    const note = await prisma.registro.findFirstOrThrow({ where: { partidaId, text: "reminder note" } });
+    expect(note.reminderDueAt?.toISOString()).toBe(new Date(due).toISOString());
+  });
 });

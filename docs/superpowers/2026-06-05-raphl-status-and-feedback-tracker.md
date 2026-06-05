@@ -61,27 +61,33 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 
 ---
 
-## 3. LEFT (detailed)
-
 ### Phase 3 — Cambios rework + Tags + Replies
-- **Cambios rework:** affected unit becomes **Bloque** (multiselect, not Partida); **remove Costo + Tiempo**; add a **rejection-reason/observations** field; render entries **like notes**. Keep the seal + approve/reject + propagate-to-affected-Partidas mechanic.
-- **Tags** for Partida type (Mampostería, diseño, ebanistería, construcción ligera… + custom); group/filter by tag.
-- **Note replies** (WhatsApp-style "Reply" to an existing note; append-only `Registro.replyToId`).
+- Cambios are now **Bloque-scoped**: create form selects one or more Bloques, not Partidas.
+- Cost/time fields are removed from the active Cambio create/list/detail workflow; old nullable DB columns remain for compatibility.
+- Reject now requires and stores `rejectionReason`, shown on the detail page.
+- Approval fans out note-style Registro markers to every active Partida inside the selected Bloques; deleted Partidas are excluded.
+- Partida tags exist (`PartidaTag` + join model); inline comma-separated tag editing creates/reuses project-scoped custom tags.
+- Note replies exist (`Registro.replyToId`) with same-Partida validation and a reply affordance in the Cuaderno. Reply metadata stays outside the hash payload.
 
-### Phase 4 — Spaces + media views + charts + reminders
-- **Per-Bloque spaces:** Cuaderno, **Planos** (per-Bloque), **Planos Actualizados** (dated observations/corrections on plans), **Levantamientos**, **Ideas**.
-- **Media submenus:** group a Bloque's attachments by type (Fotos/Videos/Notas de voz/Minutas/Documentos/Planos/Notas), separate from the general feed.
-- **Lateral location nav** (breadcrumb/tree: Obra › Bloque › Partida › Space).
-- **Charts/indicators** micro (Partida) / medio (Bloque) / general (Project) + Red/Yellow/Green health (Analítica tab).
-- **Reminders/alarms:** mandatory timeframe; flag items without a reminder; overdue → in-app alerts that observations aren't resolved.
-- **Plan viewer** (in-app PDF/large-image).
+### Phase 4 — Spaces + media views + indicators + reminders
+- Project Partidas view now includes a **per-Bloque spaces panel** with lateral navigation: Bloque selector + Cuaderno, Planos, Planos Actualizados, Levantamientos, Ideas, Media, Recordatorios, Indicadores.
+- `Document.segmentId` is wired: Planos, Planos Actualizados, Levantamientos, Ideas, Minutas/Documentos can be uploaded/listed per Bloque via `DocumentKind`.
+- Media submenu groups Bloque attachments by type: IMAGE, VIDEO, AUDIO, PDF.
+- Indicators show Bloque progress, active Partida count, recent Registro count, overdue reminder count, and no-reminder count.
+- Registro reminders exist (`reminderDueAt`, `reminderResolvedAt`); composer can set a due date, and the Bloque panel lists reminders/overdue counts.
+- Plan files still open by link; a true in-app PDF/large-image viewer remains open.
+
+---
+
+## 3. LEFT (detailed)
 
 ### Cross-cutting (schedule separately)
 - **S3/R2 storage** + presigned uploads (needed for large video + production).
 - **Offline-first / PWA** (PRD F3 — headline differentiator, not in this feedback but essential).
-- **Notification system** (powers Cambios approvals + reminders).
+- **Notification system** (turns reminder counts/Cambios events into active notifications).
 - **Feed pagination** (PRD scale). **Voice transcription.** **PDF export.** **Digital signatures** (Ley 126-02).
-- **Permissions matrix** doc + tests once Residents have CRUD.
+- **In-app plan viewer** for PDFs/large images.
+- **Advanced filters** by tag/type, progress, date, author, note text, and open-Cambios.
 
 ---
 
@@ -99,21 +105,21 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 - [x] **Subir fotos/videos/documentos sin error** (P0) — note: video ≤50 MB until S3/R2.
 - [x] **Nombre del usuario en las notas** (P0).
 - [x] **"Abrir Bitácora completa" → "Abrir Cuaderno completo"** (P0).
-- [ ] **Un segmento de planos dentro de cada bloque** (P4 — per-Bloque Planos).
+- [x] **Un segmento de planos dentro de cada bloque** (P4 — per-Bloque Planos).
 - [x] **"Segmento" → "Bloque"** (P1a).
-- [ ] **Cambios: entradas parecidas a las notas** (P3).
-- [ ] **Cambios: quitar Costo y Tiempo** (P3).
-- [ ] **Cambios: selección múltiple de bloques afectados** (P3).
-- [~] **Cambios: gerente aprueba/rechaza con marcador; aprobado aparece en partidas afectadas; rechazado con campo de motivo/observaciones** — approve/reject + propagate-to-partidas mechanic exists (Cambios slice); rework adds bloque-scope + rejection reason (P3).
+- [x] **Cambios: entradas parecidas a las notas** (P3).
+- [x] **Cambios: quitar Costo y Tiempo** (P3).
+- [x] **Cambios: selección múltiple de bloques afectados** (P3).
+- [x] **Cambios: gerente aprueba/rechaza con marcador; aprobado aparece en partidas afectadas; rechazado con campo de motivo/observaciones** (P3).
 - [x] **Editar nombres de partidas, bloques y proyectos** (P1c).
 
 ### De lo conversado anteriormente falta
-- [ ] **Menú lateral indicativo de ubicación** (P4).
-- [ ] **Submenús por tipo: fotos/videos/notas de voz/minutas/documentos/planos/notas** (P4).
-- [ ] **Charts/indicadores micro/medio/general** (P4; depends on P2 rollup).
-- [ ] **Etiquetas de tipo de partida + agrupar + crear propias** (P3).
-- [ ] **Levantamientos / Ideas / Planos Actualizados por bloque (+ observaciones a planos por fecha)** (P4).
-- [ ] **Alarmas/recordatorios obligatorios (lapso; avisar si no hay; alertar si vence)** (P4).
+- [x] **Menú lateral indicativo de ubicación** (P4).
+- [x] **Submenús por tipo: fotos/videos/notas de voz/minutas/documentos/planos/notas** (P4 base grouping).
+- [x] **Charts/indicadores micro/medio/general** (P4 base indicators; full Analítica traffic lights still production/analytics work).
+- [x] **Etiquetas de tipo de partida + agrupar + crear propias** (P3).
+- [x] **Levantamientos / Ideas / Planos Actualizados por bloque (+ observaciones a planos por fecha)** (P4).
+- [~] **Alarmas/recordatorios obligatorios (lapso; avisar si no hay; alertar si vence)** — due dates + overdue/no-reminder counts exist; active notification delivery remains cross-cutting.
 - [x] **Ver supervisor y residente por proyecto** (P2).
 - [x] **Residente puede agregar/quitar/editar partidas** (P2).
 - [x] **Residente/Supervisor solo ven su proyecto asignado** (P2).
@@ -123,15 +129,15 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 - [x] **No borrar lo escrito cuando algo no se registra; mostrar error sin borrar** (P0).
 
 ### Idea
-- [ ] **Responder a una nota tipo WhatsApp (reply)** (P3 — note replies).
+- [x] **Responder a una nota tipo WhatsApp (reply)** (P3 — note replies).
 
 ### Bugs / GPS
 - [x] **Bug de subir archivos** (P0).
 - [x] **GPS automático al crear la nota, no por botón** (P0).
 
-**Score:** 20 done · 1 base-exists (Cambios approve/reject) · ~9 planned across P3→P4. Cross-check this list after each phase.
+**Score:** 29 done · 1 partial (active reminder notifications) · remaining production hardening listed above. Cross-check this list after each phase.
 
 ---
 
 ## 5. Suggested next action
-Continue with **P3 (Cambios rework + tags + replies)**, then **P4 (spaces/charts/reminders)**. Use writing-plans → subagent-driven for each, and re-check §4 after every phase.
+Continue with production hardening: S3/R2, pagination, chain verification UI, password reset, voice transcription, offline/PWA, PDF export, legal signatures, in-app plan viewer, and analytics traffic lights.

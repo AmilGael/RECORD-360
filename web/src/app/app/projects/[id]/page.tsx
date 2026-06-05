@@ -13,16 +13,17 @@ import { PartidaRecycle } from "@/components/partida-recycle";
 import { RenameProjectForm } from "@/components/project-edit-controls";
 import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
-import type { Role } from "@prisma/client";
+import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
+import type { DocumentKind, Role } from "@prisma/client";
 
 export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string }>;
+  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; spaceBlock?: string; space?: string }>;
 }) {
   const { id } = await params;
-  const { p: selectedId, tab, q, block } = await searchParams;
+  const { p: selectedId, tab, q, block, spaceBlock, space } = await searchParams;
   const session = await auth();
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
@@ -41,9 +42,19 @@ export default async function ProjectPage({
       },
       segments: {
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-        include: { partidas: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } } },
+        include: {
+          partidas: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "asc" },
+            include: { tags: { include: { tag: { select: { name: true } } } } },
+          },
+        },
       },
-      partidas: { where: { segmentId: null, deletedAt: null }, orderBy: { createdAt: "asc" } },
+      partidas: {
+        where: { segmentId: null, deletedAt: null },
+        orderBy: { createdAt: "asc" },
+        include: { tags: { include: { tag: { select: { name: true } } } } },
+      },
     },
   });
 
@@ -52,8 +63,24 @@ export default async function ProjectPage({
   const avg = projectProgress(allPartidas);
   const segmentNames = project.segments.map((s) => s.name);
   const segmentOptions = project.segments.map((s) => ({ id: s.id, name: s.name }));
+  const segmentSummaries = project.segments.map((s) => ({
+    id: s.id,
+    name: s.name,
+    progress: projectProgress(s.partidas),
+    count: s.partidas.length,
+  }));
 
   const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : "code";
+  const selectedSpaceBlock = segmentSummaries.some((s) => s.id === spaceBlock) ? String(spaceBlock) : (segmentSummaries[0]?.id ?? null);
+  const selectedSpace = (["cuaderno", "planos", "actualizados", "levantamientos", "ideas", "media", "recordatorios", "indicadores"].includes(String(space))
+    ? String(space)
+    : "cuaderno") as SpaceKey;
+  const spaceKind: Partial<Record<SpaceKey, DocumentKind>> = {
+    planos: "PLANO",
+    actualizados: "PLANO_ACTUALIZADO",
+    levantamientos: "LEVANTAMIENTO",
+    ideas: "IDEA",
+  };
   const partidaFilters = {
     q: String(q ?? "").trim(),
     block: String(block ?? ""),
@@ -67,18 +94,63 @@ export default async function ProjectPage({
     ? (await prisma.changeRequest.findMany({
         where: { projectId: id },
         orderBy: { createdAt: "desc" },
-        include: { _count: { select: { partidas: true } } },
+        include: { _count: { select: { partidas: true, segments: true } } },
       })).map((c) => ({
         id: c.id, code: c.code, title: c.title, status: c.status,
-        costImpact: c.costImpact ? c.costImpact.toString() : null,
-        daysImpact: c.daysImpact, createdAt: c.createdAt, seal: c.seal,
-        partidaCount: c._count.partidas,
+        createdAt: c.createdAt, seal: c.seal,
+        segmentCount: c._count.segments || c._count.partidas,
       }))
     : [];
 
   const docs = activeTab === "planos"
     ? await prisma.document.findMany({ where: { projectId: id, kind: "PLANO" }, orderBy: { createdAt: "desc" } })
     : [];
+  const spaceDocs = activeTab === "code" && selectedSpaceBlock && spaceKind[selectedSpace]
+    ? await prisma.document.findMany({
+        where: { projectId: id, segmentId: selectedSpaceBlock, kind: spaceKind[selectedSpace] },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const spaceNotes = activeTab === "code" && selectedSpaceBlock && selectedSpace === "cuaderno"
+    ? (await prisma.registro.findMany({
+        where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null } },
+        orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
+        take: 20,
+        select: { id: true, partidaId: true, text: true, serverCreatedAt: true, hash: true, partida: { select: { name: true } } },
+      })).map((r) => ({ id: r.id, partidaId: r.partidaId, text: r.text, serverCreatedAt: r.serverCreatedAt, hash: r.hash, partidaName: r.partida.name }))
+    : [];
+  const spaceMedia = activeTab === "code" && selectedSpaceBlock && selectedSpace === "media"
+    ? (await prisma.attachment.findMany({
+        where: { registro: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null } } },
+        orderBy: { id: "desc" },
+        take: 60,
+        select: { id: true, url: true, fileType: true, registro: { select: { text: true, serverCreatedAt: true } } },
+      })).map((a) => ({ id: a.id, url: a.url, fileType: a.fileType, text: a.registro.text, createdAt: a.registro.serverCreatedAt }))
+    : [];
+  const now = new Date();
+  const reminderRows = activeTab === "code" && selectedSpaceBlock
+    ? await prisma.registro.findMany({
+        where: {
+          partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null },
+          reminderDueAt: { not: null },
+          reminderResolvedAt: null,
+        },
+        orderBy: { reminderDueAt: "asc" },
+        take: 20,
+        select: { id: true, partidaId: true, text: true, serverCreatedAt: true, hash: true, partida: { select: { name: true } } },
+      })
+    : [];
+  const spaceReminders = reminderRows.map((r) => ({ id: r.id, partidaId: r.partidaId, text: r.text, serverCreatedAt: r.serverCreatedAt, hash: r.hash, partidaName: r.partida.name }));
+  const overdueCount = activeTab === "code" && selectedSpaceBlock
+    ? await prisma.registro.count({
+        where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null }, reminderDueAt: { lt: now }, reminderResolvedAt: null },
+      })
+    : 0;
+  const noReminderCount = activeTab === "code" && selectedSpaceBlock
+    ? await prisma.registro.count({
+        where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null }, reminderDueAt: null },
+      })
+    : 0;
   const uploaderIds = [...new Set(docs.map((d) => d.uploadedById))];
   const uploaders = uploaderIds.length
     ? await prisma.user.findMany({ where: { id: { in: uploaderIds }, companyId }, select: { id: true, name: true } })
@@ -161,12 +233,12 @@ export default async function ProjectPage({
           <CambiosList
             projectId={project.id}
             rows={changeRows}
-            partidas={allPartidas.map((pa) => ({ id: pa.id, name: pa.name }))}
+            partidas={segmentOptions}
             lang={lang}
             t={{
-              empty: t.changes.empty, states: t.changes.states, days: t.changes.days,
+              empty: t.changes.empty, states: t.changes.states,
               new: t.changes.new, fieldTitle: t.changes.fieldTitle, fieldDescription: t.changes.fieldDescription,
-              fieldPartidas: t.changes.fieldPartidas, impactCost: t.changes.impactCost, impactTime: t.changes.impactTime,
+              fieldPartidas: t.changes.fieldPartidas,
               evidence: t.changes.evidence, gps: t.composer.gps, gpsOk: t.composer.gpsOk,
             }}
           />
@@ -215,6 +287,21 @@ export default async function ProjectPage({
               <div className="viewport"><div className="empty">{P.summaryEmpty}</div></div>
             )}
           </div>
+          <BloqueSpacesPanel
+            projectId={project.id}
+            segments={segmentSummaries}
+            selectedSegmentId={selectedSpaceBlock}
+            selectedSpace={selectedSpace}
+            docs={spaceDocs}
+            notes={spaceNotes}
+            media={spaceMedia}
+            reminders={spaceReminders}
+            overdueCount={overdueCount}
+            noReminderCount={noReminderCount}
+            canUpload={canEditStructure}
+            lang={lang}
+            t={{ emptyDocs: t.planos.empty, upload: t.planos.upload, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view }}
+          />
           <PartidaRecycle
             rows={deletedPartidas}
             deleterMap={deleterMap}

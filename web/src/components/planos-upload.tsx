@@ -2,10 +2,11 @@
 import { useEffect, useRef, useActionState } from "react";
 import { createDocument } from "@/app/actions/documents";
 import { SubmitButton } from "@/components/submit-button";
+import type { DocumentKind } from "@prisma/client";
 
 type T = { upload: string; title: string; error: string };
 
-export function PlanosUpload({ projectId, t }: { projectId: string; t: T }) {
+export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { projectId: string; segmentId?: string | null; kind?: DocumentKind; t: T }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction] = useActionState(createDocument, null);
 
@@ -14,6 +15,8 @@ export function PlanosUpload({ projectId, t }: { projectId: string; t: T }) {
   return (
     <form ref={formRef} action={formAction} className="card" style={{ padding: 16, marginBottom: 20 }}>
       <input type="hidden" name="projectId" value={projectId} />
+      <input type="hidden" name="kind" value={kind} />
+      {segmentId && <input type="hidden" name="segmentId" value={segmentId} />}
       <input name="title" placeholder={t.title} className="input" style={{ marginBottom: 10 }} />
       {state && !state.ok && (
         <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>

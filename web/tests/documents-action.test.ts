@@ -10,7 +10,7 @@ vi.mock("@/lib/storage", () => ({ storage: { put: storagePut, get: vi.fn() } }))
 
 import { createDocument } from "@/app/actions/documents";
 
-let companyId = "", adminId = "", residentId = "", projectId = "";
+let companyId = "", adminId = "", residentId = "", projectId = "", segmentId = "";
 
 beforeAll(async () => {
   const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -19,11 +19,13 @@ beforeAll(async () => {
   adminId = (await prisma.user.create({ data: { email: `adm-${s}@x.do`, name: "Adm", role: "ADMIN", companyId, passwordHash: "x" } })).id;
   residentId = (await prisma.user.create({ data: { email: `res-${s}@x.do`, name: "Res", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
   projectId = (await prisma.project.create({ data: { companyId, name: `Doc Project ${s}` } })).id;
+  segmentId = (await prisma.segment.create({ data: { projectId, name: "Doc Bloque" } })).id;
 });
 
 afterAll(async () => {
   await prisma.document.deleteMany({ where: { projectId } });
   await prisma.projectAssignment.deleteMany({ where: { projectId } });
+  await prisma.segment.deleteMany({ where: { id: segmentId } });
   await prisma.project.deleteMany({ where: { id: projectId } });
   await prisma.user.deleteMany({ where: { id: { in: [adminId, residentId] } } });
   await prisma.company.deleteMany({ where: { id: companyId } });
@@ -69,6 +71,18 @@ describe("createDocument", () => {
     expect(res.ok).toBe(true);
     const doc = await prisma.document.findFirstOrThrow({ where: { projectId, uploadedById: residentId } });
     expect(doc.fileType).toBe("PDF");
+  });
+  it("stores a scoped Planos Actualizados document for a bloque", async () => {
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    const fd = fdWithFile();
+    fd.set("segmentId", segmentId);
+    fd.set("kind", "PLANO_ACTUALIZADO");
+
+    const res = await createDocument(null, fd);
+
+    expect(res.ok).toBe(true);
+    const doc = await prisma.document.findFirstOrThrow({ where: { projectId, segmentId, kind: "PLANO_ACTUALIZADO" } });
+    expect(doc.title).toBe("Planta arquitectónica");
   });
   it("rejects when no file is provided", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });

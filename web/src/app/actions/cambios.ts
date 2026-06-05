@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
-import { parseChangeTitle, parseCostImpact, parseDaysImpact } from "@/lib/cambios/validate";
+import { parseChangeTitle, parseRejectionReason } from "@/lib/cambios/validate";
 import { computeChangeSeal } from "@/lib/cambios/seal";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
@@ -22,13 +22,11 @@ export async function createChangeRequest(formData: FormData) {
 
   const title = parseChangeTitle(formData.get("title"));
   const description = (String(formData.get("description") ?? "").trim()) || null;
-  const costImpact = parseCostImpact(formData.get("costImpact"));
-  const daysImpact = parseDaysImpact(formData.get("daysImpact"));
 
-  const partidaIds = [...new Set(formData.getAll("partidaIds").map(String).filter(Boolean))];
-  if (partidaIds.length === 0) throw new Error("Selecciona al menos una partida afectada.");
-  const valid = await prisma.partida.findMany({ where: { id: { in: partidaIds }, projectId, deletedAt: null }, select: { id: true } });
-  if (valid.length !== partidaIds.length) throw new Error("Partida inválida.");
+  const segmentIds = [...new Set(formData.getAll("segmentIds").map(String).filter(Boolean))];
+  if (segmentIds.length === 0) throw new Error("Selecciona al menos un bloque afectado.");
+  const validSegments = await prisma.segment.findMany({ where: { id: { in: segmentIds }, projectId }, select: { id: true } });
+  if (validSegments.length !== segmentIds.length) throw new Error("Bloque inválido.");
 
   const latRaw = formData.get("gpsLat"); const lngRaw = formData.get("gpsLng");
   const gpsLat = latRaw ? Number(latRaw) : null;
@@ -41,9 +39,9 @@ export async function createChangeRequest(formData: FormData) {
     const count = await tx.changeRequest.count({ where: { projectId } });
     await tx.changeRequest.create({
       data: {
-        projectId, code: `SC-${count + 1}`, title, description, costImpact, daysImpact,
+        projectId, code: `SC-${count + 1}`, title, description, costImpact: null, daysImpact: null,
         authorId: user.id!, gpsLat, gpsLng,
-        partidas: { create: partidaIds.map((id) => ({ partidaId: id })) },
+        segments: { create: segmentIds.map((id) => ({ segmentId: id })) },
         attachments: { create: prepared.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })) },
       },
     });
@@ -63,7 +61,7 @@ export async function resolveChangeRequest(formData: FormData) {
 
   const cr = await prisma.changeRequest.findFirst({
     where: { id: crId, project: { companyId: user.companyId } },
-    include: { partidas: { select: { partidaId: true } } },
+    include: { partidas: { select: { partidaId: true } }, segments: { select: { segmentId: true } } },
   });
   if (!cr) throw new Error("Forbidden");
   if (cr.status !== "OPEN") throw new Error("La solicitud ya fue resuelta.");
@@ -71,20 +69,34 @@ export async function resolveChangeRequest(formData: FormData) {
 
   const resolvedAt = new Date();
   if (action === "REJECT") {
-    await prisma.changeRequest.update({ where: { id: cr.id }, data: { status: "REJECTED", resolvedById: user.id, resolvedAt } });
+    const rejectionReason = parseRejectionReason(formData.get("rejectionReason"));
+    await prisma.changeRequest.update({ where: { id: cr.id }, data: { status: "REJECTED", resolvedById: user.id, resolvedAt, rejectionReason } });
   } else if (action === "INTEGRATE") {
+    const segmentIds = cr.segments.map((s) => s.segmentId);
+    const markerPartidas = segmentIds.length
+      ? await prisma.partida.findMany({
+          where: { projectId: cr.projectId, segmentId: { in: segmentIds }, deletedAt: null },
+          select: { id: true },
+          orderBy: { createdAt: "asc" },
+        })
+      : cr.partidas.map((p) => ({ id: p.partidaId }));
+    const markerPartidaIds = markerPartidas.map((p) => p.id);
     const seal = computeChangeSeal({
       code: cr.code, title: cr.title, description: cr.description,
-      costImpact: cr.costImpact ? cr.costImpact.toString() : null,
-      daysImpact: cr.daysImpact, partidaIds: cr.partidas.map((p) => p.partidaId),
+      costImpact: null,
+      daysImpact: null, partidaIds: markerPartidaIds,
       authorId: cr.authorId, resolvedById: user.id, resolvedAt,
     });
-    const markerText = `Cambio ${cr.code} integrado` +
-      (cr.costImpact ? ` · RD$${cr.costImpact.toString()}` : "") +
-      (cr.daysImpact != null ? ` · ${cr.daysImpact}d` : "");
+    const markerText = `Solicitud de cambio ${cr.code} integrada: ${cr.title}`;
     await retryOnConflict(() => prisma.$transaction(async (tx) => {
       await tx.changeRequest.update({ where: { id: cr.id }, data: { status: "INTEGRATED", resolvedById: user.id!, resolvedAt, seal } });
-      for (const { partidaId } of cr.partidas) {
+      if (segmentIds.length && markerPartidaIds.length) {
+        await tx.changeRequestPartida.createMany({
+          data: markerPartidaIds.map((partidaId) => ({ changeRequestId: cr.id, partidaId })),
+          skipDuplicates: true,
+        });
+      }
+      for (const partidaId of markerPartidaIds) {
         await appendRegistroTx(tx, {
           partidaId, authorId: user.id!, category: null, text: markerText,
           progressPct: null, gpsLat: null, gpsLng: null, locationId: null,

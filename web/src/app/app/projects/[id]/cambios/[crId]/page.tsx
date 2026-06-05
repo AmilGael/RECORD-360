@@ -7,17 +7,23 @@ import { resolveChangeRequest } from "@/app/actions/cambios";
 import { SubmitButton } from "@/components/submit-button";
 import { Pin } from "@/components/icons";
 import type { Lang } from "@/i18n/dictionaries";
+import { projectAccessWhere } from "@/lib/authz/projects";
+import type { Role } from "@prisma/client";
 
 export default async function CambioDetail({ params }: { params: Promise<{ id: string; crId: string }> }) {
   const { id, crId } = await params;
   const session = await auth();
-  const u = session!.user as { id: string; companyId: string; role: string };
+  const u = session!.user as { id: string; companyId: string; role: Role };
   const { lang, t } = await getDict();
   const C = t.changes;
 
   const cr = await prisma.changeRequest.findFirstOrThrow({
-    where: { id: crId, projectId: id, project: { companyId: u.companyId } },
-    include: { partidas: { include: { partida: { select: { name: true } } } }, attachments: true },
+    where: { id: crId, projectId: id, project: projectAccessWhere(u) },
+    include: {
+      segments: { include: { segment: { select: { name: true } } } },
+      partidas: { include: { partida: { select: { name: true } } } },
+      attachments: true,
+    },
   });
 
   const resolverName = cr.resolvedById
@@ -41,12 +47,9 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
         <Field label={C.fieldTitle}><span className="h-md" style={{ fontSize: "1.05rem" }}>{cr.title}</span></Field>
         {cr.description && <Field label={C.fieldDescription}>{cr.description}</Field>}
         <Field label={C.fieldPartidas}>
-          {cr.partidas.map((p) => <span key={p.partidaId} className="chip">{p.partida.name}</span>)}
-        </Field>
-        <Field label={`${C.impactCost} / ${C.impactTime}`}>
-          <span className="cr-cost">{cr.costImpact ? `RD$${cr.costImpact.toString()}` : "—"}</span>
-          {" · "}
-          <span>{cr.daysImpact != null ? `${cr.daysImpact} ${C.days}` : "—"}</span>
+          {(cr.segments.length ? cr.segments : cr.partidas).map((p) => (
+            <span key={"segment" in p ? p.segmentId : p.partidaId} className="chip">{"segment" in p ? p.segment.name : p.partida.name}</span>
+          ))}
         </Field>
         <Field label={C.requester}>
           {cr.gpsLat != null && <><Pin size={11} style={{ verticalAlign: -2, marginRight: 3 }} />{`${Number(cr.gpsLat).toFixed(4)} · `}</>}
@@ -65,6 +68,9 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
         {cr.status !== "OPEN" && resolverName && (
           <Field label={C.resolvedBy}>{resolverName}</Field>
         )}
+        {cr.status === "REJECTED" && cr.rejectionReason && (
+          <Field label={C.rejectionReason}>{cr.rejectionReason}</Field>
+        )}
         {cr.status === "INTEGRATED" && cr.seal && (
           <Field label={C.seal}><span className="mono">{cr.seal.slice(0, 8)}…{cr.seal.slice(-4)}</span> · {cr.resolvedAt ? formatTimestamp(cr.resolvedAt, lang as Lang) : ""}</Field>
         )}
@@ -78,6 +84,7 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
             <form action={resolveChangeRequest}>
               <input type="hidden" name="changeRequestId" value={cr.id} />
               <input type="hidden" name="action" value="REJECT" />
+              <textarea name="rejectionReason" required rows={2} className="input" placeholder={C.rejectionReason} style={{ minWidth: 220, resize: "vertical" }} />
               <SubmitButton className="btn btn-ghost">{C.reject}</SubmitButton>
             </form>
             <span className="mono text-steel" style={{ fontSize: "0.62rem", marginLeft: "auto", alignSelf: "center" }}>{C.managerOnly}</span>

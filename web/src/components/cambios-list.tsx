@@ -6,12 +6,11 @@ import { CambiosCreate } from "@/components/cambios-create";
 
 type Row = {
   id: string; code: string; title: string; status: ChangeStatus;
-  costImpact: string | null; // Prisma Decimal serialized via .toString()
-  daysImpact: number | null; createdAt: Date;
-  seal: string | null; partidaCount: number;
+  createdAt: Date;
+  seal: string | null; segmentCount: number;
 };
 type ListT = {
-  empty: string; states: Record<ChangeStatus, string>; days: string;
+  empty: string; states: Record<ChangeStatus, string>;
 } & React.ComponentProps<typeof CambiosCreate>["t"];
 
 const dotClass: Record<ChangeStatus, string> = { OPEN: "open", INTEGRATED: "merged", REJECTED: "rej" };
@@ -27,7 +26,7 @@ export function CambiosList({
 }) {
   return (
     <div>
-      <CambiosCreate projectId={projectId} partidas={partidas} t={t} />
+      <CambiosCreate projectId={projectId} segments={partidas} t={t} />
       <div className="repo-list">
         {rows.length === 0 && <div className="repo-list-empty">{t.empty}</div>}
         {rows.map((r) => (
@@ -35,11 +34,8 @@ export function CambiosList({
             <span className={`pdot ${dotClass[r.status]}`} aria-hidden="true" />
             <span className="cr-main">
               <span className="cr-title">{r.code} · {r.title}</span>
-              <span className="cr-meta">{r.partidaCount} · {t.states[r.status]} · {formatTimestamp(r.createdAt, lang)}{r.seal ? ` · ${r.seal.slice(0, 7)}` : ""}</span>
+              <span className="cr-meta">{r.segmentCount} · {t.states[r.status]} · {formatTimestamp(r.createdAt, lang)}{r.seal ? ` · ${r.seal.slice(0, 7)}` : ""}</span>
             </span>
-            {(r.costImpact || r.daysImpact != null) && (
-              <span className="cr-cost">{r.costImpact ? `RD$${r.costImpact}` : ""}{r.daysImpact != null ? ` · ${r.daysImpact} ${t.days}` : ""}</span>
-            )}
           </Link>
         ))}
       </div>
