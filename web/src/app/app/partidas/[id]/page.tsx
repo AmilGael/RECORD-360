@@ -22,6 +22,7 @@ export default async function PartidaPage({
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
   const isAdmin = hasCompanyWideAccess(sessionUser.role);
+  const isOwner = sessionUser.role === "ADMIN"; // delete is ADMIN-only
   const { lang, t } = await getDict();
   // Tenant scoping: only return the partida if its project belongs to the caller's company.
   const partida = await prisma.partida.findFirstOrThrow({
@@ -74,7 +75,7 @@ export default async function PartidaPage({
       <Link href={`/app/projects/${partida.projectId}`} className="kicker" style={{ textDecoration: "none" }}>← {partida.project.name}</Link>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 4px" }}>{partida.name}</h1>
       <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-        {isAdmin && (
+        {isOwner && (
           <PartidaDeleteButton partidaId={partida.id} projectId={partida.projectId} t={{ del: t.project.del, delConfirm: t.project.delConfirm, yes: t.project.yes, no: t.project.no }} />
         )}
         <PartidaVerifyButton

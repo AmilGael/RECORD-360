@@ -29,6 +29,7 @@ export default async function ProjectPage({
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
   const isAdmin = hasCompanyWideAccess(sessionUser.role);
+  const isOwner = sessionUser.role === "ADMIN"; // delete/recycle is ADMIN-only
   const { lang, t } = await getDict();
   const P = t.project;
 
@@ -187,7 +188,7 @@ export default async function ProjectPage({
     ? (await prisma.user.findFirst({ where: { id: latestAuthorId, companyId }, select: { name: true } }))?.name ?? null
     : null;
 
-  const deletedPartidas = activeTab === "code" && isAdmin
+  const deletedPartidas = activeTab === "code" && isOwner
     ? await prisma.partida.findMany({
         where: { projectId: id, deletedAt: { not: null } },
         include: { _count: { select: { registros: true } } },
