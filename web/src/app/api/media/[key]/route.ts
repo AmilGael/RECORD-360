@@ -5,10 +5,10 @@ import path from "node:path";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 
-// SECURITY: media is served inline on the first-party origin, so it must never
-// be sniffable/executable as anything other than a known-safe raster image.
-// The Content-Type comes from the stored extension (which put() derives from a
-// validated MIME allowlist — SVG excluded), with nosniff + a locked-down CSP.
+// SECURITY: media is served inline on the first-party origin. The Content-Type
+// comes from the stored extension (which put() derives from a validated MIME
+// allowlist — image/pdf/video/audio; SVG and other executable types excluded),
+// with nosniff + a locked-down CSP so nothing is sniffed or executed as script.
 export async function GET(_req: Request, ctx: { params: Promise<{ key: string }> }) {
   const { key } = await ctx.params;
   const safeKey = path.basename(key); // prevent path traversal

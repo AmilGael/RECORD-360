@@ -6,11 +6,15 @@ import { createHash } from "node:crypto";
 export type PreparedAttachment = { fileType: AttachmentType; url: string; sha256: string };
 
 const MAX_FILES = 10;
+// Per-type caps MUST stay below the Next server-action bodySizeLimit (next.config.ts,
+// currently 60mb) so an oversize file is rejected here with a graceful message instead
+// of the opaque framework body-limit error. Larger media (esp. video) needs the
+// dedicated upload route / cloud storage planned in a later phase.
 const SIZE_CAP: Record<AttachmentType, number> = {
   IMAGE: 15 * 1024 * 1024,
   PDF: 30 * 1024 * 1024,
   AUDIO: 30 * 1024 * 1024,
-  VIDEO: 200 * 1024 * 1024,
+  VIDEO: 50 * 1024 * 1024,
 };
 
 /**
