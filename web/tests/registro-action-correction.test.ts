@@ -87,8 +87,8 @@ describe("logRegistro corrections", () => {
     fd.set("text", "corrected note");
     fd.set("correctionOfId", baseRegistroId);
 
-    await logRegistro(fd);
-
+    const res = await logRegistro(null, fd);
+    expect(res.ok).toBe(true);
     const correction = await prisma.registro.findFirstOrThrow({
       where: { partidaId, text: "corrected note" },
       orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
@@ -103,9 +103,9 @@ describe("logRegistro corrections", () => {
     fd.set("partidaId", partidaId);
     fd.set("text", "bad correction");
     fd.set("correctionOfId", otherRegistroId);
-
-    await expect(logRegistro(fd)).rejects.toThrow(/correction/i);
-
+    const res = await logRegistro(null, fd);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toMatch(/correction/i);
     await expect(prisma.registro.count({ where: { partidaId } })).resolves.toBe(before);
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
