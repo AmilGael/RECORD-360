@@ -17,6 +17,7 @@ export default async function Dashboard() {
   const session = await auth();
   const u = session!.user as { id: string; companyId: string; role: Role };
   const isAdmin = hasCompanyWideAccess(u.role);
+  const isOwner = u.role === "ADMIN"; // only ADMIN may archive/restore (delete) projects
   const { lang, t } = await getDict();
   const D = t.dash;
 
@@ -144,7 +145,7 @@ export default async function Dashboard() {
                     )}
                   </div>
                 </Link>
-                {isAdmin && (
+                {isOwner && (
                   <div style={{ marginTop: 8 }}>
                     <ArchiveButton projectId={p.id} t={{ archive: D.archive, confirm: D.confirm, yes: D.yes, no: D.no }} />
                   </div>
@@ -167,12 +168,14 @@ export default async function Dashboard() {
                         <span className="state-badge is-archived">{t.project.statusArchived}</span>
                       </div>
                     </div>
-                    <form action={restoreProject}>
-                      <input type="hidden" name="projectId" value={p.id} />
-                      <SubmitButton className="btn btn-ghost" style={{ padding: "0.35rem 0.8rem", fontSize: "0.75rem" }}>
-                        {D.restore}
-                      </SubmitButton>
-                    </form>
+                    {isOwner && (
+                      <form action={restoreProject}>
+                        <input type="hidden" name="projectId" value={p.id} />
+                        <SubmitButton className="btn btn-ghost" style={{ padding: "0.35rem 0.8rem", fontSize: "0.75rem" }}>
+                          {D.restore}
+                        </SubmitButton>
+                      </form>
+                    )}
                   </div>
                 ))}
               </div>

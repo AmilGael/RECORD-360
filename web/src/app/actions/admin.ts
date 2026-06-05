@@ -51,6 +51,7 @@ export async function createPartida(formData: FormData) {
   const segmentId = await resolveSegment(projectId, parseSegment(formData.get("segment")));
   await prisma.partida.create({ data: { projectId, name: String(formData.get("name")), segmentId } });
   revalidatePath(`/app/projects/${projectId}`);
+  revalidatePath("/app");
 }
 
 export async function createSegment(formData: FormData) {
@@ -59,12 +60,14 @@ export async function createSegment(formData: FormData) {
   await requireProjectStructureAccess(user, projectId);
   await resolveSegment(projectId, parseSegment(formData.get("name")));
   revalidatePath(`/app/projects/${projectId}`);
+  revalidatePath("/app");
 }
 
 // Soft delete: archive an obra. Its partidas and immutable registros are
 // preserved (never destroyed) — the obra is just hidden from the dashboard.
 export async function archiveProject(formData: FormData) {
-  const { companyId } = await requireAdmin();
+  const { companyId, role } = await requireAdmin();
+  if (role !== Role.ADMIN) throw new Error("Forbidden");
   const id = String(formData.get("projectId"));
   const project = await prisma.project.findFirst({ where: { id, companyId } });
   if (!project) throw new Error("Forbidden");
@@ -73,7 +76,8 @@ export async function archiveProject(formData: FormData) {
 }
 
 export async function restoreProject(formData: FormData) {
-  const { companyId } = await requireAdmin();
+  const { companyId, role } = await requireAdmin();
+  if (role !== Role.ADMIN) throw new Error("Forbidden");
   const id = String(formData.get("projectId"));
   const project = await prisma.project.findFirst({ where: { id, companyId } });
   if (!project) throw new Error("Forbidden");

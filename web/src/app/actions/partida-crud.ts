@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
 import { writeAudit } from "@/lib/audit/log";
-import { requireProjectStructureAccess } from "@/lib/authz/projects";
 
 async function requireSession() {
   const session = await auth();
@@ -25,7 +24,7 @@ async function ownedPartida(partidaId: string, companyId: string) {
 export async function deletePartida(formData: FormData) {
   const { id: uid, companyId, role } = await requireSession();
   const p = await ownedPartida(String(formData.get("partidaId")), companyId);
-  await requireProjectStructureAccess({ id: uid, companyId, role }, p.projectId);
+  if (role !== Role.ADMIN) throw new Error("Forbidden");
   const deletedAt = new Date();
   await prisma.$transaction(async (tx) => {
     await tx.partida.update({ where: { id: p.id }, data: { deletedAt, deletedById: uid } });
@@ -40,12 +39,14 @@ export async function deletePartida(formData: FormData) {
     });
   });
   revalidatePath(`/app/projects/${p.projectId}`);
+  revalidatePath(`/app/partidas/${p.id}`);
+  revalidatePath("/app");
 }
 
 export async function restorePartida(formData: FormData) {
   const { id: uid, companyId, role } = await requireSession();
   const p = await ownedPartida(String(formData.get("partidaId")), companyId);
-  await requireProjectStructureAccess({ id: uid, companyId, role }, p.projectId);
+  if (role !== Role.ADMIN) throw new Error("Forbidden");
   await prisma.$transaction(async (tx) => {
     await tx.partida.update({ where: { id: p.id }, data: { deletedAt: null, deletedById: null } });
     await writeAudit(tx, {
@@ -59,6 +60,8 @@ export async function restorePartida(formData: FormData) {
     });
   });
   revalidatePath(`/app/projects/${p.projectId}`);
+  revalidatePath(`/app/partidas/${p.id}`);
+  revalidatePath("/app");
 }
 
 export async function purgePartida(formData: FormData) {
@@ -81,4 +84,6 @@ export async function purgePartida(formData: FormData) {
     });
   });
   revalidatePath(`/app/projects/${p.projectId}`);
+  revalidatePath(`/app/partidas/${p.id}`);
+  revalidatePath("/app");
 }

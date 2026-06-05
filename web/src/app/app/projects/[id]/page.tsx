@@ -187,7 +187,7 @@ export default async function ProjectPage({
     ? (await prisma.user.findFirst({ where: { id: latestAuthorId, companyId }, select: { name: true } }))?.name ?? null
     : null;
 
-  const deletedPartidas = activeTab === "code" && canEditStructure
+  const deletedPartidas = activeTab === "code" && isAdmin
     ? await prisma.partida.findMany({
         where: { projectId: id, deletedAt: { not: null } },
         include: { _count: { select: { registros: true } } },
