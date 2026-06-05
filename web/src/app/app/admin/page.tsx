@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { getDict } from "@/i18n/server";
 import { createUser } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
+import { ResetPasswordButton } from "@/components/reset-password-button";
 import type { Lang } from "@/i18n/dictionaries";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { Key, Plus } from "@/components/icons";
@@ -128,6 +129,12 @@ export default async function AdminPage() {
               <span className="member-date">
                 {A.added} {formatTimestamp(u.createdAt, lang as Lang)}
               </span>
+              {user.role === "ADMIN" && (
+                <ResetPasswordButton
+                  userId={u.id}
+                  t={{ resetPw: A.resetPw, resetConfirm: A.resetConfirm, yes: A.yes, no: A.no }}
+                />
+              )}
             </div>
           ))}
         </div>

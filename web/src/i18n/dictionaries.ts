@@ -197,6 +197,10 @@ export const dictionaries = {
       selectRole: "Seleccionar rol",
       added: "Agregado",
       members: "colaboradores",
+      resetPw: "Restablecer contraseña",
+      resetConfirm: "¿Restablecer?",
+      yes: "Sí",
+      no: "No",
       roles: {
         ADMIN: "Administrador",
         MANAGER: "Gerente",
@@ -404,6 +408,10 @@ export const dictionaries = {
       selectRole: "Select role",
       added: "Added",
       members: "collaborators",
+      resetPw: "Reset password",
+      resetConfirm: "Reset?",
+      yes: "Yes",
+      no: "No",
       roles: {
         ADMIN: "Admin",
         MANAGER: "Manager",
