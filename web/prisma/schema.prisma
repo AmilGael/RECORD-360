@@ -71,6 +71,8 @@ model Partida {
   segmentId      String?
   segment        Segment?               @relation(fields: [segmentId], references: [id], onDelete: SetNull)
   name           String
+  deletedAt      DateTime?
+  deletedById    String?
   progressPct    Int                    @default(0)
   registros      Registro[]
   changeRequests ChangeRequestPartida[]
