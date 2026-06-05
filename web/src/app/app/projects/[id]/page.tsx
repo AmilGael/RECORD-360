@@ -31,9 +31,9 @@ export default async function ProjectPage({
       company: { select: { name: true } },
       segments: {
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-        include: { partidas: { orderBy: { createdAt: "asc" } } },
+        include: { partidas: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } } },
       },
-      partidas: { where: { segmentId: null }, orderBy: { createdAt: "asc" } },
+      partidas: { where: { segmentId: null, deletedAt: null }, orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -67,7 +67,7 @@ export default async function ProjectPage({
 
   const selected = selectedId
     ? await prisma.partida.findFirst({
-        where: { id: selectedId, projectId: id },
+        where: { id: selectedId, projectId: id, deletedAt: null },
         include: {
           registros: {
             orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],

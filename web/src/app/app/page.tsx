@@ -24,6 +24,7 @@ export default async function Dashboard() {
     orderBy: { createdAt: "desc" },
     include: {
       partidas: {
+        where: { deletedAt: null },
         select: {
           progressPct: true,
           registros: {

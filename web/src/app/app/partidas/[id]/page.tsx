@@ -18,7 +18,7 @@ export default async function PartidaPage({
   const { lang, t } = await getDict();
   // Tenant scoping: only return the partida if its project belongs to the caller's company.
   const partida = await prisma.partida.findFirstOrThrow({
-    where: { id, project: { companyId } },
+    where: { id, project: { companyId }, deletedAt: null },
     include: {
       project: { include: { locations: { orderBy: { label: "asc" } } } },
       registros: {
