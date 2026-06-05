@@ -5,6 +5,7 @@ import { getDict } from "@/i18n/server";
 import { LogComposer } from "@/components/log-composer";
 import { RecordCard } from "@/components/record-card";
 import { PartidaDeleteButton } from "@/components/partida-delete-button";
+import { PartidaVerifyButton } from "@/components/partida-verify-button";
 import { PartidaProgressForm } from "@/components/partida-progress-form";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import type { Role } from "@prisma/client";
@@ -72,11 +73,15 @@ export default async function PartidaPage({
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
       <Link href={`/app/projects/${partida.projectId}`} className="kicker" style={{ textDecoration: "none" }}>← {partida.project.name}</Link>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 4px" }}>{partida.name}</h1>
-      {canEditStructure && (
-        <div style={{ marginBottom: 8 }}>
+      <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        {canEditStructure && (
           <PartidaDeleteButton partidaId={partida.id} projectId={partida.projectId} t={{ del: t.project.del, delConfirm: t.project.delConfirm, yes: t.project.yes, no: t.project.no }} />
-        </div>
-      )}
+        )}
+        <PartidaVerifyButton
+          partidaId={partida.id}
+          t={{ verify: t.partida.verify, verifyOk: t.partida.verifyOk, verifyBroken: t.partida.verifyBroken, verifyError: t.partida.verifyError }}
+        />
+      </div>
       <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
       <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} />
       {partida.registros.map((r) => (

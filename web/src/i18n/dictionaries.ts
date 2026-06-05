@@ -161,6 +161,10 @@ export const dictionaries = {
     partida: {
       progress: "AVANCE",
       empty: "Aún no hay registros. Crea el primero arriba.",
+      verify: "Verificar integridad",
+      verifyOk: "Cadena íntegra",
+      verifyBroken: "Cadena alterada",
+      verifyError: "No se pudo verificar.",
     },
     composer: {
       placeholder: "Describe lo que pasó en obra…",
@@ -364,6 +368,10 @@ export const dictionaries = {
     partida: {
       progress: "PROGRESS",
       empty: "No entries yet. Create the first one above.",
+      verify: "Verify integrity",
+      verifyOk: "Chain intact",
+      verifyBroken: "Chain altered",
+      verifyError: "Could not verify.",
     },
     composer: {
       placeholder: "Describe what happened on site…",
