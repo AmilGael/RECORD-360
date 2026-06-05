@@ -47,7 +47,7 @@ export default async function Dashboard() {
     }
   }
   const authors = authorIds.size > 0
-    ? await prisma.user.findMany({ where: { id: { in: [...authorIds] } }, select: { id: true, name: true } })
+    ? await prisma.user.findMany({ where: { id: { in: [...authorIds] }, companyId: u.companyId }, select: { id: true, name: true } })
     : [];
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
 

@@ -59,6 +59,7 @@ export async function logRegistro(_prev: LogResult | null, formData: FormData): 
     const reminderRaw = String(formData.get("reminderDueAt") ?? "").trim();
     const reminderDueAt = reminderRaw ? new Date(reminderRaw) : null;
     if (reminderDueAt && Number.isNaN(reminderDueAt.getTime())) return { ok: false, error: "Recordatorio inválido." };
+    if (reminderDueAt && reminderDueAt.getTime() < Date.now()) return { ok: false, error: "El recordatorio debe ser una fecha futura." };
 
     await appendRegistro({ partidaId, authorId, category, text, progressPct: null, gpsLat, gpsLng, locationId, attachments, correctionOfId, replyToId, reminderDueAt });
     revalidatePath(`/app/partidas/${partidaId}`);
