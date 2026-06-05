@@ -26,7 +26,7 @@ export async function createChangeRequest(formData: FormData) {
 
   const partidaIds = [...new Set(formData.getAll("partidaIds").map(String).filter(Boolean))];
   if (partidaIds.length === 0) throw new Error("Selecciona al menos una partida afectada.");
-  const valid = await prisma.partida.findMany({ where: { id: { in: partidaIds }, projectId }, select: { id: true } });
+  const valid = await prisma.partida.findMany({ where: { id: { in: partidaIds }, projectId, deletedAt: null }, select: { id: true } });
   if (valid.length !== partidaIds.length) throw new Error("Partida inválida.");
 
   const latRaw = formData.get("gpsLat"); const lngRaw = formData.get("gpsLng");

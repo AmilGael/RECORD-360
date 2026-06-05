@@ -18,7 +18,7 @@ export async function logRegistro(_prev: LogResult | null, formData: FormData): 
 
     const partidaId = String(formData.get("partidaId"));
     const partida = await prisma.partida.findFirst({
-      where: { id: partidaId, project: { companyId: user.companyId } },
+      where: { id: partidaId, deletedAt: null, project: { companyId: user.companyId } },
     });
     if (!partida) return { ok: false, error: "No autorizado." };
 
