@@ -91,7 +91,7 @@ export const dictionaries = {
       summaryEmpty: "Selecciona una partida para ver su resumen.",
       summaryNoEntries: "Sin registros todavía.",
       lastUpdate: "última actualización",
-      openLog: "Abrir bitácora completa",
+      openLog: "Abrir Cuaderno completo",
     },
     // Cambios = the "pull request" surface, in construction terms. A change request
     // is proposed → revisada → Integrada (merged into the record) / Rechazada.
@@ -138,7 +138,7 @@ export const dictionaries = {
         OBSERVACIONES: "Observaciones", COSTOS: "Costos", PERSONAL: "Personal",
       },
     },
-    record: { noGps: "sin GPS", immutable: "inalterable" },
+    record: { noGps: "sin GPS", immutable: "inalterable", by: "por", document: "Ver documento" },
     admin: {
       title: "Control de Accesos y Roles",
       kicker: "EQUIPO",
@@ -253,7 +253,7 @@ export const dictionaries = {
       summaryEmpty: "Select a work item to see its summary.",
       summaryNoEntries: "No entries yet.",
       lastUpdate: "last update",
-      openLog: "Open full log",
+      openLog: "Open full notebook",
     },
     // Changes = the "pull request" surface. A change request is
     // proposed → reviewed → Integrated (merged into the record) / Rejected.
@@ -299,7 +299,7 @@ export const dictionaries = {
         OBSERVACIONES: "Observations", COSTOS: "Costs", PERSONAL: "Labor",
       },
     },
-    record: { noGps: "no GPS", immutable: "immutable" },
+    record: { noGps: "no GPS", immutable: "immutable", by: "by", document: "View document" },
     admin: {
       title: "Access Control & Roles",
       kicker: "TEAM",
