@@ -6,7 +6,8 @@ import { CambiosCreate } from "@/components/cambios-create";
 
 type Row = {
   id: string; code: string; title: string; status: ChangeStatus;
-  costImpact: string | null; daysImpact: number | null; createdAt: Date;
+  costImpact: string | null; // Prisma Decimal serialized via .toString()
+  daysImpact: number | null; createdAt: Date;
   seal: string | null; partidaCount: number;
 };
 type ListT = {
@@ -37,7 +38,7 @@ export function CambiosList({
               <span className="cr-meta">{r.partidaCount} · {t.states[r.status]} · {formatTimestamp(r.createdAt, lang)}{r.seal ? ` · ${r.seal.slice(0, 7)}` : ""}</span>
             </span>
             {(r.costImpact || r.daysImpact != null) && (
-              <span className="cr-cost">{r.costImpact ? `RD$${r.costImpact}` : ""}{r.daysImpact != null ? ` · ${r.daysImpact}${t.days[0]}` : ""}</span>
+              <span className="cr-cost">{r.costImpact ? `RD$${r.costImpact}` : ""}{r.daysImpact != null ? ` · ${r.daysImpact} ${t.days}` : ""}</span>
             )}
           </Link>
         ))}
