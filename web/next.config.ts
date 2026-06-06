@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // TEMP (cloudflare quick-tunnel testing) — remove before merging.
-  allowedDevOrigins: ["*.trycloudflare.com"],
+  // Dev-only opt-in: let the Next dev server accept requests proxied through a
+  // Cloudflare quick tunnel during external testing. Off by default (production
+  // is unaffected — allowedDevOrigins only applies to `next dev`). Enable with
+  // DEV_TUNNEL=1 when running the dev server behind a tunnel.
+  ...(process.env.DEV_TUNNEL ? { allowedDevOrigins: ["*.trycloudflare.com"] } : {}),
   // Keep pdfkit out of the webpack bundle so its built-in AFM fonts load at
   // runtime from the node_modules filesystem (not inlined into the bundle).
   serverExternalPackages: ["pdfkit"],
