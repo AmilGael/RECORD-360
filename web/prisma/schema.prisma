@@ -185,10 +185,13 @@ model Registro {
   reminderResolvedAt DateTime?
   changeRequestId  String?
   changeRequest    ChangeRequest?    @relation("RegistroChange", fields: [changeRequestId], references: [id], onDelete: SetNull)
-  idempotencyKey   String?           @unique   // client UUID for offline-capture dedupe; NOT in computeHash
+  idempotencyKey   String?                      // client UUID for offline-capture dedupe; NOT in computeHash
   clientCapturedAt DateTime?                   // when written on-site (offline); NOT in computeHash; metadata only
 
   @@unique([partidaId, prevHash])
+  // Dedup is scoped to the partida (which the caller is access-checked against),
+  // never global — prevents idempotency replay from resolving cross-tenant (IDOR).
+  @@unique([partidaId, idempotencyKey])
   @@index([partidaId, serverCreatedAt])
   @@index([replyToId])
 }

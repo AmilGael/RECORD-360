@@ -44,10 +44,12 @@
 
 - [ ] **Step 1: Add the two columns to `Registro`**
 
-In `model Registro`, add:
+In `model Registro`, add (idempotency uniqueness is **partida-scoped**, not global — prevents IDOR-via-dedup):
 ```prisma
-  idempotencyKey   String?   @unique   // client UUID for offline-capture dedupe; NOT in computeHash
-  clientCapturedAt DateTime?           // when written on-site (offline); NOT in computeHash; metadata only
+  idempotencyKey   String?              // client UUID for offline-capture dedupe; NOT in computeHash
+  clientCapturedAt DateTime?            // when written on-site (offline); NOT in computeHash; metadata only
+  // ... and in the model's index block:
+  @@unique([partidaId, idempotencyKey])
 ```
 
 - [ ] **Step 2: Create + apply the additive migration**
@@ -203,7 +205,7 @@ describe("POST /api/offline/registros", () => {
     asUser();
     const res = await POST(req({ partidaId, idempotencyKey: "k3", text: "hola", clientCapturedAt: "2026-06-01T14:03:00.000Z" }));
     expect(res.status).toBe(200);
-    const rec = await prisma.registro.findUnique({ where: { idempotencyKey: "k3" } });
+    const rec = await prisma.registro.findFirst({ where: { idempotencyKey: "k3" } });
     expect(rec?.text).toBe("hola");
     expect(rec?.clientCapturedAt?.toISOString()).toBe("2026-06-01T14:03:00.000Z");
   });
@@ -249,7 +251,10 @@ export async function POST(request: Request) {
   if (!partida) return Response.json({ error: "Not found" }, { status: 404 });
 
   // Idempotency: if this entry already landed, return it without creating a dup.
-  const existing = await prisma.registro.findUnique({ where: { idempotencyKey }, select: { id: true } });
+  // SCOPED to the (already access-checked) partida — never look up by key alone,
+  // which would let replay resolve cross-tenant (IDOR-via-dedup). Uniqueness is
+  // @@unique([partidaId, idempotencyKey]).
+  const existing = await prisma.registro.findFirst({ where: { partidaId, idempotencyKey }, select: { id: true } });
   if (existing) return Response.json({ id: existing.id, deduped: true }, { status: 200 });
 
   try {
