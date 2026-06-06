@@ -26,6 +26,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.notification.deleteMany({ where: { companyId } });
   await prisma.registro.deleteMany({ where: { partidaId: { in: [pA, pB] } } });
   await prisma.changeRequestPartida.deleteMany({ where: { partidaId: { in: [pA, pB] } } });
   await prisma.changeRequestSegment.deleteMany({ where: { segmentId: { in: [segmentA, segmentB] } } });

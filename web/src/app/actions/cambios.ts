@@ -10,6 +10,7 @@ import { storage } from "@/lib/storage";
 import { appendRegistroTx } from "@/lib/registro/append";
 import { retryOnConflict } from "@/lib/registro/retry";
 import { projectAccessWhere } from "@/lib/authz/projects";
+import { createNotifications } from "@/lib/notifications/create";
 
 export async function createChangeRequest(formData: FormData) {
   const session = await auth();
@@ -35,18 +36,35 @@ export async function createChangeRequest(formData: FormData) {
   const photos = formData.getAll("evidence").filter((f): f is File => f instanceof File);
   const prepared = await prepareAttachments(photos, storage);
 
-  await retryOnConflict(() => prisma.$transaction(async (tx) => {
+  const cr = await retryOnConflict(() => prisma.$transaction(async (tx) => {
     const count = await tx.changeRequest.count({ where: { projectId } });
-    await tx.changeRequest.create({
+    const created = await tx.changeRequest.create({
       data: {
         projectId, code: `SC-${count + 1}`, title, description, costImpact: null, daysImpact: null,
         authorId: user.id!, gpsLat, gpsLng,
         segments: { create: segmentIds.map((id) => ({ segmentId: id })) },
         attachments: { create: prepared.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })) },
       },
+      select: { id: true, code: true },
     });
+    return created;
   }));
+
   revalidatePath(`/app/projects/${projectId}`);
+
+  // Best-effort notifications — must not roll back the cambio
+  const reviewers = await prisma.user.findMany({
+    where: { companyId: user.companyId, role: { in: [Role.ADMIN, Role.MANAGER] }, id: { not: user.id } },
+    select: { id: true },
+  });
+  await createNotifications(reviewers.map((r) => ({
+    companyId: user.companyId!,
+    userId: r.id,
+    type: "cambio.created",
+    title: `Nueva solicitud de cambio ${cr.code}`,
+    body: title,
+    link: `/app/projects/${projectId}/cambios/${cr.id}`,
+  })));
 }
 
 export async function resolveChangeRequest(formData: FormData) {
@@ -112,4 +130,17 @@ export async function resolveChangeRequest(formData: FormData) {
   }
   revalidatePath(`/app/projects/${cr.projectId}`);
   revalidatePath(`/app/projects/${cr.projectId}/cambios/${cr.id}`);
+
+  // Best-effort notification to author
+  const resolvedTitle = action === "INTEGRATE"
+    ? `Solicitud ${cr.code} integrada`
+    : `Solicitud ${cr.code} rechazada`;
+  await createNotifications([{
+    companyId: user.companyId!,
+    userId: cr.authorId,
+    type: "cambio.resolved",
+    title: resolvedTitle,
+    body: cr.title,
+    link: `/app/projects/${cr.projectId}/cambios/${cr.id}`,
+  }]);
 }
