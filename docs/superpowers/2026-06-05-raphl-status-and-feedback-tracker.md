@@ -21,7 +21,7 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 
 ---
 
-## 2. DONE (shipped to `feat/web-m1-core-loop`, verified green: 38 test files / 168 tests, lint/tsc clean)
+## 2. DONE (shipped to `feat/web-m1-core-loop`, verified green: 40 test files / 180 tests, lint/tsc clean)
 
 ### Phase 0 — Hotfixes
 - Multimodal uploads fixed: root cause was the **1 MB server-action body limit** (now 60 MB) + images-only allowlist. Now image/PDF/video/audio upload, type derived from MIME, rendered by type (img/video/audio/doc-link); per-type caps 15/30/30/50 MB (caps sit under the 60 MB body limit so oversize gives a graceful message). Larger video needs the S3/R2 phase.
@@ -88,6 +88,7 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 - **Durable storage (Cloudflare R2)** — S3-compatible adapter behind an env-driven driver; files stay private, served through the authed media route. Activate via `S3_BUCKET`+endpoint+keys. `d7bb705` (guide: `2026-06-05-r2-storage-setup.md`)
 - **Transactional email (Resend)** — env-driven mailer; delivers temp passwords on user-create + password-reset (best-effort). Activate via `RESEND_API_KEY`+`EMAIL_FROM`. `c2970ce` (guide: `2026-06-05-email-setup.md`)
 - **PWA phase 1** — installable (manifest + brand icons) + production-gated offline app-shell service worker (disabled/unregistered in dev). `5e204ae`
+- **Authenticated sign-off (Firma)** — `Signature` model; `signPartida` requires password re-auth (bcrypt) and binds the signature to the ledger **chain head** (latest Registro hash) + its own SHA-256 seal; Firmas section on the partida page + sealed Firmas section in the PDF report. (Not legally-accredited — that needs a paid TSP.) `2df33f5`·`6b2d0c4`·`6f67eff`·`fde1945`
 
 ---
 
@@ -95,7 +96,7 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 
 ### Needs a product/legal decision
 - **Offline data capture** (PWA phase 2) — queue Registros locally + sync on reconnect; must respect the immutable hash chain (ordering/seal at sync time). Phase-1 PWA shell is shipped.
-- **Digital signatures** (Ley 126-02) — *accredited* needs a paid trust-service provider + jurisdiction call. A free **authenticated sign-off** (identity + timestamp sealed into the hash chain) is buildable now — **selected next**.
+- **Digital signatures** (Ley 126-02) — free **authenticated sign-off** is **DONE** (P5: password re-auth + ledger-bound seal, shown in PDF). *Accredited* (legally-binding) still needs a paid trust-service provider + jurisdiction call.
 
 ### Cross-cutting (schedule separately)
 - **In-app plan viewer** for PDFs/large images.
@@ -157,6 +158,6 @@ Legend: `[x]` done · `[~]` partial/base exists · `[ ]` planned (phase noted).
 ---
 
 ## 5. Suggested next action
-**Selected:** free **authenticated sign-off** (firma) for change orders/reports — identity + timestamp sealed into the existing hash chain (not legally accredited; that needs a paid TSP + jurisdiction call). Then, decision-gated: offline data capture (PWA phase 2), accredited signatures. Remaining polish: in-app plan viewer, advanced filters, analytics traffic lights, overdue-reminder → notification scheduled check.
+Decision-gated: **offline data capture** (PWA phase 2), **accredited** signatures (paid TSP + jurisdiction). Remaining polish: in-app plan viewer, advanced filters, analytics traffic lights, overdue-reminder → notification scheduled check. (Free authenticated sign-off is DONE — P5.)
 
 **Pre-merge cleanup still pending:** TEMP `allowedDevOrigins`/`AUTH_TRUST_HOST` (tunnel testing); finish the branch (merge/PR). Activate R2 + Resend via env in prod (see setup guides).
