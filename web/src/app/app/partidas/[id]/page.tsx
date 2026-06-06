@@ -82,6 +82,9 @@ export default async function PartidaPage({
           partidaId={partida.id}
           t={{ verify: t.partida.verify, verifyOk: t.partida.verifyOk, verifyBroken: t.partida.verifyBroken, verifyError: t.partida.verifyError }}
         />
+        <a href={`/api/partidas/${partida.id}/report`} className="btn btn-ghost" download>
+          {t.partida.exportPdf}
+        </a>
       </div>
       <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
       <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />

@@ -165,6 +165,7 @@ export const dictionaries = {
       verifyOk: "Cadena íntegra",
       verifyBroken: "Cadena alterada",
       verifyError: "No se pudo verificar.",
+      exportPdf: "Exportar PDF",
     },
     composer: {
       placeholder: "Describe lo que pasó en obra…",
@@ -378,6 +379,7 @@ export const dictionaries = {
       verifyOk: "Chain intact",
       verifyBroken: "Chain altered",
       verifyError: "Could not verify.",
+      exportPdf: "Export PDF",
     },
     composer: {
       placeholder: "Describe what happened on site…",
