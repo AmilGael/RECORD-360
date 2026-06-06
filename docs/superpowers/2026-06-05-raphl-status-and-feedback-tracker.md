@@ -89,13 +89,14 @@ Paste this whole file as the opening prompt of a fresh session to continue the w
 - **Transactional email (Resend)** — env-driven mailer; delivers temp passwords on user-create + password-reset (best-effort). Activate via `RESEND_API_KEY`+`EMAIL_FROM`. `c2970ce` (guide: `2026-06-05-email-setup.md`)
 - **PWA phase 1** — installable (manifest + brand icons) + production-gated offline app-shell service worker (disabled/unregistered in dev). `5e204ae`
 - **Authenticated sign-off (Firma)** — `Signature` model; `signPartida` requires password re-auth (bcrypt) and binds the signature to the ledger **chain head** (latest Registro hash) + its own SHA-256 seal; Firmas section on the partida page + sealed Firmas section in the PDF report. (Not legally-accredited — that needs a paid TSP.) `2df33f5`·`6b2d0c4`·`6f67eff`·`fde1945`
+- **Offline data capture (PWA phase 2)** — offline-first composer captures notes + media into an IndexedDB queue; an idempotent, tenant-scoped sync endpoint appends each entry to the server-authoritative hash chain on reconnect (capture time stored as metadata, hash payload unchanged). Pending list + nav sync indicator + auto-drain on load/reconnect; `Capturado`/`Sellado` on cards. Idempotency is `@@unique([partidaId, idempotencyKey])` (partida-scoped — no IDOR-via-dedup). `6789468`·`d6b0a9f`·`0915268`·`cc8fd49`·`125a32f`·`4c62374`·`1f27587`·`147e0bd`·`59143f5`. **v1 boundary: works while the app tab is open; cold-start-offline (app-shell) + Background Sync are future phases.**
 
 ---
 
 ## 3. LEFT (detailed)
 
 ### Needs a product/legal decision
-- **Offline data capture** (PWA phase 2) — queue Registros locally + sync on reconnect; must respect the immutable hash chain (ordering/seal at sync time). Phase-1 PWA shell is shipped.
+- **Offline data capture** — **DONE** (P5: offline-first queue + idempotent sync; v1 = tab-open). Remaining: cold-start-offline app-shell + Background Sync (closed-tab flush).
 - **Digital signatures** (Ley 126-02) — free **authenticated sign-off** is **DONE** (P5: password re-auth + ledger-bound seal, shown in PDF). *Accredited* (legally-binding) still needs a paid trust-service provider + jurisdiction call.
 
 ### Cross-cutting (schedule separately)
