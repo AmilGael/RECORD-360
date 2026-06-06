@@ -9,6 +9,7 @@ import { PartidaVerifyButton } from "@/components/partida-verify-button";
 import { PartidaProgressForm } from "@/components/partida-progress-form";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { SignPartidaForm } from "@/components/sign-partida-form";
 import { pageWindow } from "@/lib/feed/paginate";
 import type { Role } from "@prisma/client";
 
@@ -58,6 +59,7 @@ export default async function PartidaPage({
     ? await prisma.user.findMany({ where: { id: { in: authorIds }, companyId }, select: { id: true, name: true } })
     : [];
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
+  const signatures = await prisma.signature.findMany({ where: { partidaId: id }, orderBy: { signedAt: "desc" } });
   const canEditStructure = isAdmin || partida.project.assignments.some((a) => a.userId === sessionUser.id);
   const locationLabels = partida.project.locations.map((l) => l.label);
   // Look up correction/reply targets via dedicated queries (page-independent).
@@ -165,6 +167,33 @@ export default async function PartidaPage({
           )}
         </div>
       )}
+      <section style={{ marginTop: 28, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+        <h2 className="kicker" style={{ marginBottom: 10 }}>{t.signatures.title}</h2>
+        {signatures.length === 0 && <p className="text-steel">{t.signatures.none}</p>}
+        {signatures.map((s) => (
+          <div key={s.id} style={{ marginBottom: 12, fontSize: "0.9rem" }}>
+            <div>
+              <strong>{s.signerName}</strong> · {s.signerRole} ·{" "}
+              {new Date(s.signedAt).toLocaleString(lang === "es" ? "es-DO" : "en-US")}
+            </div>
+            {s.statement && <div className="text-steel" style={{ margin: "2px 0" }}>{s.statement}</div>}
+            <div className="kicker" style={{ color: "var(--steel)" }}>
+              {t.signatures.sealLabel} {s.seal.slice(0, 8)}…{s.seal.slice(-4)} · {t.signatures.boundTo}{" "}
+              {s.chainHead ? `${s.chainHead.slice(0, 8)}…` : t.signatures.emptyLedger}
+            </div>
+          </div>
+        ))}
+        <SignPartidaForm
+          partidaId={partida.id}
+          t={{
+            sign: t.signatures.sign,
+            password: t.signatures.password,
+            statement: t.signatures.statement,
+            statementPlaceholder: t.signatures.statementPlaceholder,
+            signed: t.signatures.signed,
+          }}
+        />
+      </section>
     </div>
   );
 }

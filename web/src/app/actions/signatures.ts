@@ -77,3 +77,19 @@ export async function signPartida(formData: FormData): Promise<void> {
 
   revalidatePath(`/app/partidas/${partidaId}`);
 }
+
+export type SignResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Form-friendly wrapper around signPartida for useActionState: returns a
+ * structured result instead of throwing, so the form can show the error
+ * (e.g. wrong password) without wiping the input.
+ */
+export async function signPartidaAction(_prev: SignResult | null, formData: FormData): Promise<SignResult> {
+  try {
+    await signPartida(formData);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo firmar." };
+  }
+}

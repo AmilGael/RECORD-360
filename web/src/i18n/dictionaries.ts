@@ -7,6 +7,7 @@ export const dictionaries = {
     common: { app: "Raphl", blackBox: "BLACK BOX" },
     nav: { sites: "Obras", team: "Equipo", signOut: "Salir", notifications: "Notificaciones" },
     offline: { title: "Sin conexión", body: "No hay conexión a internet. Vuelve a intentarlo cuando recuperes la señal." },
+    signatures: { title: "Firmas", sign: "Firmar", password: "Contraseña", statement: "Declaración (opcional)", statementPlaceholder: "Doy fe del estado de esta partida…", signed: "Firma registrada.", none: "Aún no hay firmas.", sealLabel: "Sello", boundTo: "Estado del Cuaderno", emptyLedger: "Cuaderno vacío" },
     landing: {
       eyebrow: "Gestión de obra · República Dominicana",
       heroLead:
@@ -241,6 +242,7 @@ export const dictionaries = {
     common: { app: "Raphl", blackBox: "BLACK BOX" },
     nav: { sites: "Sites", team: "Team", signOut: "Sign out", notifications: "Notifications" },
     offline: { title: "You're offline", body: "No internet connection. Try again once your signal is back." },
+    signatures: { title: "Signatures", sign: "Sign", password: "Password", statement: "Statement (optional)", statementPlaceholder: "I attest to the state of this work item…", signed: "Signature recorded.", none: "No signatures yet.", sealLabel: "Seal", boundTo: "Ledger state", emptyLedger: "Empty ledger" },
     landing: {
       eyebrow: "Construction management · Dominican Republic",
       heroLead:

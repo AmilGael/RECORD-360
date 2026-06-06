@@ -62,6 +62,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
           location: true,
         },
       },
+      signatures: { orderBy: { signedAt: "asc" } },
     },
   });
   if (!partida) return new Response("Not found", { status: 404 });
@@ -158,6 +159,28 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       .lineWidth(0.5)
       .stroke();
     doc.moveDown(0.5);
+  }
+
+  // ── Firmas (sign-offs) ─────────────────────────────────────────────────────
+  doc.moveDown(0.4);
+  doc.font(FONT_BOLD).fontSize(12).fillColor(PRIMARY).text("Firmas");
+  doc.moveDown(0.3);
+  if (partida.signatures.length === 0) {
+    doc.font(FONT_SMALL).fontSize(9).fillColor(MUTED).text("Sin firmas.");
+  } else {
+    for (const s of partida.signatures) {
+      const signedAt = s.signedAt.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+      doc.font(FONT_BOLD).fontSize(10).fillColor(PRIMARY);
+      doc.text(`${signedAt}  ·  ${s.signerName} (${s.signerRole})`);
+      if (s.statement) {
+        doc.font(FONT_NORMAL).fontSize(10).fillColor(PRIMARY);
+        doc.text(s.statement, { lineGap: 1 });
+      }
+      doc.font(FONT_SMALL).fontSize(8).fillColor(MUTED);
+      doc.text(`SELLO ${s.seal}`);
+      doc.text(`Estado del Cuaderno: ${s.chainHead || "(vacio)"}`);
+      doc.moveDown(0.5);
+    }
   }
 
   // ── Page numbers ─────────────────────────────────────────────────────────
