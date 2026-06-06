@@ -9,6 +9,7 @@ import { PartidaVerifyButton } from "@/components/partida-verify-button";
 import { PartidaProgressForm } from "@/components/partida-progress-form";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { PendingEntries } from "@/components/pending-entries";
 import { SignPartidaForm } from "@/components/sign-partida-form";
 import { pageWindow } from "@/lib/feed/paginate";
 import type { Role } from "@prisma/client";
@@ -115,6 +116,10 @@ export default async function PartidaPage({
       </div>
       <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
       <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
+      <PendingEntries
+        partidaId={partida.id}
+        t={{ pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, errorTitle: t.offlineCapture.errorTitle }}
+      />
       {registros.map((r) => (
         <RecordCard
           key={r.id}

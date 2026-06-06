@@ -3,6 +3,8 @@ import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getDict } from "@/i18n/server";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { OfflineProvider } from "@/components/offline-provider";
+import { SyncIndicator } from "@/components/sync-indicator";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -17,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="grid-bg" style={{ minHeight: "100vh" }}>
+      <OfflineProvider />
       <header className="appbar">
         <div className="appbar-inner">
           <Link href="/app" className="brand"><b>Raphl<span className="dot" aria-hidden="true">.</span></b><span className="tag">{t.common.blackBox}</span></Link>
@@ -26,6 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/app/notifications">
               {unread > 0 ? `${t.nav.notifications} (${unread})` : t.nav.notifications}
             </Link>
+            <SyncIndicator t={{ pending: t.offlineCapture.pending }} />
             <LanguageSwitcher current={lang} />
             <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
               <button>{t.nav.signOut}</button>
