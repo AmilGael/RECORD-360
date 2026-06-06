@@ -183,8 +183,10 @@ model Registro {
   replies         Registro[]        @relation("RegistroReplies")
   reminderDueAt   DateTime?
   reminderResolvedAt DateTime?
-  changeRequestId String?
-  changeRequest   ChangeRequest?    @relation("RegistroChange", fields: [changeRequestId], references: [id], onDelete: SetNull)
+  changeRequestId  String?
+  changeRequest    ChangeRequest?    @relation("RegistroChange", fields: [changeRequestId], references: [id], onDelete: SetNull)
+  idempotencyKey   String?           @unique   // client UUID for offline-capture dedupe; NOT in computeHash
+  clientCapturedAt DateTime?                   // when written on-site (offline); NOT in computeHash; metadata only
 
   @@unique([partidaId, prevHash])
   @@index([partidaId, serverCreatedAt])
