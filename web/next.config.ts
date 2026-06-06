@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // TEMP (cloudflare quick-tunnel testing) — remove before merging.
   allowedDevOrigins: ["*.trycloudflare.com"],
+  // Keep pdfkit out of the webpack bundle so its built-in AFM fonts load at
+  // runtime from the node_modules filesystem (not inlined into the bundle).
+  serverExternalPackages: ["pdfkit"],
   experimental: {
     // Phone photos / PDFs exceed the 1 MB server-action default and were failing.
     // Kept above the largest per-type upload cap (50mb, see lib/registro/upload.ts)
