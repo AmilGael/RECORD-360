@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useRef, useState, useId, useActionState } from "react";
+import { useEffect, useRef, useState, useId } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logRegistro } from "@/app/actions/registro";
-import { SubmitButton } from "@/components/submit-button";
 import { Mic } from "@/components/icons";
+import { IndexedDbQueue } from "@/lib/offline/queue";
+import { syncQueue } from "@/lib/offline/sync";
+import type { QueuedRegistro } from "@/lib/offline/types";
 import type { Lang } from "@/i18n/dictionaries";
 
 // Minimal structural type for the Web Speech API recogniser — avoids `any`.
@@ -18,8 +19,6 @@ type SpeechRecognitionLike = {
   onend: (() => void) | null;
   onerror: (() => void) | null;
 };
-
-// The constructor may live under either name depending on the browser vendor.
 type WindowWithSpeech = {
   SpeechRecognition?: new () => SpeechRecognitionLike;
   webkitSpeechRecognition?: new () => SpeechRecognitionLike;
@@ -39,8 +38,19 @@ type ComposerT = {
   reminder?: string;
   dictate?: string;
   listening?: string;
+  saved?: string;
   categories: Record<string, string>;
 };
+
+// Lazy browser-only singleton — IndexedDB is only touched inside event handlers.
+let _queue: IndexedDbQueue | null = null;
+function getQueue(): IndexedDbQueue {
+  if (!_queue) _queue = new IndexedDbQueue();
+  return _queue;
+}
+function emitQueueChanged() {
+  window.dispatchEvent(new Event("raphl:queue-changed"));
+}
 
 export function LogComposer({
   partidaId, t, locations, correction, reply, lang,
@@ -57,21 +67,19 @@ export function LogComposer({
   const listId = useId();
   const router = useRouter();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [state, formAction] = useActionState(logRegistro, null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
-  // Voice dictation state
   const [speechSupported, setSpeechSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
 
-  // Detect Web Speech API support on mount (client-only).
   useEffect(() => {
     const w = window as unknown as WindowWithSpeech;
-    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    setSpeechSupported(Boolean(Ctor));
+    setSpeechSupported(Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition));
   }, []);
 
-  // Automatic GPS capture on mount (no button). Silent on denial — the note still saves.
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -80,64 +88,85 @@ export function LogComposer({
     );
   }, []);
 
-  // On success: clear the form and (if correcting) return to the partida. On
-  // error: keep everything the user typed and show the message.
-  useEffect(() => {
-    if (state?.ok) {
-      formRef.current?.reset();
-      if (correction || reply) router.replace(`/app/partidas/${partidaId}`);
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (pending) return;
+    setError(null);
+    const form = formRef.current;
+    if (!form) return;
+    const fd = new FormData(form);
+    const text = String(fd.get("text") ?? "").trim() || null;
+    const files = (fd.getAll("photos").filter((f): f is File => f instanceof File)).filter((f) => f.size > 0);
+    if (!text && files.length === 0) {
+      setError(t.error);
+      return;
     }
-  }, [state, correction, reply, partidaId, router]);
+    const item: QueuedRegistro = {
+      id: crypto.randomUUID(),
+      partidaId,
+      text,
+      category: (String(fd.get("category") ?? "").trim()) || null,
+      gpsLat: coords?.lat ?? null,
+      gpsLng: coords?.lng ?? null,
+      locationLabel: (String(fd.get("location") ?? "").trim()) || null,
+      correctionOfId: correction?.id ?? null,
+      replyToId: reply?.id ?? null,
+      reminderDueAt: (String(fd.get("reminderDueAt") ?? "").trim()) || null,
+      clientCapturedAt: new Date().toISOString(),
+      attachments: files.map((f) => ({ blob: f, filename: f.name, contentType: f.type })),
+      status: "pending",
+      attempts: 0,
+    };
+    setPending(true);
+    try {
+      await getQueue().enqueue(item);
+      form.reset();
+      setSaved(true);
+      emitQueueChanged();
+      // Background sync; refresh the feed when it settles (no-op if offline).
+      void syncQueue({ queue: getQueue(), onChange: emitQueueChanged }).then(() => router.refresh());
+      if (correction || reply) router.replace(`/app/partidas/${partidaId}`);
+      window.setTimeout(() => setSaved(false), 4000);
+    } catch {
+      setError(t.error);
+    } finally {
+      setPending(false);
+    }
+  }
 
   function toggleDictation() {
-    // If already listening, stop and clean up.
     if (listening && recRef.current) {
       recRef.current.stop();
       recRef.current = null;
       setListening(false);
       return;
     }
-
     const w = window as unknown as WindowWithSpeech;
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Ctor) return;
-
     const rec = new Ctor();
     rec.lang = lang === "es" ? "es-DO" : "en-US";
     rec.interimResults = false;
     rec.continuous = false;
-
-    rec.onresult = (e) => {
+    rec.onresult = (ev) => {
       const transcripts: string[] = [];
-      for (let i = 0; i < e.results.length; i++) {
-        transcripts.push(e.results[i][0].transcript);
-      }
+      for (let i = 0; i < ev.results.length; i++) transcripts.push(ev.results[i][0].transcript);
       const appended = transcripts.join(" ");
       if (textRef.current) {
         const existing = textRef.current.value;
         textRef.current.value = existing ? `${existing} ${appended}` : appended;
       }
     };
-
-    const finish = () => {
-      recRef.current = null;
-      setListening(false);
-    };
+    const finish = () => { recRef.current = null; setListening(false); };
     rec.onend = finish;
     rec.onerror = finish;
-
     recRef.current = rec;
     rec.start();
     setListening(true);
   }
 
   return (
-    <form ref={formRef} action={formAction} className="card" style={{ padding: 16, marginBottom: 28 }}>
-      <input type="hidden" name="partidaId" value={partidaId} />
-      {correction && <input type="hidden" name="correctionOfId" value={correction.id} />}
-      {reply && <input type="hidden" name="replyToId" value={reply.id} />}
-      <input type="hidden" name="gpsLat" value={coords?.lat ?? ""} />
-      <input type="hidden" name="gpsLng" value={coords?.lng ?? ""} />
+    <form ref={formRef} onSubmit={handleSubmit} className="card" style={{ padding: 16, marginBottom: 28 }}>
       {correction && (
         <div className="mono" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", background: "var(--paper-2)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "8px 10px", fontSize: "0.7rem", marginBottom: 10 }}>
           <span>{correction.notice} {correction.label}</span>
@@ -151,9 +180,14 @@ export function LogComposer({
         </div>
       )}
       <textarea ref={textRef} name="text" placeholder={t.placeholder} rows={3} className="input" style={{ marginBottom: 10, resize: "vertical" }} />
-      {state && !state.ok && (
+      {error && (
         <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
-          {state.error || t.error}
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p role="status" style={{ background: "rgba(46,125,50,0.08)", border: "1px solid #2e7d32", color: "#2e7d32", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+          {t.saved ?? "Guardado."}
         </p>
       )}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -172,22 +206,16 @@ export function LogComposer({
           <input type="datetime-local" name="reminderDueAt" className="input" style={{ width: 190 }} />
         </label>
         {speechSupported && (
-          <button
-            type="button"
-            onClick={toggleDictation}
-            className="btn btn-ghost"
-            aria-label={listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")}
-            style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
-          >
+          <button type="button" onClick={toggleDictation} className="btn btn-ghost" aria-label={listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
             <Mic size={14} />
             {listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")}
           </button>
         )}
         <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/webm" style={{ fontSize: "0.8rem", maxWidth: 220 }} />
         <span className="mono text-steel" style={{ fontSize: "0.72rem" }}>{coords ? t.gpsOk : t.gps}</span>
-        <SubmitButton className="btn btn-ink" style={{ marginLeft: "auto" }} pendingLabel={t.sending}>
-          {t.submit} <span className="arrow">→</span>
-        </SubmitButton>
+        <button type="submit" disabled={pending} className="btn btn-ink" style={{ marginLeft: "auto" }}>
+          {pending ? t.sending : <>{t.submit} <span className="arrow">→</span></>}
+        </button>
       </div>
     </form>
   );

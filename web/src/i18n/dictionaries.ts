@@ -186,6 +186,7 @@ export const dictionaries = {
       reminder: "Recordatorio",
       dictate: "Dictar",
       listening: "Escuchando…",
+      saved: "Guardado. Se sincronizará al recuperar conexión.",
       categories: {
         MATERIALES: "Materiales", PROCESOS: "Procesos", EVENTUALIDADES: "Eventualidades",
         OBSERVACIONES: "Observaciones", COSTOS: "Costos", PERSONAL: "Personal",
@@ -420,6 +421,7 @@ export const dictionaries = {
       reminder: "Reminder",
       dictate: "Dictate",
       listening: "Listening…",
+      saved: "Saved. It will sync when the connection returns.",
       categories: {
         MATERIALES: "Materials", PROCESOS: "Processes", EVENTUALIDADES: "Incidents",
         OBSERVACIONES: "Observations", COSTOS: "Costs", PERSONAL: "Labor",
