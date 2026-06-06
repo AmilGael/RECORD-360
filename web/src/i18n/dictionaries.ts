@@ -226,6 +226,15 @@ export const dictionaries = {
       markAllRead: "Marcar todo como leído",
       unread: "no leída",
     },
+    breadcrumb: {
+      aria: "Ruta de navegación",
+    },
+    pager: {
+      older: "Anteriores",
+      newer: "Siguientes",
+      pageLabel: "Página",
+      ofLabel: "de",
+    },
   },
   en: {
     common: { app: "Raphl", blackBox: "BLACK BOX" },
@@ -448,6 +457,15 @@ export const dictionaries = {
       markRead: "Mark read",
       markAllRead: "Mark all as read",
       unread: "unread",
+    },
+    breadcrumb: {
+      aria: "Breadcrumb",
+    },
+    pager: {
+      older: "Older",
+      newer: "Newer",
+      pageLabel: "Page",
+      ofLabel: "of",
     },
   },
 };

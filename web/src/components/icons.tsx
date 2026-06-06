@@ -158,3 +158,11 @@ export function Bell({ size = 14, className, style }: IconProps) {
     </svg>
   );
 }
+
+export function ChevronRight({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
