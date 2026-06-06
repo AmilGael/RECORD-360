@@ -1,34 +1,30 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
-import { parseCategory, parseLocation } from "@/lib/registro/validate";
+import { parseCategory, parseLocation, parseReminderDueAt } from "@/lib/registro/validate";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 import { projectAccessWhere } from "@/lib/authz/projects";
-import type { Role } from "@prisma/client";
+import { requireFreshSession } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
-  const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-  if (!user?.id || !user.companyId || !user.role) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
-  const form = await request.formData();
-  const partidaId = String(form.get("partidaId") ?? "");
-  const idempotencyKey = String(form.get("idempotencyKey") ?? "").trim();
-  if (!idempotencyKey) return Response.json({ error: "idempotencyKey requerido" }, { status: 400 });
-
-  const partida = await prisma.partida.findFirst({
-    where: { id: partidaId, deletedAt: null, project: projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) },
-  });
-  if (!partida) return Response.json({ error: "Not found" }, { status: 404 });
-
-  // Idempotency lookup SCOPED to the access-checked partida.
-  // NEVER look up by idempotencyKey alone — that would allow cross-tenant replay (IDOR-via-dedup).
-  const existing = await prisma.registro.findFirst({ where: { partidaId, idempotencyKey }, select: { id: true } });
-  if (existing) return Response.json({ id: existing.id, deduped: true }, { status: 200 });
-
   try {
+    const user = await requireFreshSession();
+    const form = await request.formData();
+    const partidaId = String(form.get("partidaId") ?? "");
+    const idempotencyKey = String(form.get("idempotencyKey") ?? "").trim();
+    if (!idempotencyKey) return Response.json({ error: "idempotencyKey requerido" }, { status: 400 });
+
+    const partida = await prisma.partida.findFirst({
+      where: { id: partidaId, deletedAt: null, project: projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) },
+    });
+    if (!partida) return Response.json({ error: "Not found" }, { status: 404 });
+
+    // Idempotency lookup SCOPED to the access-checked partida.
+    // NEVER look up by idempotencyKey alone — that would allow cross-tenant replay (IDOR-via-dedup).
+    const existing = await prisma.registro.findFirst({ where: { partidaId, idempotencyKey }, select: { id: true } });
+    if (existing) return Response.json({ id: existing.id, deduped: true }, { status: 200 });
+
     const text = (String(form.get("text") ?? "").trim()) || null;
     const category = parseCategory(form.get("category"));
     const latRaw = form.get("gpsLat"); const lngRaw = form.get("gpsLng");
@@ -58,10 +54,7 @@ export async function POST(request: Request) {
     if (replyToId && !(await prisma.registro.findFirst({ where: { id: replyToId, partidaId }, select: { id: true } })))
       return Response.json({ error: "Destino de respuesta inválido." }, { status: 400 });
 
-    const remRaw = String(form.get("reminderDueAt") ?? "").trim();
-    const reminderDueAt = remRaw ? new Date(remRaw) : null;
-    if (reminderDueAt && Number.isNaN(reminderDueAt.getTime()))
-      return Response.json({ error: "Recordatorio inválido." }, { status: 400 });
+    const reminderDueAt = parseReminderDueAt(form.get("reminderDueAt"));
 
     const capRaw = String(form.get("clientCapturedAt") ?? "").trim();
     const clientCapturedAt = capRaw ? new Date(capRaw) : null;
@@ -78,6 +71,9 @@ export async function POST(request: Request) {
     revalidatePath("/app");
     return Response.json({ id: rec.id }, { status: 200 });
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "No se pudo registrar." }, { status: 400 });
+    const message = e instanceof Error ? e.message : "No se pudo registrar.";
+    if (message === "Unauthorized") return Response.json({ error: message }, { status: 401 });
+    if (message === "Forbidden") return Response.json({ error: message }, { status: 403 });
+    return Response.json({ error: message }, { status: 400 });
   }
 }

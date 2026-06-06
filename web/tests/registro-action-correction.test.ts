@@ -28,7 +28,7 @@ beforeAll(async () => {
   const company = await prisma.company.create({ data: { name: `Correction Co ${suffix}` } });
   companyId = company.id;
   const user = await prisma.user.create({
-    data: { email: `correction-${suffix}@x.do`, name: "Correction User", role: "RESIDENT", companyId, passwordHash: "x" },
+    data: { email: `correction-${suffix}@x.do`, name: "Correction User", role: "ADMIN", companyId, passwordHash: "x" },
   });
   userId = user.id;
   const project = await prisma.project.create({ data: { companyId, name: `Correction Project ${suffix}` } });

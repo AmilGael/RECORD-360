@@ -52,6 +52,17 @@ describe("POST /api/offline/registros", () => {
     expect(rec?.text).toBe("hola");
     expect(rec?.clientCapturedAt?.toISOString()).toBe("2026-06-01T14:03:00.000Z");
   });
+  it("rejects past-dated reminderDueAt values on the offline API", async () => {
+    asUser();
+    const res = await POST(req({
+      partidaId,
+      idempotencyKey: "k-reminder",
+      text: "reminder",
+      reminderDueAt: "2026-06-01T14:03:00.000Z",
+    }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/Recordatorio/i);
+  });
   it("is idempotent: same key twice → one row, returns existing id", async () => {
     asUser();
     const a = await POST(req({ partidaId, idempotencyKey: "k4", text: "once" }));

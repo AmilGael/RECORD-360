@@ -1,5 +1,4 @@
 "use server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
@@ -11,11 +10,10 @@ import { appendRegistroTx } from "@/lib/registro/append";
 import { retryOnConflict } from "@/lib/registro/retry";
 import { projectAccessWhere } from "@/lib/authz/projects";
 import { createNotifications } from "@/lib/notifications/create";
+import { requireFreshSession } from "@/lib/auth/session";
 
 export async function createChangeRequest(formData: FormData) {
-  const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
+  const user = await requireFreshSession();
 
   const projectId = String(formData.get("projectId"));
   const project = await prisma.project.findFirst({ where: { id: projectId, ...projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) } });
@@ -67,9 +65,7 @@ export async function createChangeRequest(formData: FormData) {
 }
 
 export async function resolveChangeRequest(formData: FormData) {
-  const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
+  const user = await requireFreshSession();
   if (user.role !== Role.ADMIN && user.role !== Role.MANAGER) throw new Error("Forbidden");
 
   const crId = String(formData.get("changeRequestId"));

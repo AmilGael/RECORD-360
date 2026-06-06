@@ -18,8 +18,8 @@ export function PartidaVerifyButton({ partidaId, t }: { partidaId: string; t: T 
     <form action={formAction} style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
       <input type="hidden" name="partidaId" value={partidaId} />
       <SubmitButton
-        className="mono"
-        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--steel)", fontSize: "0.72rem", letterSpacing: "0.06em" }}
+        className="btn btn-ghost"
+        style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem", letterSpacing: "0.04em" }}
         pendingLabel={t.verify}
       >
         {t.verify}

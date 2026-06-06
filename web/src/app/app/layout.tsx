@@ -1,26 +1,28 @@
 import Link from "next/link";
-import { auth, signOut } from "@/auth";
+import { redirect } from "next/navigation";
+import { signOut } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getDict } from "@/i18n/server";
+import { requireFreshSession } from "@/lib/auth/session";
 import { OfflineProvider } from "@/components/offline-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AppSidebar } from "@/components/app-sidebar";
 import { cookies } from "next/headers";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  const user = session?.user as { id?: string; role?: string; companyId?: string; name?: string } | undefined;
-  const role = user?.role;
-  const userId = user?.id;
-  const companyId = user?.companyId;
+  // DB-backed session freshness/revocation runs here (Node runtime — Prisma can't
+  // run in edge middleware). This gates every /app navigation: a disabled user, or
+  // one whose tenant/role changed, is redirected to /login on their next move.
+  const user = await requireFreshSession().catch(() => redirect("/login"));
+  const { id: userId, companyId, role } = user;
   const isAdmin = role === "ADMIN" || role === "MANAGER";
   const { lang, t } = await getDict();
   const theme = (await cookies()).get("r360_theme")?.value === "dark" ? "dark" : "light";
 
   const [unread, activeProjects, archivedProjects] = await Promise.all([
-    userId ? prisma.notification.count({ where: { userId, readAt: null } }) : 0,
-    companyId ? prisma.project.count({ where: { companyId, archivedAt: null } }) : 0,
-    companyId ? prisma.project.count({ where: { companyId, archivedAt: { not: null } } }) : 0,
+    prisma.notification.count({ where: { userId, readAt: null } }),
+    prisma.project.count({ where: { companyId, archivedAt: null } }),
+    prisma.project.count({ where: { companyId, archivedAt: { not: null } } }),
   ]);
 
   async function signOutAction() {

@@ -1,5 +1,4 @@
 "use server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
@@ -13,6 +12,7 @@ import { requireProjectStructureAccess } from "@/lib/authz/projects";
 import { writeAudit } from "@/lib/audit/log";
 import { sendBestEffort } from "@/lib/email";
 import { passwordResetEmail, userInviteEmail } from "@/lib/email/templates";
+import { requireFreshSession } from "@/lib/auth/session";
 
 /** Absolute login URL for emails, when APP_URL is configured. */
 function loginUrl(): string | undefined {
@@ -27,9 +27,7 @@ const ADMIN_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
 
 /** Require a signed-in user; returns their tenant + role. */
 async function requireSession() {
-  const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
+  const user = await requireFreshSession();
   return { id: user.id, companyId: user.companyId, role: user.role };
 }
 

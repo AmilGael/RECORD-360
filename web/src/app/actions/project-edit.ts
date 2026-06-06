@@ -1,18 +1,16 @@
 "use server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/log";
 import { parseSegment } from "@/lib/registro/validate";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireProjectStructureAccess } from "@/lib/authz/projects";
+import { requireFreshSession } from "@/lib/auth/session";
 
 const MANAGER_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
 
 async function requireSession() {
-  const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
+  const user = await requireFreshSession();
   return { id: user.id, companyId: user.companyId, role: user.role };
 }
 

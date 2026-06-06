@@ -17,6 +17,22 @@ export function parseProgressPct(raw: unknown): number | null {
   return n;
 }
 
+/** Parse an optional reminder timestamp. Empty → null; otherwise the date must
+ * exist and be in the future (with a small skew buffer for offline capture). */
+export function parseReminderDueAt(raw: unknown): Date | null {
+  if (raw === null || raw === undefined) return null;
+  const v = String(raw).trim();
+  if (v === "") return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) {
+    throw new Error("Recordatorio inválido.");
+  }
+  if (d.getTime() < Date.now() - 60 * 1000) {
+    throw new Error("El recordatorio debe ser una fecha futura.");
+  }
+  return d;
+}
+
 /** Parse an optional location label. Empty/whitespace → null; otherwise trimmed,
  *  bounded to 200 chars (rejects tampered/oversized input). */
 export function parseLocation(raw: unknown): string | null {

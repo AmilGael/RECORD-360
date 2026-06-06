@@ -1,12 +1,11 @@
 "use server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { Role } from "@prisma/client";
 import type { DocumentKind } from "@prisma/client";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { canAccessProject } from "@/lib/authz/projects";
+import { requireFreshSession } from "@/lib/auth/session";
 
 export type DocResult = { ok: true } | { ok: false; error: string };
 
@@ -19,9 +18,7 @@ function parseDocumentKind(raw: unknown): DocumentKind {
 
 export async function createDocument(_prev: DocResult | null, formData: FormData): Promise<DocResult> {
   try {
-    const session = await auth();
-    const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-    if (!user?.id || !user.companyId || !user.role) return { ok: false, error: "No autorizado." };
+    const user = await requireFreshSession();
 
     const projectId = String(formData.get("projectId"));
     if (!(await canAccessProject({ id: user.id, companyId: user.companyId, role: user.role }, projectId))) return { ok: false, error: "No autorizado." };

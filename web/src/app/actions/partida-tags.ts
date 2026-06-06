@@ -1,10 +1,8 @@
 "use server";
-
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requireProjectStructureAccess } from "@/lib/authz/projects";
 import { revalidatePath } from "next/cache";
-import type { Role } from "@prisma/client";
+import { requireFreshSession } from "@/lib/auth/session";
 
 function parseTagList(raw: unknown) {
   return [...new Set(
@@ -16,9 +14,7 @@ function parseTagList(raw: unknown) {
 }
 
 export async function setPartidaTags(formData: FormData) {
-  const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
+  const user = await requireFreshSession();
 
   const partidaId = String(formData.get("partidaId"));
   const partida = await prisma.partida.findFirst({

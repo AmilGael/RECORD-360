@@ -3,6 +3,7 @@ import { computeHash, GENESIS_PREV_HASH } from "./hash";
 import { retryOnConflict } from "./retry";
 import type { RegistroCategory, AttachmentType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+import { lockPartidaLedger } from "./ledger-lock";
 
 const LEDGER_VERSION = 2;
 
@@ -25,6 +26,7 @@ export type AppendInput = {
 };
 
 export async function appendRegistroTx(tx: Prisma.TransactionClient, input: AppendInput) {
+  await lockPartidaLedger(tx, input.partidaId);
   const tip = await tx.registro.findFirst({
     where: { partidaId: input.partidaId },
     orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],

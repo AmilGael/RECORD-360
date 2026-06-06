@@ -70,6 +70,7 @@ export function LogComposer({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const savedTimerRef = useRef<number | null>(null);
 
   const [speechSupported, setSpeechSupported] = useState(false);
   const [listening, setListening] = useState(false);
@@ -86,6 +87,15 @@ export function LogComposer({
       (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => setCoords(null),
     );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) {
+        window.clearTimeout(savedTimerRef.current);
+        savedTimerRef.current = null;
+      }
+    };
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -126,7 +136,11 @@ export function LogComposer({
       // Background sync; refresh the feed when it settles (no-op if offline).
       void syncQueue({ queue: getQueue(), onChange: emitQueueChanged }).then(() => router.refresh());
       if (correction || reply) router.replace(`/app/partidas/${partidaId}`);
-      window.setTimeout(() => setSaved(false), 4000);
+      if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = window.setTimeout(() => {
+        setSaved(false);
+        savedTimerRef.current = null;
+      }, 4000);
     } catch {
       setError(t.error);
     } finally {
@@ -203,7 +217,7 @@ export function LogComposer({
         </datalist>
         <label className="mono text-steel" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.68rem" }}>
           {t.reminder ?? "Reminder"}
-          <input type="datetime-local" name="reminderDueAt" className="input" style={{ width: 190 }} />
+        <input type="datetime-local" name="reminderDueAt" min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)} className="input" style={{ width: 190 }} />
         </label>
         {speechSupported && (
           <button type="button" onClick={toggleDictation} className="btn btn-ghost" aria-label={listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>

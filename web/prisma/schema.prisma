@@ -50,7 +50,17 @@ model User {
   projectAssignments ProjectAssignment[]
   notifications      Notification[]
   signatures         Signature[]
+  disabledAt         DateTime?
   createdAt          DateTime            @default(now())
+}
+
+model LoginAttempt {
+  key             String   @id
+  failures        Int      @default(0)
+  windowStartedAt DateTime
+  blockedUntil    DateTime?
+  lastFailureAt   DateTime?
+  updatedAt       DateTime @updatedAt
 }
 
 model Project {
@@ -323,7 +333,7 @@ model Signature {
   id         String   @id @default(cuid())
   companyId  String
   partidaId  String
-  partida    Partida  @relation(fields: [partidaId], references: [id])
+  partida    Partida  @relation(fields: [partidaId], references: [id], onDelete: Cascade)
   signerId   String
   signer     User     @relation(fields: [signerId], references: [id])
   signerName String

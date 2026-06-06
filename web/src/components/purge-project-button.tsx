@@ -13,15 +13,11 @@ export function PurgeProjectButton({ projectId, t }: { projectId: string; t: T }
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="mono"
+        className="btn btn-danger-soft mono"
         style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: "var(--steel)",
-          fontSize: "0.7rem",
+          padding: "0.28rem 0.7rem",
+          fontSize: "0.68rem",
           letterSpacing: "0.08em",
-          transition: "color 0.18s var(--ease)",
         }}
       >
         {t.purge}

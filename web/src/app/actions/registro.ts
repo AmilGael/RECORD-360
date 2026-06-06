@@ -1,21 +1,18 @@
 "use server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
-import { parseCategory, parseLocation } from "@/lib/registro/validate";
+import { parseCategory, parseLocation, parseReminderDueAt } from "@/lib/registro/validate";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 import { projectAccessWhere } from "@/lib/authz/projects";
-import type { Role } from "@prisma/client";
+import { requireFreshSession } from "@/lib/auth/session";
 
 export type LogResult = { ok: true } | { ok: false; error: string };
 
 export async function logRegistro(_prev: LogResult | null, formData: FormData): Promise<LogResult> {
   try {
-    const session = await auth();
-    const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-    if (!user?.id || !user.companyId || !user.role) return { ok: false, error: "No autorizado." };
+    const user = await requireFreshSession();
     const authorId = user.id;
 
     const partidaId = String(formData.get("partidaId"));
@@ -56,12 +53,7 @@ export async function logRegistro(_prev: LogResult | null, formData: FormData): 
       const replied = await prisma.registro.findFirst({ where: { id: replyToId, partidaId }, select: { id: true } });
       if (!replied) return { ok: false, error: "Destino de respuesta inválido." };
     }
-    const reminderRaw = String(formData.get("reminderDueAt") ?? "").trim();
-    const reminderDueAt = reminderRaw ? new Date(reminderRaw) : null;
-    if (reminderDueAt && Number.isNaN(reminderDueAt.getTime())) return { ok: false, error: "Recordatorio inválido." };
-    if (reminderDueAt && reminderDueAt.getTime() < Date.now() - 60 * 1000) {
-      return { ok: false, error: "El recordatorio debe ser una fecha futura." };
-    }
+    const reminderDueAt = parseReminderDueAt(formData.get("reminderDueAt"));
 
     await appendRegistro({ partidaId, authorId, category, text, progressPct: null, gpsLat, gpsLng, locationId, attachments, correctionOfId, replyToId, reminderDueAt });
     revalidatePath(`/app/projects/${partida.projectId}`);

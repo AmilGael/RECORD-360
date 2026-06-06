@@ -15,6 +15,7 @@ const KNOWN_PASSWORD = "test-password-123";
 let companyId = "";
 let companyBId = "";
 let userId = "";
+let adminId = "";
 let userBId = "";
 let projectId = "";
 let partidaId = "";
@@ -28,6 +29,9 @@ beforeAll(async () => {
   companyId = (await prisma.company.create({ data: { name: `Sig Co A ${s}` } })).id;
   userId = (await prisma.user.create({
     data: { email: `sig-u-${s}@x.do`, name: "Supervisora Test", role: "SUPERVISOR", companyId, passwordHash: hash },
+  })).id;
+  adminId = (await prisma.user.create({
+    data: { email: `sig-admin-${s}@x.do`, name: "Admin Test", role: "ADMIN", companyId, passwordHash: hash },
   })).id;
 
   projectId = (await prisma.project.create({ data: { companyId, name: `Sig Project ${s}` } })).id;
@@ -52,7 +56,7 @@ afterAll(async () => {
   await prisma.projectAssignment.deleteMany({ where: { projectId } });
   await prisma.partida.deleteMany({ where: { projectId } });
   await prisma.project.deleteMany({ where: { id: projectId } });
-  await prisma.user.deleteMany({ where: { id: userId } });
+  await prisma.user.deleteMany({ where: { id: { in: [userId, adminId] } } });
   await prisma.company.deleteMany({ where: { id: companyId } });
   // Company B cleanup
   await prisma.partida.deleteMany({ where: { id: partidaNoAccessId } });
@@ -124,6 +128,18 @@ describe("signPartida", () => {
     // cleanup
     await prisma.signature.deleteMany({ where: { partidaId: emptyPartida.id } });
     await prisma.partida.delete({ where: { id: emptyPartida.id } });
+  });
+
+  it("purging an empty signed partida deletes the signature via cascade", async () => {
+    const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const emptyPartida = await prisma.partida.create({ data: { projectId, name: `Signed Empty ${s}` } });
+
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    await signPartida(fd({ partidaId: emptyPartida.id, password: KNOWN_PASSWORD }));
+    expect(await prisma.signature.count({ where: { partidaId: emptyPartida.id } })).toBe(1);
+
+    await prisma.partida.delete({ where: { id: emptyPartida.id } });
+    expect(await prisma.signature.count({ where: { partidaId: emptyPartida.id } })).toBe(0);
   });
 
   it("wrong password → throws 'Contraseña incorrecta.', no row created", async () => {

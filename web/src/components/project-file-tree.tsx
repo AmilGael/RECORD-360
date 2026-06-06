@@ -52,7 +52,7 @@ function FileRow({
         className="tree-file"
         aria-label={`${pa.name} — ${pa.progressPct}%`}
       >
-        <span>{pa.name}</span>
+        <span className="tree-file-name">{pa.name}</span>
         <span className="pct">{pa.progressPct}%</span>
       </Link>
       {isAdmin && (
@@ -113,7 +113,8 @@ export function ProjectFileTree({
       {segments.map((s) => (
         <div key={s.id}>
           <div className="tree-folder">
-            <span><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name} <span className="pct">{projectProgress(s.partidas)}%</span></span>
+            <span className="tree-folder-name"><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</span>
+            <span className="pct">{projectProgress(s.partidas)}%</span>
             {isAdmin && <RenameSegmentForm segmentId={s.id} currentName={s.name} t={t} />}
           </div>
           {s.partidas.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} filters={filters} />)}
@@ -121,7 +122,7 @@ export function ProjectFileTree({
       ))}
       {ungrouped.length > 0 && (
         <div>
-          <div className="tree-folder" style={{ opacity: 0.7 }}><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{t.ungrouped}</div>
+          <div className="tree-folder" style={{ opacity: 0.7 }}><span className="tree-folder-name"><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{t.ungrouped}</span></div>
           {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} filters={filters} />)}
         </div>
       )}
