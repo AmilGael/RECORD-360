@@ -166,3 +166,38 @@ export function ChevronRight({ size = 14, className, style }: IconProps) {
     </svg>
   );
 }
+
+export function Sun({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <circle cx="12" cy="12" r="4" />
+      <line x1="12" y1="2.5" x2="12" y2="5" />
+      <line x1="12" y1="19" x2="12" y2="21.5" />
+      <line x1="2.5" y1="12" x2="5" y2="12" />
+      <line x1="19" y1="12" x2="21.5" y2="12" />
+      <line x1="5.2" y1="5.2" x2="6.9" y2="6.9" />
+      <line x1="17.1" y1="17.1" x2="18.8" y2="18.8" />
+      <line x1="17.1" y1="6.9" x2="18.8" y2="5.2" />
+      <line x1="5.2" y1="18.8" x2="6.9" y2="17.1" />
+    </svg>
+  );
+}
+
+export function Moon({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M20 14.4A8 8 0 1 1 9.6 4 7 7 0 1 0 20 14.4z" />
+    </svg>
+  );
+}
+
+export function Users({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
+      <circle cx="17" cy="9" r="2.3" />
+      <path d="M14.5 20a4.5 4.5 0 0 1 6 0" />
+    </svg>
+  );
+}

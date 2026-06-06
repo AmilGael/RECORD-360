@@ -74,6 +74,8 @@ export async function createSegment(formData: FormData) {
 // Soft delete: archive an obra. Its partidas and immutable registros are
 // preserved (never destroyed) — the obra is just hidden from the dashboard.
 export async function archiveProject(formData: FormData) {
+  // Archiving hides an entire obra from the whole company — ADMIN-only, matching
+  // the "only admin deletes" policy (purgeProject is also ADMIN-only).
   const { companyId, role } = await requireAdmin();
   if (role !== Role.ADMIN) throw new Error("Forbidden");
   const id = String(formData.get("projectId"));
@@ -96,22 +98,22 @@ export async function restoreProject(formData: FormData) {
 export async function purgeProject(formData: FormData) {
   const { id: actorId, companyId, role } = await requireSession();
   if (role !== Role.ADMIN) throw new Error("Forbidden");
+
   const id = String(formData.get("projectId"));
   const project = await prisma.project.findFirst({ where: { id, companyId } });
   if (!project) throw new Error("Forbidden");
   if (!project.archivedAt) throw new Error("Archiva la obra antes de eliminarla definitivamente.");
-  // refuse unless truly empty — protects immutable records
+
   const [partidas, changes, documents] = await Promise.all([
     prisma.partida.count({ where: { projectId: id } }),
     prisma.changeRequest.count({ where: { projectId: id } }),
     prisma.document.count({ where: { projectId: id } }),
   ]);
-  if (partidas > 0 || changes > 0 || documents > 0)
+  if (partidas > 0 || changes > 0 || documents > 0) {
     throw new Error("No se puede borrar definitivamente: la obra aún contiene partidas, cambios o documentos.");
+  }
+
   await prisma.$transaction(async (tx) => {
-    // Delete non-cascading children in FK-safe order before deleting the project.
-    // ProjectAssignment and PartidaTag already have onDelete: Cascade → skipped.
-    // Segment and Location have no cascade → delete explicitly.
     await tx.location.deleteMany({ where: { projectId: id } });
     await tx.segment.deleteMany({ where: { projectId: id } });
     await tx.project.delete({ where: { id } });

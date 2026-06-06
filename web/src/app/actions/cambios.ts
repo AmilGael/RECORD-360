@@ -36,35 +36,34 @@ export async function createChangeRequest(formData: FormData) {
   const photos = formData.getAll("evidence").filter((f): f is File => f instanceof File);
   const prepared = await prepareAttachments(photos, storage);
 
-  const cr = await retryOnConflict(() => prisma.$transaction(async (tx) => {
+  const created = await retryOnConflict(() => prisma.$transaction(async (tx) => {
     const count = await tx.changeRequest.count({ where: { projectId } });
-    const created = await tx.changeRequest.create({
+    return tx.changeRequest.create({
       data: {
         projectId, code: `SC-${count + 1}`, title, description, costImpact: null, daysImpact: null,
         authorId: user.id!, gpsLat, gpsLng,
         segments: { create: segmentIds.map((id) => ({ segmentId: id })) },
         attachments: { create: prepared.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })) },
       },
-      select: { id: true, code: true },
     });
-    return created;
   }));
-
-  revalidatePath(`/app/projects/${projectId}`);
-
-  // Best-effort notifications — must not roll back the cambio
-  const reviewers = await prisma.user.findMany({
-    where: { companyId: user.companyId, role: { in: [Role.ADMIN, Role.MANAGER] }, id: { not: user.id } },
-    select: { id: true },
+  const recipients = await prisma.user.findMany({
+    where: {
+      companyId: user.companyId,
+      role: { in: [Role.ADMIN, Role.MANAGER] },
+      id: { not: user.id },
+    },
+    select: { id: true, companyId: true },
   });
-  await createNotifications(reviewers.map((r) => ({
-    companyId: user.companyId!,
+  await createNotifications(recipients.map((r) => ({
+    companyId: r.companyId,
     userId: r.id,
     type: "cambio.created",
-    title: `Nueva solicitud de cambio ${cr.code}`,
+    title: `Nueva solicitud de cambio ${created.code}`,
     body: title,
-    link: `/app/projects/${projectId}/cambios/${cr.id}`,
+    link: `/app/projects/${projectId}/cambios/${created.id}`,
   })));
+  revalidatePath(`/app/projects/${projectId}`);
 }
 
 export async function resolveChangeRequest(formData: FormData) {
@@ -93,10 +92,10 @@ export async function resolveChangeRequest(formData: FormData) {
     const segmentIds = cr.segments.map((s) => s.segmentId);
     const markerPartidas = segmentIds.length
       ? await prisma.partida.findMany({
-          where: { projectId: cr.projectId, segmentId: { in: segmentIds }, deletedAt: null },
-          select: { id: true },
-          orderBy: { createdAt: "asc" },
-        })
+        where: { projectId: cr.projectId, segmentId: { in: segmentIds }, deletedAt: null },
+        select: { id: true },
+        orderBy: { createdAt: "asc" },
+      })
       : cr.partidas.map((p) => ({ id: p.partidaId }));
     const markerPartidaIds = markerPartidas.map((p) => p.id);
     const seal = computeChangeSeal({
@@ -122,25 +121,21 @@ export async function resolveChangeRequest(formData: FormData) {
         });
       }
     }));
+    // The integration appended markers to each affected partida — refresh them.
     for (const partidaId of markerPartidaIds) {
       revalidatePath(`/app/partidas/${partidaId}`);
     }
   } else {
     throw new Error("Acción inválida.");
   }
-  revalidatePath(`/app/projects/${cr.projectId}`);
-  revalidatePath(`/app/projects/${cr.projectId}/cambios/${cr.id}`);
-
-  // Best-effort notification to author
-  const resolvedTitle = action === "INTEGRATE"
-    ? `Solicitud ${cr.code} integrada`
-    : `Solicitud ${cr.code} rechazada`;
   await createNotifications([{
-    companyId: user.companyId!,
+    companyId: user.companyId,
     userId: cr.authorId,
     type: "cambio.resolved",
-    title: resolvedTitle,
+    title: `Solicitud ${cr.code} ${action === "INTEGRATE" ? "integrada" : "rechazada"}`,
     body: cr.title,
     link: `/app/projects/${cr.projectId}/cambios/${cr.id}`,
   }]);
+  revalidatePath(`/app/projects/${cr.projectId}`);
+  revalidatePath(`/app/projects/${cr.projectId}/cambios/${cr.id}`);
 }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, Space_Mono, Fraunces } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { getLang } from "@/i18n/server";
 import { ServiceWorkerRegister } from "@/components/sw-register";
@@ -21,9 +22,10 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const lang = await getLang();
+  const theme = (await cookies()).get("r360_theme")?.value === "dark" ? "dark" : "light";
   return (
     <html lang={lang}>
-      <body className={`${archivo.variable} ${mono.variable} ${fraunces.variable}`}>
+      <body className={`${archivo.variable} ${mono.variable} ${fraunces.variable}`} data-theme={theme}>
         {children}
         <ServiceWorkerRegister />
       </body>

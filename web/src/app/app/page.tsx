@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { ArchiveButton } from "@/components/archive-button";
 import { projectProgress } from "@/lib/project/progress";
 import { formatTimestamp } from "@/lib/format/datetime";
+import { buildDashboardAnalytics } from "@/lib/dashboard/analytics";
 import type { Lang } from "@/i18n/dictionaries";
 import { DashboardSearch } from "@/components/dashboard-search";
 import { Folder, Plus } from "@/components/icons";
@@ -53,10 +54,10 @@ export default async function Dashboard() {
     : [];
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
 
-  // Pre-compute per-project metadata
-  const projectMeta = projects.map((p) => {
+  const now = new Date();
+  const projectRows = await Promise.all(projects.map(async (p) => {
     const pct = projectProgress(p.partidas);
-    // Find the most recent registro across all partidas
+    // Find the most recent registro across all partidas.
     let latest: { serverCreatedAt: Date; authorId: string; hash: string } | null = null;
     for (const pa of p.partidas) {
       const r = pa.registros[0];
@@ -64,14 +65,29 @@ export default async function Dashboard() {
         latest = r;
       }
     }
+    const [openChanges, overdueReminders] = await Promise.all([
+      prisma.changeRequest.count({ where: { projectId: p.id, status: "OPEN" } }),
+      prisma.registro.count({
+        where: {
+          partida: { projectId: p.id, deletedAt: null },
+          reminderDueAt: { lt: now },
+          reminderResolvedAt: null,
+        },
+      }),
+    ]);
     return {
-      ...p,
-      pct,
+      id: p.id,
+      name: p.name,
+      progress: pct,
+      partidas: p.partidas.length,
+      openChanges,
+      overdueReminders,
       latestAuthor: latest ? authorMap.get(latest.authorId) ?? "—" : null,
       latestTime: latest ? formatTimestamp(latest.serverCreatedAt, lang as Lang) : null,
       latestHash: latest ? latest.hash : null,
     };
-  });
+  }));
+  const dashboard = buildDashboardAnalytics(projectRows);
 
   const archived = isAdmin
     ? await prisma.project.findMany({
@@ -89,8 +105,95 @@ export default async function Dashboard() {
           <h1 className="h-lg" style={{ fontSize: "clamp(2rem, 4.5vw, 2.8rem)", margin: "6px 0 0" }}>{D.title}</h1>
         </div>
         <span className="counter">
-          {projects.length} {D.tabActive.toLowerCase()} · {archived.length} {D.tabArchived.toLowerCase()}
+          {dashboard.totalProjects} {D.tabActive.toLowerCase()} · {archived.length} {D.tabArchived.toLowerCase()}
         </span>
+      </div>
+
+      <div className="dash-analytics">
+        <div className="dash-analytics-stack">
+          <div className="analitica-cards">
+            <div className="analitica-card">
+              <span className={`health-dot ${dashboard.portfolioHealth}`} aria-hidden="true" />
+              <strong>{dashboard.avgProgress}%</strong>
+              <span>{D.analyticsProgress}</span>
+            </div>
+            <div className="analitica-card">
+              <strong>{dashboard.totalPartidas}</strong>
+              <span>{D.analyticsPartidas}</span>
+            </div>
+            <div className="analitica-card">
+              <strong>{dashboard.openChanges}</strong>
+              <span>{D.analyticsOpenChanges}</span>
+            </div>
+            <div className="analitica-card">
+              <strong>{dashboard.overdueReminders}</strong>
+              <span>{D.analyticsOverdue}</span>
+            </div>
+          </div>
+
+          <div className="dash-analytics-panel">
+            <div className="kicker">{D.analyticsHealth}</div>
+            <div className="dash-health-list">
+              {([
+                ["green", D.analyticsGreen, dashboard.healthCounts.green],
+                ["yellow", D.analyticsYellow, dashboard.healthCounts.yellow],
+                ["red", D.analyticsRed, dashboard.healthCounts.red],
+              ] as const).map(([level, label, count]) => {
+                const total = dashboard.totalProjects || 1;
+                const pct = Math.round((count / total) * 100);
+                return (
+                  <div key={level} className="dash-health-row">
+                    <span className="dash-health-label">
+                      <span className={`health-dot ${level}`} aria-hidden="true" />
+                      {label}
+                    </span>
+                    <div className="dash-health-track" aria-hidden="true">
+                      <span className={`dash-health-fill ${level}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="dash-health-count mono">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="dash-analytics-panel dash-risk-panel">
+          <div className="kicker">{D.analyticsRisk}</div>
+          {dashboard.topRiskProjects.length === 0 ? (
+            <p className="text-steel" style={{ margin: "8px 0 0" }}>{D.analyticsNoRisk}</p>
+          ) : (
+            <div className="dash-risk-list">
+              {dashboard.topRiskProjects.map((p) => (
+                <Link key={p.id} href={`/app/projects/${p.id}?tab=analitica`} className="dash-risk-item">
+                  <div className="dash-risk-name">
+                    <span className={`health-dot ${p.health}`} aria-hidden="true" />
+                    <span>{p.name}</span>
+                    <span className="state-badge is-active">{p.progress}%</span>
+                  </div>
+                  <div className="dash-risk-track">
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{ width: `${p.progress}%` }} />
+                    </div>
+                  </div>
+                  <div className="dash-risk-meta">
+                    <span>{p.partidas} {D.analyticsPartidas}</span>
+                    <span className="sep">·</span>
+                    <span>{p.openChanges} {D.analyticsOpenChanges}</span>
+                    <span className="sep">·</span>
+                    <span>{p.overdueReminders} {D.analyticsOverdue}</span>
+                    {p.latestTime && (
+                      <>
+                        <span className="sep">·</span>
+                        <span>{D.lastBy} {p.latestAuthor} · {p.latestTime}</span>
+                      </>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Dual-column layout */}
@@ -101,10 +204,10 @@ export default async function Dashboard() {
 
           {/* Active projects */}
           <div className="repo-list" id="dash-active-list">
-            {projectMeta.length === 0 && (
+            {projectRows.length === 0 && (
               <div className="repo-list-empty">{D.empty}</div>
             )}
-            {projectMeta.map((p) => (
+            {projectRows.map((p) => (
               <div key={p.id} className="repo-card" data-name={p.name.toLowerCase()}>
                 <Link href={`/app/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <div className="repo-title">
@@ -115,16 +218,16 @@ export default async function Dashboard() {
                     </span>
                   </div>
                   <div className="repo-meta">
-                    <span>{p.partidas.length} {D.partidas}</span>
+                    <span>{p.partidas} {D.partidas}</span>
                     <span className="sep">·</span>
                     <div className="progress-bar">
                       <div className="progress-track">
                         <div
-                          className={`progress-fill${p.pct >= 100 ? " is-done" : ""}`}
-                          style={{ width: `${p.pct}%` }}
+                          className={`progress-fill${p.progress >= 100 ? " is-done" : ""}`}
+                          style={{ width: `${p.progress}%` }}
                         />
                       </div>
-                      <span className="progress-label">{p.pct}%</span>
+                      <span className="progress-label">{p.progress}%</span>
                     </div>
                     {p.latestTime && (
                       <>
