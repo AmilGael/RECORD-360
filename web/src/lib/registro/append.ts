@@ -20,6 +20,8 @@ export type AppendInput = {
   replyToId?: string | null;
   reminderDueAt?: Date | null;
   changeRequestId?: string | null;
+  idempotencyKey?: string | null;
+  clientCapturedAt?: Date | null;
 };
 
 export async function appendRegistroTx(tx: Prisma.TransactionClient, input: AppendInput) {
@@ -30,7 +32,8 @@ export async function appendRegistroTx(tx: Prisma.TransactionClient, input: Appe
   const prevHash = tip ? tip.hash : GENESIS_PREV_HASH;
   const serverCreatedAt = new Date();
   // LEDGER CONTRACT: relational back-pointers (correctionOfId, replyToId, changeRequestId)
-  // are metadata, NOT ledger content — they MUST stay out of this hash payload.
+  // and offline-capture metadata (idempotencyKey, clientCapturedAt) are metadata,
+  // NOT ledger content — they MUST stay out of this hash payload.
   // Adding them would change every recomputed hash and break verifyChain for all
   // existing records.
   const hash = computeHash(prevHash, {
@@ -49,6 +52,8 @@ export async function appendRegistroTx(tx: Prisma.TransactionClient, input: Appe
       replyToId: input.replyToId ?? null,
       reminderDueAt: input.reminderDueAt ?? null,
       changeRequestId: input.changeRequestId ?? null,
+      idempotencyKey: input.idempotencyKey ?? null,
+      clientCapturedAt: input.clientCapturedAt ?? null,
       attachments: {
         create: input.attachments.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })),
       },
