@@ -5,7 +5,7 @@
 export const dictionaries = {
   es: {
     common: { app: "Raphl", blackBox: "BLACK BOX" },
-    nav: { sites: "Obras", team: "Equipo", signOut: "Salir" },
+    nav: { sites: "Obras", team: "Equipo", signOut: "Salir", notifications: "Notificaciones" },
     landing: {
       eyebrow: "Gestión de obra · República Dominicana",
       heroLead:
@@ -217,10 +217,17 @@ export const dictionaries = {
         RESIDENT: "Registro de campo. Fotos, notas y reportes básicos.",
       },
     },
+    notifications: {
+      title: "Notificaciones",
+      empty: "Sin notificaciones.",
+      markRead: "Marcar leído",
+      markAllRead: "Marcar todo como leído",
+      unread: "no leída",
+    },
   },
   en: {
     common: { app: "Raphl", blackBox: "BLACK BOX" },
-    nav: { sites: "Sites", team: "Team", signOut: "Sign out" },
+    nav: { sites: "Sites", team: "Team", signOut: "Sign out", notifications: "Notifications" },
     landing: {
       eyebrow: "Construction management · Dominican Republic",
       heroLead:
@@ -430,6 +437,13 @@ export const dictionaries = {
         SUPERVISOR: "Site supervision. Logs progress and observations.",
         RESIDENT: "Field logging. Photos, notes and basic reports.",
       },
+    },
+    notifications: {
+      title: "Notifications",
+      empty: "No notifications.",
+      markRead: "Mark read",
+      markAllRead: "Mark all as read",
+      unread: "unread",
     },
   },
 };
