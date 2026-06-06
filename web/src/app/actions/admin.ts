@@ -85,6 +85,40 @@ export async function restoreProject(formData: FormData) {
   revalidatePath("/app");
 }
 
+export async function purgeProject(formData: FormData) {
+  const { id: actorId, companyId, role } = await requireSession();
+  if (role !== Role.ADMIN) throw new Error("Forbidden");
+  const id = String(formData.get("projectId"));
+  const project = await prisma.project.findFirst({ where: { id, companyId } });
+  if (!project) throw new Error("Forbidden");
+  if (!project.archivedAt) throw new Error("Archiva la obra antes de eliminarla definitivamente.");
+  // refuse unless truly empty — protects immutable records
+  const [partidas, changes, documents] = await Promise.all([
+    prisma.partida.count({ where: { projectId: id } }),
+    prisma.changeRequest.count({ where: { projectId: id } }),
+    prisma.document.count({ where: { projectId: id } }),
+  ]);
+  if (partidas > 0 || changes > 0 || documents > 0)
+    throw new Error("No se puede borrar definitivamente: la obra aún contiene partidas, cambios o documentos.");
+  await prisma.$transaction(async (tx) => {
+    // Delete non-cascading children in FK-safe order before deleting the project.
+    // ProjectAssignment and PartidaTag already have onDelete: Cascade → skipped.
+    // Segment and Location have no cascade → delete explicitly.
+    await tx.location.deleteMany({ where: { projectId: id } });
+    await tx.segment.deleteMany({ where: { projectId: id } });
+    await tx.project.delete({ where: { id } });
+    await writeAudit(tx, {
+      companyId,
+      actorId,
+      action: "project.purge",
+      targetType: "Project",
+      targetId: id,
+      summary: `Obra borrada definitivamente: ${project.name}`,
+    });
+  });
+  revalidatePath("/app");
+}
+
 export async function createUser(formData: FormData) {
   // Minting users (incl. ADMINs) is ADMIN-only — stricter than other admin actions.
   const { companyId, role } = await requireSession();
