@@ -1,7 +1,7 @@
-# RECORD-360
+# Raphl (formerly RECORD-360)
 Product Requirements Document (PRD)
 
-Project Name: RECORD 360
+Project Name: Raphl
 
 Document Version: 1.0
 
