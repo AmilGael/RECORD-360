@@ -49,6 +49,7 @@ model User {
   company            Company             @relation(fields: [companyId], references: [id])
   projectAssignments ProjectAssignment[]
   notifications      Notification[]
+  signatures         Signature[]
   createdAt          DateTime            @default(now())
 }
 
@@ -96,6 +97,7 @@ model Partida {
   registros      Registro[]
   changeRequests ChangeRequestPartida[]
   tags           PartidaTagOnPartida[]
+  signatures     Signature[]
   createdAt      DateTime               @default(now())
 
   @@index([segmentId])
@@ -310,4 +312,21 @@ model Notification {
 
   @@index([userId, readAt])
   @@index([userId, createdAt])
+}
+
+model Signature {
+  id         String   @id @default(cuid())
+  companyId  String
+  partidaId  String
+  partida    Partida  @relation(fields: [partidaId], references: [id])
+  signerId   String
+  signer     User     @relation(fields: [signerId], references: [id])
+  signerName String
+  signerRole Role
+  statement  String?
+  chainHead  String
+  seal       String
+  signedAt   DateTime @default(now())
+
+  @@index([partidaId])
 }
