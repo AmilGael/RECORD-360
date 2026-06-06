@@ -15,6 +15,7 @@ import { RenameProjectForm } from "@/components/project-edit-controls";
 import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import type { DocumentKind, Role } from "@prisma/client";
 
 export default async function ProjectPage({
@@ -210,7 +211,13 @@ export default async function ProjectPage({
 
   return (
     <div className="reveal">
-      <Link href="/app" className="kicker" style={{ textDecoration: "none" }}>← {P.back}</Link>
+      <Breadcrumbs
+        ariaLabel={t.breadcrumb.aria}
+        items={[
+          { label: t.nav.sites, href: "/app" },
+          { label: project.name },
+        ]}
+      />
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "10px 0 2px" }}>
         <h1 className="h-lg" style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)" }}>{project.name}</h1>
         <span className={`state-badge ${project.archivedAt ? "is-archived" : "is-active"}`}>
