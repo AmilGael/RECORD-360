@@ -4,11 +4,12 @@ import type { Lang } from "@/i18n/dictionaries";
 import Link from "next/link";
 import { Pin, Check } from "@/components/icons";
 
-type RecordT = { noGps: string; immutable: string; correct?: string; reply?: string; by?: string; document?: string };
+type RecordT = { noGps: string; immutable: string; correct?: string; reply?: string; by?: string; document?: string; capturado?: string; sellado?: string };
 type RegistroWithRelations = Registro & {
   attachments: Attachment[];
   location: Location | null;
   replyTo?: Pick<Registro, "id" | "text" | "hash"> | null;
+  clientCapturedAt?: Date | string | null;
 };
 
 function Media({ a, t }: { a: Attachment; t: RecordT }) {
@@ -36,7 +37,16 @@ export function RecordCard({
   correctionHref?: string;
   replyHref?: string;
 }) {
-  const ts = formatTimestamp(r.serverCreatedAt, lang);
+  const locale = lang === "es" ? "es-DO" : "en-US";
+  const formatAbsolute = (d: Date) => d.toLocaleString(locale);
+
+  const capturedRaw = r.clientCapturedAt ? new Date(r.clientCapturedAt) : null;
+  const sealedDate = r.serverCreatedAt;
+  const showDual =
+    capturedRaw !== null &&
+    Math.abs(sealedDate.getTime() - capturedRaw.getTime()) > 60_000;
+
+  const ts = formatTimestamp(sealedDate, lang);
   const gps =
     r.gpsLat !== null && r.gpsLng !== null
       ? `${Number(r.gpsLat).toFixed(4)} · ${Number(r.gpsLng).toFixed(4)}`
@@ -45,7 +55,14 @@ export function RecordCard({
     <div className="card" style={{ marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "var(--ink)", color: "var(--paper)" }}>
         <span className="mono" style={{ fontSize: 11, letterSpacing: "0.08em" }}>{r.category ?? "REGISTRO"}</span>
-        <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>{ts}</span>
+        {showDual && capturedRaw ? (
+          <span className="mono" style={{ fontSize: 11, opacity: 0.7, textAlign: "right" }}>
+            <span style={{ display: "block" }}>{t.capturado ?? "Capturado"}: {formatAbsolute(capturedRaw)}</span>
+            <span style={{ display: "block" }}>{t.sellado ?? "Sellado"}: {formatAbsolute(sealedDate)}</span>
+          </span>
+        ) : (
+          <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>{ts}</span>
+        )}
       </div>
       <div style={{ padding: 14 }}>
         {authorName && (

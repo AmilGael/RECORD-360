@@ -124,7 +124,7 @@ export default async function PartidaPage({
         <RecordCard
           key={r.id}
           r={r}
-          t={{ ...t.record, correct: correctionCopy.correct, reply: correctionCopy.reply }}
+          t={{ ...t.record, correct: correctionCopy.correct, reply: correctionCopy.reply, capturado: t.offlineCapture.capturado, sellado: t.offlineCapture.sellado }}
           lang={lang}
           authorName={authorMap.get(r.authorId) ?? null}
           correctionHref={`/app/partidas/${partida.id}?correctionOf=${r.id}`}
