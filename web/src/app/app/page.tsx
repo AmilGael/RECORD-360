@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { getDict } from "@/i18n/server";
 import { createProject, restoreProject } from "@/app/actions/admin";
+import { PurgeProjectButton } from "@/components/purge-project-button";
 import { SubmitButton } from "@/components/submit-button";
 import { ArchiveButton } from "@/components/archive-button";
 import { projectProgress } from "@/lib/project/progress";
@@ -169,12 +170,18 @@ export default async function Dashboard() {
                       </div>
                     </div>
                     {isOwner && (
-                      <form action={restoreProject}>
-                        <input type="hidden" name="projectId" value={p.id} />
-                        <SubmitButton className="btn btn-ghost" style={{ padding: "0.35rem 0.8rem", fontSize: "0.75rem" }}>
-                          {D.restore}
-                        </SubmitButton>
-                      </form>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <form action={restoreProject}>
+                          <input type="hidden" name="projectId" value={p.id} />
+                          <SubmitButton className="btn btn-ghost" style={{ padding: "0.35rem 0.8rem", fontSize: "0.75rem" }}>
+                            {D.restore}
+                          </SubmitButton>
+                        </form>
+                        <PurgeProjectButton
+                          projectId={p.id}
+                          t={{ purge: D.purge, purgeConfirm: D.purgeConfirm, yes: D.yes, no: D.no }}
+                        />
+                      </div>
                     )}
                   </div>
                 ))}
