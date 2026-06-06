@@ -6,6 +6,7 @@ export const dictionaries = {
   es: {
     common: { app: "Raphl", blackBox: "BLACK BOX" },
     nav: { sites: "Obras", team: "Equipo", signOut: "Salir", notifications: "Notificaciones" },
+    offline: { title: "Sin conexión", body: "No hay conexión a internet. Vuelve a intentarlo cuando recuperes la señal." },
     landing: {
       eyebrow: "Gestión de obra · República Dominicana",
       heroLead:
@@ -239,6 +240,7 @@ export const dictionaries = {
   en: {
     common: { app: "Raphl", blackBox: "BLACK BOX" },
     nav: { sites: "Sites", team: "Team", signOut: "Sign out", notifications: "Notifications" },
+    offline: { title: "You're offline", body: "No internet connection. Try again once your signal is back." },
     landing: {
       eyebrow: "Construction management · Dominican Republic",
       heroLead:
