@@ -11,6 +11,14 @@ import { parseSegment } from "@/lib/registro/validate";
 import { resolveSegment } from "@/lib/project/segments";
 import { requireProjectStructureAccess } from "@/lib/authz/projects";
 import { writeAudit } from "@/lib/audit/log";
+import { sendBestEffort } from "@/lib/email";
+import { passwordResetEmail, userInviteEmail } from "@/lib/email/templates";
+
+/** Absolute login URL for emails, when APP_URL is configured. */
+function loginUrl(): string | undefined {
+  const base = process.env.APP_URL;
+  return base ? `${base.replace(/\/$/, "")}/login` : undefined;
+}
 
 /** Cookie name shared with the admin page to flash a one-time temp password. */
 const TEMP_PW_COOKIE = "r360_temp_pw";
@@ -128,17 +136,23 @@ export async function createUser(formData: FormData) {
   const submitted = String(formData.get("role"));
   if (!Object.values(Role).includes(submitted as Role)) throw new Error("Invalid role");
 
+  const email = String(formData.get("email"));
+  const name = String(formData.get("name"));
+
   // CSPRNG temp password (~96 bits), not Math.random().
   const tempPassword = randomBytes(12).toString("base64url");
   await prisma.user.create({
     data: {
-      email: String(formData.get("email")),
-      name: String(formData.get("name")),
+      email,
+      name,
       role: submitted as Role,
       companyId,
       passwordHash: await bcrypt.hash(tempPassword, 10),
     },
   });
+  // Email the new user their access (best-effort; the temp password is also
+  // shown once to the admin via the return value + banner).
+  await sendBestEffort(userInviteEmail(email, name, tempPassword, loginUrl()));
   revalidatePath("/app/admin");
   return tempPassword;
 }
@@ -175,6 +189,10 @@ export async function resetUserPassword(formData: FormData) {
       summary: `Admin reset password for user ${target.email}`,
     });
   });
+
+  // Email the user their temp password (best-effort; the admin also sees it via
+  // the cookie flash below as a fallback).
+  await sendBestEffort(passwordResetEmail(target.email, tempPassword, loginUrl()));
 
   // Flash the temp password via a short-lived httpOnly cookie — same pattern
   // as the addUser wrapper in the admin page (maxAge 30 s, path /app/admin).
