@@ -1,0 +1,20 @@
+# Netlify config for the Raphl web app (lives in web/).
+# Set environment variables in the Netlify UI (Site settings → Environment variables):
+#   DATABASE_URL (Supabase pooled, 6543) · DIRECT_URL (Supabase direct, 5432) ·
+#   AUTH_SECRET · AUTH_TRUST_HOST=true · APP_URL ·
+#   S3_BUCKET · S3_ENDPOINT · S3_ACCESS_KEY_ID · S3_SECRET_ACCESS_KEY · S3_REGION=auto ·
+#   RESEND_API_KEY · EMAIL_FROM
+# See web/.env.example for the full contract.
+
+[build]
+  base = "web"
+  # Generate the Prisma client, apply migrations (uses DIRECT_URL), then build.
+  # To manage migrations out-of-band instead, drop the `prisma migrate deploy` step.
+  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Official Next.js runtime adapter (App Router, server actions, route handlers).
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

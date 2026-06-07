@@ -33,6 +33,8 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/record360_test
+      # No pooler in CI, so the direct URL is the same as DATABASE_URL.
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/record360_test
       # Non-secret placeholders so build/runtime code that reads these doesn't fail.
       # Real values are configured per-environment at deploy time (see web/.env.example).
       AUTH_SECRET: ci-placeholder-not-a-real-secret

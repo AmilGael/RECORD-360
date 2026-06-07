@@ -1,10 +1,16 @@
 generator client {
   provider = "prisma-client-js"
+  // "native" for local dev; rhel-openssl-3.0.x for Netlify Functions (AWS Lambda runtime).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Runtime connection. On Supabase + serverless this is the POOLED string
+  // (Supavisor, port 6543, with ?pgbouncer=true) to avoid exhausting connections.
+  url       = env("DATABASE_URL")
+  // Migrations need a DIRECT connection (Supabase port 5432). Used by `prisma migrate`.
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
