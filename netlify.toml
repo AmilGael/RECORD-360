@@ -8,12 +8,22 @@
 
 [build]
   base = "web"
-  # Generate the Prisma client, apply migrations (uses DIRECT_URL), then build.
-  # To manage migrations out-of-band instead, drop the `prisma migrate deploy` step.
-  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
+  # DEFAULT for every context (incl. deploy-preview / branch-deploy): build only,
+  # NO migrations. Untrusted PR code must never run `prisma migrate deploy`.
+  command = "npx prisma generate && npm run build"
 
 [build.environment]
   NODE_VERSION = "20"
+
+# Migrations run ONLY on the production deploy (post-merge to the production
+# branch = a trusted context). For defense in depth, scope DATABASE_URL and
+# DIRECT_URL to the *Production* deploy context in the Netlify UI
+# (Site settings → Environment variables → Deploy contexts) so preview/branch
+# builds can't reach the prod database even if this command changes.
+# To manage migrations fully out-of-band instead, drop the migrate step here and
+# run `prisma migrate deploy` from CI on main (or manually) after merge.
+[context.production]
+  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
 
 # Official Next.js runtime adapter (App Router, server actions, route handlers).
 [[plugins]]
