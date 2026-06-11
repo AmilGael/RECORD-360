@@ -264,6 +264,7 @@ export default async function ProjectPage({
               empty: t.changes.empty, states: t.changes.states,
               new: t.changes.new, fieldTitle: t.changes.fieldTitle, fieldDescription: t.changes.fieldDescription,
               fieldPartidas: t.changes.fieldPartidas,
+              fieldReminder: t.changes.fieldReminder, fieldReminderPlaceholder: t.changes.fieldReminderPlaceholder,
               evidence: t.changes.evidence, gps: t.composer.gps, gpsOk: t.composer.gpsOk,
             }}
           />
