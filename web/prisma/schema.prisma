@@ -88,6 +88,7 @@ model Project {
   documents      Document[]
   assignments    ProjectAssignment[]
   tags           PartidaTag[]
+  informes       Informe[]
   archivedAt     DateTime?
   createdAt      DateTime        @default(now())
 }
@@ -308,6 +309,25 @@ model Document {
   createdAt    DateTime     @default(now())
 
   @@index([projectId, kind, createdAt])
+}
+
+// AI-generated informe (spec R2.2 "Report" table). Deterministic PDF reports are
+// stateless routes; informes persist because they are auditable deliverables.
+model Informe {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  segmentId     String?
+  partidaId     String?
+  requestedById String
+  brief         String
+  periodFrom    DateTime?
+  periodTo      DateTime?
+  contentMd     String
+  model         String
+  createdAt     DateTime @default(now())
+
+  @@index([projectId, createdAt])
 }
 
 model AuditLog {
