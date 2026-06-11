@@ -234,6 +234,8 @@ model ChangeRequest {
   resolvedById String?
   resolvedAt   DateTime?
   rejectionReason String?
+  resolutionNote  String?
+  reminderDueAt   DateTime?
   seal         String?
   createdAt    DateTime     @default(now())
 
