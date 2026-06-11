@@ -4,11 +4,14 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getDict } from "@/i18n/server";
 import { createUser } from "@/app/actions/admin";
+import { updateCompanySeal } from "@/app/actions/profile";
 import { SubmitButton } from "@/components/submit-button";
 import { ResetPasswordButton } from "@/components/reset-password-button";
+import { MemberProfileForm } from "@/components/member-profile-form";
 import type { Lang } from "@/i18n/dictionaries";
 import { formatTimestamp } from "@/lib/format/datetime";
-import { Key, Plus } from "@/components/icons";
+import { Key, Plus, Upload } from "@/components/icons";
+import Link from "next/link";
 
 const TEMP_PW_COOKIE = "r360_temp_pw";
 
@@ -55,6 +58,18 @@ export default async function AdminPage() {
     where: { companyId: user.companyId },
     orderBy: { createdAt: "asc" },
   });
+
+  const assignmentRows = await prisma.projectAssignment.findMany({
+    where: { user: { companyId: user.companyId } },
+    select: { userId: true, project: { select: { id: true, name: true, archivedAt: true } } },
+  });
+  const assignmentsByUser = new Map<string, { id: string; name: string; archivedAt: Date | null }[]>();
+  for (const a of assignmentRows) {
+    const list = assignmentsByUser.get(a.userId) ?? [];
+    list.push(a.project);
+    assignmentsByUser.set(a.userId, list);
+  }
+  const company = await prisma.company.findUniqueOrThrow({ where: { id: user.companyId }, select: { sealKey: true } });
 
   // Flash the freshly-created temp password from a short-lived httpOnly cookie
   // (kept out of the URL). It auto-expires; cookies can't be cleared at render.
@@ -120,15 +135,38 @@ export default async function AdminPage() {
           </div>
           {members.map((u) => (
             <div key={u.id} className="member-card">
-              <div className={`avatar ${avatarClass(u.role)}`}>{initials(u.name)}</div>
+              {u.photoKey ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/api/media/${u.photoKey}`} alt="" className={`avatar ${avatarClass(u.role)}`} style={{ objectFit: "cover" }} />
+              ) : (
+                <div className={`avatar ${avatarClass(u.role)}`}>{initials(u.name)}</div>
+              )}
               <div className="member-info">
                 <div className="member-name">{u.name}</div>
-                <div className="member-email">{u.email}</div>
+                <div className="member-email">{u.email}{u.phone ? ` · ${u.phone}` : ""}</div>
+                {u.signatureKey && (
+                  <div className="mono text-steel" style={{ fontSize: "0.62rem" }}>{A.signed}</div>
+                )}
+                {(u.role === "SUPERVISOR" || u.role === "RESIDENT") && (
+                  <details style={{ marginTop: 2 }}>
+                    <summary className="mono text-steel" style={{ fontSize: "0.66rem", cursor: "pointer" }}>
+                      {(assignmentsByUser.get(u.id) ?? []).length} {A.assignedObras}
+                    </summary>
+                    <div style={{ display: "grid", gap: 2, marginTop: 4 }}>
+                      {(assignmentsByUser.get(u.id) ?? []).map((p) => (
+                        <Link key={p.id} href={`/app/projects/${p.id}`} className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-deep)", textDecoration: "none" }}>
+                          {p.name}{p.archivedAt ? " (archivada)" : ""}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
+                )}
               </div>
               <span className={`role-badge ${roleClass(u.role)}`}>{A.roles[u.role as RoleKey]}</span>
               <span className="member-date">
                 {A.added} {formatTimestamp(u.createdAt, lang as Lang)}
               </span>
+              <MemberProfileForm userId={u.id} phone={u.phone} t={{ editProfile: A.editProfile, phone: A.phone, photo: A.photo, signature: A.signature, saveProfile: A.saveProfile }} />
               {user.role === "ADMIN" && (
                 <ResetPasswordButton
                   userId={u.id}
@@ -139,6 +177,26 @@ export default async function AdminPage() {
           ))}
         </div>
       ))}
+
+      {/* Company seal section */}
+      {user.role === "ADMIN" && (
+        <div className="card" style={{ padding: 16, marginBottom: 24 }}>
+          <div className="form-label" style={{ marginBottom: 6 }}>{A.sealTitle}</div>
+          <p className="mono text-steel" style={{ fontSize: "0.7rem", margin: "0 0 10px" }}>{A.sealHint}</p>
+          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            {company.sealKey ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/media/${company.sealKey}`} alt={A.sealTitle} style={{ width: 72, height: 72, objectFit: "contain", background: "#fff", borderRadius: "var(--radius-sm)", border: "1px solid var(--line-strong)" }} />
+            ) : (
+              <span className="mono text-steel" style={{ fontSize: "0.74rem" }}>{A.noSeal}</span>
+            )}
+            <form action={updateCompanySeal} style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+              <input type="file" name="seal" required accept="image/png" style={{ fontSize: "0.78rem" }} />
+              <SubmitButton className="btn btn-ghost"><Upload size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{A.sealUpload}</SubmitButton>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Invite collaborator panel */}
       {user.role === "ADMIN" && (
