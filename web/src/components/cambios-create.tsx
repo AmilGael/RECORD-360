@@ -39,6 +39,7 @@ export function CambiosCreate({ projectId, segments, t }: {
         type="datetime-local"
         name="reminderDueAt"
         required
+        min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
         aria-label={t.fieldReminderPlaceholder}
         className="input"
         style={{ marginBottom: 10 }}

@@ -9,7 +9,7 @@ vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 import { purgeProject } from "@/app/actions/admin";
 import { purgePartida } from "@/app/actions/partida-crud";
 
-let companyId = "", adminId = "", managerId = "", residentId = "";
+let companyId = "", adminId = "", managerId = "", residentId = "", disabledManagerId = "";
 
 function fd(obj: Record<string, string>) {
   const f = new FormData();
@@ -23,6 +23,7 @@ beforeAll(async () => {
   adminId = (await prisma.user.create({ data: { email: `adm-${s}@x.do`, name: "Adm", role: "ADMIN", companyId, passwordHash: "x" } })).id;
   managerId = (await prisma.user.create({ data: { email: `mgr-${s}@x.do`, name: "Mgr", role: "MANAGER", companyId, passwordHash: "x" } })).id;
   residentId = (await prisma.user.create({ data: { email: `res-${s}@x.do`, name: "Res", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
+  disabledManagerId = (await prisma.user.create({ data: { email: `mgr-dis-${s}@x.do`, name: "Mgr Disabled", role: "MANAGER", companyId, passwordHash: "x", disabledAt: new Date() } })).id;
 });
 
 afterAll(async () => {
@@ -71,5 +72,8 @@ describe("permanent deletes create notifications", () => {
       where: { userId: managerId, type: "delete.permanent", title: { contains: "Partida fantasma" } },
     });
     expect(mgrNote).not.toBeNull();
+
+    const disabledNote = await prisma.notification.findFirst({ where: { userId: disabledManagerId, type: "delete.permanent" } });
+    expect(disabledNote).toBeNull();
   });
 });

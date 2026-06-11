@@ -71,7 +71,7 @@ export async function purgePartida(formData: FormData) {
   if (records > 0) throw new Error("No se puede borrar definitivamente: contiene registros inalterables.");
 
   const [staff, assignments, actor] = await Promise.all([
-    prisma.user.findMany({ where: { companyId, role: { in: [Role.ADMIN, Role.MANAGER] } }, select: { id: true } }),
+    prisma.user.findMany({ where: { companyId, role: { in: [Role.ADMIN, Role.MANAGER] }, disabledAt: null }, select: { id: true } }),
     prisma.projectAssignment.findMany({ where: { projectId: p.projectId }, select: { userId: true } }),
     prisma.user.findFirst({ where: { id: uid }, select: { name: true } }),
   ]);

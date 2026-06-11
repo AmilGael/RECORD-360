@@ -57,6 +57,9 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
           {cr.gpsLat != null && <><Pin size={11} style={{ verticalAlign: -2, marginRight: 3 }} />{`${Number(cr.gpsLat).toFixed(4)} · `}</>}
           {formatTimestamp(cr.createdAt, lang as Lang)}
         </Field>
+        {cr.reminderDueAt && (
+          <Field label={C.fieldReminder}>{formatTimestamp(cr.reminderDueAt, lang as Lang)}</Field>
+        )}
         {cr.attachments.length > 0 && (
           <Field label={C.evidence}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 8 }}>
