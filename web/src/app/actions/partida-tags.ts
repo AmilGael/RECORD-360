@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/db";
-import { requireProjectStructureAccess } from "@/lib/authz/projects";
+import { requireProjectStructureAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { revalidatePath } from "next/cache";
 import { requireFreshSession } from "@/lib/auth/session";
 
@@ -18,7 +18,7 @@ export async function setPartidaTags(formData: FormData) {
 
   const partidaId = String(formData.get("partidaId"));
   const partida = await prisma.partida.findFirst({
-    where: { id: partidaId, deletedAt: null, project: { companyId: user.companyId } },
+    where: { id: partidaId, deletedAt: null, project: projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) },
     select: { id: true, projectId: true },
   });
   if (!partida) throw new Error("Forbidden");

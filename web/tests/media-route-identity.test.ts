@@ -15,7 +15,7 @@ vi.mock("@/lib/storage", () => ({
 
 import { GET } from "@/app/api/media/[key]/route";
 
-let companyId = "", otherCompanyId = "", adminId = "", outsiderId = "", residentId = "", projectId = "";
+let companyId = "", otherCompanyId = "", adminId = "", outsiderId = "", residentId = "";
 const COVER_KEY = "r1cover-test.png";
 const PHOTO_KEY = "r1photo-test.png";
 const SEAL_KEY = "r1seal-test.png";
@@ -31,7 +31,7 @@ beforeAll(async () => {
   adminId = (await prisma.user.create({ data: { email: `adm-${s}@x.do`, name: "Adm", role: "ADMIN", companyId, passwordHash: "x", photoKey: PHOTO_KEY } })).id;
   residentId = (await prisma.user.create({ data: { email: `res-${s}@x.do`, name: "Res", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
   outsiderId = (await prisma.user.create({ data: { email: `out-${s}@x.do`, name: "Out", role: "ADMIN", companyId: otherCompanyId, passwordHash: "x" } })).id;
-  projectId = (await prisma.project.create({ data: { companyId, name: `Media Obra ${s}`, registrationCode: generateRegistrationCode(), coverImageKey: COVER_KEY } })).id;
+  await prisma.project.create({ data: { companyId, name: `Media Obra ${s}`, registrationCode: generateRegistrationCode(), coverImageKey: COVER_KEY } });
 });
 
 afterAll(async () => {

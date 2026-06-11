@@ -4,7 +4,7 @@ import { writeAudit } from "@/lib/audit/log";
 import { parseSegment } from "@/lib/registro/validate";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { requireProjectStructureAccess } from "@/lib/authz/projects";
+import { requireProjectStructureAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { requireFreshSession } from "@/lib/auth/session";
 
 const MANAGER_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
@@ -62,7 +62,7 @@ export async function renameSegment(formData: FormData) {
   if (!name) throw new Error("El nombre del bloque es obligatorio.");
 
   const segment = await prisma.segment.findFirst({
-    where: { id: segmentId, project: { companyId: user.companyId } },
+    where: { id: segmentId, project: projectAccessWhere(user) },
     select: { id: true, projectId: true, name: true },
   });
   if (!segment) throw new Error("Forbidden");
@@ -100,7 +100,7 @@ export async function renamePartida(formData: FormData) {
   const name = parseName(formData.get("name"), "El nombre de la partida");
 
   const partida = await prisma.partida.findFirst({
-    where: { id: partidaId, deletedAt: null, project: { companyId: user.companyId } },
+    where: { id: partidaId, deletedAt: null, project: projectAccessWhere(user) },
     select: { id: true, projectId: true, name: true },
   });
   if (!partida) throw new Error("Forbidden");
@@ -130,7 +130,7 @@ export async function movePartida(formData: FormData) {
   const segmentId = rawSegmentId ? rawSegmentId : null;
 
   const partida = await prisma.partida.findFirst({
-    where: { id: partidaId, deletedAt: null, project: { companyId: user.companyId } },
+    where: { id: partidaId, deletedAt: null, project: projectAccessWhere(user) },
     select: { id: true, projectId: true, name: true, segmentId: true },
   });
   if (!partida) throw new Error("Forbidden");

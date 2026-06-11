@@ -18,7 +18,8 @@ export function projectAccessWhere(user: SessionUser): Prisma.ProjectWhereInput 
   if (hasCompanyWideAccess(user.role)) return base;
   // R1.6: archiving an obra revokes assigned RESIDENT/SUPERVISOR access —
   // only ADMIN/MANAGER can enter archived obras. Single choke point: this
-  // where-clause feeds lists, detail pages, registros, media and reports.
+  // where-clause feeds lists, detail pages, registros, media, reports, and
+  // all structure-write pre-lookups (partida-progress, partida-tags, project-edit).
   return { ...base, archivedAt: null, assignments: { some: { userId: user.id } } };
 }
 
@@ -40,7 +41,7 @@ export async function canManageProjectStructure(user: SessionUser, projectId: st
     return Boolean(project);
   }
   const assignment = await prisma.projectAssignment.findFirst({
-    where: { projectId, userId: user.id, project: { companyId: user.companyId } },
+    where: { projectId, userId: user.id, project: { companyId: user.companyId, archivedAt: null } },
     select: { id: true },
   });
   return Boolean(assignment);
