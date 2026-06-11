@@ -14,7 +14,7 @@ describe("ResendMailer.send", () => {
 
   it("POSTs to the Resend API with auth + the message", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
-    const mailer = new ResendMailer("key_123", "Raphl <no-reply@raphl.app>");
+    const mailer = new ResendMailer("key_123", "Raphel <no-reply@raphel.app>");
     await mailer.send({ to: "u@x.do", subject: "Hi", html: "<p>x</p>", text: "x" });
 
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -23,7 +23,7 @@ describe("ResendMailer.send", () => {
     expect(init.method).toBe("POST");
     expect(init.headers.Authorization).toBe("Bearer key_123");
     const body = JSON.parse(init.body);
-    expect(body).toMatchObject({ from: "Raphl <no-reply@raphl.app>", to: ["u@x.do"], subject: "Hi", html: "<p>x</p>", text: "x" });
+    expect(body).toMatchObject({ from: "Raphel <no-reply@raphel.app>", to: ["u@x.do"], subject: "Hi", html: "<p>x</p>", text: "x" });
   });
 
   it("throws when the API responds non-2xx", async () => {

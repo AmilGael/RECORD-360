@@ -44,7 +44,7 @@ export function AppSidebar({
   return (
     <aside className="app-sidebar">
       <div className="sidebar-brand">
-        <div className="kicker">Raphl</div>
+        <div className="kicker">Raphel</div>
         <strong>BLACK BOX</strong>
         <span className="text-steel">{labels.brandTagline}</span>
       </div>

@@ -1,6 +1,6 @@
 import type { EmailMessage } from "./types";
 
-const APP_NAME = "Raphl";
+const APP_NAME = "Raphel";
 
 /** Minimal HTML escaping for values interpolated into email bodies. */
 function esc(s: string): string {
