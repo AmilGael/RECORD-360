@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
 import { writeAudit } from "@/lib/audit/log";
 import { requireFreshSession } from "@/lib/auth/session";
+import { createNotifications } from "@/lib/notifications/create";
 
 async function requireSession() {
   const user = await requireFreshSession();
@@ -68,6 +69,14 @@ export async function purgePartida(formData: FormData) {
   const p = await ownedPartida(String(formData.get("partidaId")), companyId);
   const records = await prisma.registro.count({ where: { partidaId: p.id } });
   if (records > 0) throw new Error("No se puede borrar definitivamente: contiene registros inalterables.");
+
+  const [staff, assignments, actor] = await Promise.all([
+    prisma.user.findMany({ where: { companyId, role: { in: [Role.ADMIN, Role.MANAGER] } }, select: { id: true } }),
+    prisma.projectAssignment.findMany({ where: { projectId: p.projectId }, select: { userId: true } }),
+    prisma.user.findFirst({ where: { id: uid }, select: { name: true } }),
+  ]);
+  const recipientIds = [...new Set([...staff.map((u) => u.id), ...assignments.map((a) => a.userId)])].filter((rid) => rid !== uid);
+
   await prisma.$transaction(async (tx) => {
     await tx.changeRequestPartida.deleteMany({ where: { partidaId: p.id } });
     await tx.partida.delete({ where: { id: p.id } });
@@ -84,4 +93,11 @@ export async function purgePartida(formData: FormData) {
   revalidatePath(`/app/projects/${p.projectId}`);
   revalidatePath(`/app/partidas/${p.id}`);
   revalidatePath("/app");
+  await createNotifications(recipientIds.map((userId) => ({
+    companyId,
+    userId,
+    type: "delete.permanent",
+    title: `Partida borrada definitivamente: ${p.name}`,
+    body: `Borrada por ${actor?.name ?? "—"}.`,
+  })));
 }

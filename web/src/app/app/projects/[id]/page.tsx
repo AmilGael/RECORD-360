@@ -12,6 +12,9 @@ import { projectProgress } from "@/lib/project/progress";
 import { filterPartidaGroups } from "@/lib/project/partida-filter";
 import { PartidaRecycle } from "@/components/partida-recycle";
 import { RenameProjectForm } from "@/components/project-edit-controls";
+import { ArchiveButton } from "@/components/archive-button";
+import { PurgeProjectButton } from "@/components/purge-project-button";
+import { restoreProject } from "@/app/actions/admin";
 import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
@@ -233,6 +236,24 @@ export default async function ProjectPage({
       <div className="mono text-steel" style={{ fontSize: "0.78rem" }}>
         {project.company.name} · {allPartidas.length} {P.partidasWord} · {avg}%
       </div>
+      {isOwner && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
+          <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>
+            {project.archivedAt ? P.dangerArchivedHint : P.dangerArchiveHint}
+          </span>
+          {project.archivedAt ? (
+            <>
+              <form action={restoreProject} style={{ display: "inline" }}>
+                <input type="hidden" name="projectId" value={project.id} />
+                <button type="submit" className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{P.restoreProject}</button>
+              </form>
+              <PurgeProjectButton projectId={project.id} t={{ purge: t.dash.purge, purgeConfirm: t.dash.purgeConfirm, yes: t.dash.yes, no: t.dash.no }} />
+            </>
+          ) : (
+            <ArchiveButton projectId={project.id} t={{ archive: t.dash.archive, confirm: t.dash.confirm, yes: t.dash.yes, no: t.dash.no }} />
+          )}
+        </div>
+      )}
       <ProjectAssignmentsPanel
         projectId={project.id}
         assignments={project.assignments}

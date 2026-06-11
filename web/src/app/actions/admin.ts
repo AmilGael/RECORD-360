@@ -13,6 +13,7 @@ import { writeAudit } from "@/lib/audit/log";
 import { sendBestEffort } from "@/lib/email";
 import { passwordResetEmail, userInviteEmail } from "@/lib/email/templates";
 import { requireFreshSession } from "@/lib/auth/session";
+import { createNotifications } from "@/lib/notifications/create";
 
 /** Absolute login URL for emails, when APP_URL is configured. */
 function loginUrl(): string | undefined {
@@ -81,6 +82,7 @@ export async function archiveProject(formData: FormData) {
   if (!project) throw new Error("Forbidden");
   await prisma.project.update({ where: { id }, data: { archivedAt: new Date() } });
   revalidatePath("/app");
+  revalidatePath(`/app/projects/${id}`);
 }
 
 export async function restoreProject(formData: FormData) {
@@ -91,6 +93,7 @@ export async function restoreProject(formData: FormData) {
   if (!project) throw new Error("Forbidden");
   await prisma.project.update({ where: { id }, data: { archivedAt: null } });
   revalidatePath("/app");
+  revalidatePath(`/app/projects/${id}`);
 }
 
 export async function purgeProject(formData: FormData) {
@@ -111,6 +114,13 @@ export async function purgeProject(formData: FormData) {
     throw new Error("No se puede borrar definitivamente: la obra aún contiene partidas, cambios o documentos.");
   }
 
+  const [staff, assignments, actor] = await Promise.all([
+    prisma.user.findMany({ where: { companyId, role: { in: [Role.ADMIN, Role.MANAGER] }, disabledAt: null }, select: { id: true } }),
+    prisma.projectAssignment.findMany({ where: { projectId: id }, select: { userId: true } }),
+    prisma.user.findFirst({ where: { id: actorId }, select: { name: true } }),
+  ]);
+  const recipientIds = [...new Set([...staff.map((u) => u.id), ...assignments.map((a) => a.userId)])].filter((uid) => uid !== actorId);
+
   await prisma.$transaction(async (tx) => {
     await tx.location.deleteMany({ where: { projectId: id } });
     await tx.segment.deleteMany({ where: { projectId: id } });
@@ -125,6 +135,14 @@ export async function purgeProject(formData: FormData) {
     });
   });
   revalidatePath("/app");
+  await createNotifications(recipientIds.map((userId) => ({
+    companyId,
+    userId,
+    type: "delete.permanent",
+    title: `Obra borrada definitivamente: ${project.name}`,
+    body: `Borrada por ${actor?.name ?? "—"}.`,
+  })));
+  redirect("/app");
 }
 
 export async function createUser(formData: FormData) {
