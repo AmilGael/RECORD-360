@@ -70,14 +70,18 @@ export function AppSidebar({
       <section className="sidebar-section">
         <div className="sidebar-heading">{labels.status}</div>
         <div className="sidebar-stats">
-          <div className="sidebar-stat">
-            <strong>{activeProjects}</strong>
-            <span>{labels.activeProjects}</span>
-          </div>
-          <div className="sidebar-stat">
-            <strong>{archivedProjects}</strong>
-            <span>{labels.archivedProjects}</span>
-          </div>
+          {isAdmin && (
+            <>
+              <div className="sidebar-stat">
+                <strong>{activeProjects}</strong>
+                <span>{labels.activeProjects}</span>
+              </div>
+              <div className="sidebar-stat">
+                <strong>{archivedProjects}</strong>
+                <span>{labels.archivedProjects}</span>
+              </div>
+            </>
+          )}
           <div className="sidebar-stat">
             <strong>{unread}</strong>
             <span>{labels.unread}</span>
