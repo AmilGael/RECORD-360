@@ -51,6 +51,7 @@ export async function createChangeRequest(formData: FormData) {
       companyId: user.companyId,
       role: { in: [Role.ADMIN, Role.MANAGER] },
       id: { not: user.id },
+      disabledAt: null,
     },
     select: { id: true, companyId: true },
   });

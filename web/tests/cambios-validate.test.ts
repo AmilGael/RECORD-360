@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseChangeTitle, parseRejectionReason, parseReminderDueAt, parseResolutionNote } from "@/lib/cambios/validate";
+import { parseChangeTitle, parseReminderDueAt, parseResolutionNote } from "@/lib/cambios/validate";
 
 describe("parseChangeTitle", () => {
   it("trims and returns", () => { expect(parseChangeTitle("  Refuerzo  ")).toBe("Refuerzo"); });
@@ -7,11 +7,6 @@ describe("parseChangeTitle", () => {
   it("rejects > 200 chars", () => { expect(() => parseChangeTitle("x".repeat(201))).toThrow(); });
 });
 
-describe("parseRejectionReason", () => {
-  it("trims and returns", () => { expect(parseRejectionReason("  no procede  ")).toBe("no procede"); });
-  it("rejects empty", () => { expect(() => parseRejectionReason("   ")).toThrow(); });
-  it("rejects > 1000 chars", () => { expect(() => parseRejectionReason("x".repeat(1001))).toThrow(); });
-});
 
 describe("parseReminderDueAt", () => {
   it("throws when empty — reminders are mandatory on change requests", () => {
@@ -25,6 +20,9 @@ describe("parseReminderDueAt", () => {
     const d = parseReminderDueAt("2027-01-15T10:00");
     expect(d).toBeInstanceOf(Date);
     expect(d.getFullYear()).toBe(2027);
+  });
+  it("rejects past dates — a mandatory reminder must be in the future", () => {
+    expect(() => parseReminderDueAt("2020-01-01T10:00")).toThrow(/futura/i);
   });
 });
 

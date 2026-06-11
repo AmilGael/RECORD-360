@@ -217,7 +217,7 @@ export function LogComposer({
         </datalist>
         <label className="mono text-steel" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.68rem" }}>
           {t.reminder ?? "Reminder"}
-        <input type="datetime-local" name="reminderDueAt" min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)} className="input" style={{ width: 190 }} />
+        <input type="datetime-local" name="reminderDueAt" min={new Date(Date.now() + 60_000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)} className="input" style={{ width: 190 }} />
         </label>
         {speechSupported && (
           <button type="button" onClick={toggleDictation} className="btn btn-ghost" aria-label={listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
