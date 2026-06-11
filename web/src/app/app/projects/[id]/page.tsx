@@ -75,12 +75,11 @@ export default async function ProjectPage({
 
   const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : tab === "analitica" ? "analitica" : "code";
   const selectedSpaceBlock = segmentSummaries.some((s) => s.id === spaceBlock) ? String(spaceBlock) : (segmentSummaries[0]?.id ?? null);
-  const selectedSpace = (["cuaderno", "planos", "actualizados", "levantamientos", "ideas", "media", "recordatorios", "indicadores"].includes(String(space))
+  const selectedSpace = (["cuaderno", "planos", "levantamientos", "ideas", "media", "recordatorios", "indicadores"].includes(String(space))
     ? String(space)
     : "cuaderno") as SpaceKey;
   const spaceKind: Partial<Record<SpaceKey, DocumentKind>> = {
     planos: "PLANO",
-    actualizados: "PLANO_ACTUALIZADO",
     levantamientos: "LEVANTAMIENTO",
     ideas: "IDEA",
   };
@@ -106,11 +105,17 @@ export default async function ProjectPage({
     : [];
 
   const docs = activeTab === "planos"
-    ? await prisma.document.findMany({ where: { projectId: id, kind: "PLANO" }, orderBy: { createdAt: "desc" } })
+    ? await prisma.document.findMany({ where: { projectId: id, kind: { in: ["PLANO", "PLANO_ACTUALIZADO"] } }, orderBy: { createdAt: "desc" } })
     : [];
   const spaceDocs = activeTab === "code" && selectedSpaceBlock && spaceKind[selectedSpace]
     ? await prisma.document.findMany({
-        where: { projectId: id, segmentId: selectedSpaceBlock, kind: spaceKind[selectedSpace] },
+        where: {
+          projectId: id,
+          segmentId: selectedSpaceBlock,
+          kind: selectedSpace === "planos"
+            ? { in: ["PLANO", "PLANO_ACTUALIZADO"] }
+            : spaceKind[selectedSpace],
+        },
         orderBy: { createdAt: "desc" },
       })
     : [];
