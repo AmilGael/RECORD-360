@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -18,7 +19,7 @@ beforeAll(async () => {
   companyId = (await prisma.company.create({ data: { name: `MgrUp Co ${s}` } })).id;
   // Deliberately NOT assigned to the project — regression lock: manager can publish company-wide.
   managerId = (await prisma.user.create({ data: { email: `mgr-${s}@x.do`, name: "Gerente", role: "MANAGER", companyId, passwordHash: "x" } })).id;
-  projectId = (await prisma.project.create({ data: { companyId, name: `MgrUp Obra ${s}` } })).id;
+  projectId = (await prisma.project.create({ data: { companyId, name: `MgrUp Obra ${s}`, registrationCode: generateRegistrationCode() } })).id;
   partidaId = (await prisma.partida.create({ data: { projectId, name: "Losa N1" } })).id;
 });
 

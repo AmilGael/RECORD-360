@@ -39,6 +39,7 @@ enum AttachmentType {
 model Company {
   id        String    @id @default(cuid())
   name      String
+  sealKey   String?
   users     User[]
   projects  Project[]
   auditLogs AuditLog[]
@@ -51,6 +52,9 @@ model User {
   passwordHash       String
   name               String
   role               Role
+  phone        String?
+  photoKey     String?
+  signatureKey String?
   companyId          String
   company            Company             @relation(fields: [companyId], references: [id])
   projectAssignments ProjectAssignment[]
@@ -73,9 +77,11 @@ model Project {
   id             String          @id @default(cuid())
   companyId      String
   company        Company         @relation(fields: [companyId], references: [id])
-  name           String
-  description    String?
-  partidas       Partida[]
+  name             String
+  description      String?
+  coverImageKey    String?
+  registrationCode String  @unique
+  partidas         Partida[]
   segments       Segment[]
   locations      Location[]
   changeRequests ChangeRequest[]

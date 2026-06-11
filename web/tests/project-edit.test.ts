@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 import { verifyChain } from "@/lib/registro/hash";
 import { toStored } from "@/lib/registro/map";
 
@@ -36,8 +37,8 @@ beforeAll(async () => {
   otherCompanyId = (await prisma.company.create({ data: { name: `Other Edit Co ${suffix}` } })).id;
   managerId = (await prisma.user.create({ data: { email: `edit-m-${suffix}@x.do`, name: "Manager", role: "MANAGER", companyId, passwordHash: "x" } })).id;
   residentId = (await prisma.user.create({ data: { email: `edit-r-${suffix}@x.do`, name: "Resident", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
-  projectId = (await prisma.project.create({ data: { companyId, name: "Editable Obra" } })).id;
-  otherProjectId = (await prisma.project.create({ data: { companyId: otherCompanyId, name: "Other Project" } })).id;
+  projectId = (await prisma.project.create({ data: { companyId, name: "Editable Obra", registrationCode: generateRegistrationCode() } })).id;
+  otherProjectId = (await prisma.project.create({ data: { companyId: otherCompanyId, name: "Other Project", registrationCode: generateRegistrationCode() } })).id;
   segmentAId = (await prisma.segment.create({ data: { projectId, name: "Bloque A" } })).id;
   segmentBId = (await prisma.segment.create({ data: { projectId, name: "Bloque B" } })).id;
   otherSegmentId = (await prisma.segment.create({ data: { projectId: otherProjectId, name: "Other Bloque" } })).id;

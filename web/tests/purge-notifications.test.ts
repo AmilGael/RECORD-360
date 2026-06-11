@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -39,7 +40,7 @@ afterAll(async () => {
 describe("permanent deletes create notifications", () => {
   it("purgeProject notifies MANAGER and assigned users; NOT the actor (ADMIN)", async () => {
     const project = await prisma.project.create({
-      data: { companyId, name: "Obra a borrar", archivedAt: new Date() },
+      data: { companyId, name: "Obra a borrar", archivedAt: new Date(), registrationCode: generateRegistrationCode() },
     });
     await prisma.projectAssignment.create({ data: { projectId: project.id, userId: residentId, role: "RESIDENT" } });
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
@@ -60,7 +61,7 @@ describe("permanent deletes create notifications", () => {
   });
 
   it("purgePartida notifies MANAGER with the partida name", async () => {
-    const project = await prisma.project.create({ data: { companyId, name: "Obra viva" } });
+    const project = await prisma.project.create({ data: { companyId, name: "Obra viva", registrationCode: generateRegistrationCode() } });
     const partida = await prisma.partida.create({
       data: { projectId: project.id, name: "Partida fantasma", deletedAt: new Date(), deletedById: adminId },
     });

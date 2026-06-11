@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 
@@ -36,7 +37,7 @@ beforeAll(async () => {
   });
   otherUserId = otherUser.id;
 
-  const project = await prisma.project.create({ data: { companyId, name: `Verify Project ${suffix}` } });
+  const project = await prisma.project.create({ data: { companyId, name: `Verify Project ${suffix}`, registrationCode: generateRegistrationCode() } });
   projectId = project.id;
 
   const partida = await prisma.partida.create({ data: { projectId, name: "Verify Partida" } });

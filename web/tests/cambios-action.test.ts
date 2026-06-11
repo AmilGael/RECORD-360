@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { verifyChain } from "@/lib/registro/hash";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -18,7 +19,7 @@ beforeAll(async () => {
   managerId = (await prisma.user.create({ data: { email: `mgr-${s}@x.do`, name: "Mgr", role: "MANAGER", companyId, passwordHash: "x" } })).id;
   adminId = (await prisma.user.create({ data: { email: `adm-${s}@x.do`, name: "Adm", role: "ADMIN", companyId, passwordHash: "x" } })).id;
   residentId = (await prisma.user.create({ data: { email: `res-${s}@x.do`, name: "Res", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
-  projectId = (await prisma.project.create({ data: { companyId, name: `CR Project ${s}` } })).id;
+  projectId = (await prisma.project.create({ data: { companyId, name: `CR Project ${s}`, registrationCode: generateRegistrationCode() } })).id;
   await prisma.projectAssignment.create({ data: { projectId, userId: residentId, role: "RESIDENT" } });
   segmentA = (await prisma.segment.create({ data: { projectId, name: "Bloque A" } })).id;
   segmentB = (await prisma.segment.create({ data: { projectId, name: "Bloque B" } })).id;

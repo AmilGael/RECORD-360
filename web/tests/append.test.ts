@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 import { toStored } from "@/lib/registro/map";
 import { verifyChain, GENESIS_PREV_HASH } from "@/lib/registro/hash";
 
@@ -11,7 +12,7 @@ beforeAll(async () => {
   companyId = c.id;
   const u = await prisma.user.create({ data: { email: `t${Date.now()}@x.do`, name: "T", role: "RESIDENT", companyId, passwordHash: "x" } });
   userId = u.id;
-  const p = await prisma.project.create({ data: { companyId, name: "T Proj" } });
+  const p = await prisma.project.create({ data: { companyId, name: "T Proj", registrationCode: generateRegistrationCode() } });
   projectId = p.id;
   const pa = await prisma.partida.create({ data: { projectId, name: "T Partida" } });
   partidaId = pa.id;

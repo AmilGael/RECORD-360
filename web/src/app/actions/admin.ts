@@ -14,6 +14,7 @@ import { sendBestEffort } from "@/lib/email";
 import { passwordResetEmail, userInviteEmail } from "@/lib/email/templates";
 import { requireFreshSession } from "@/lib/auth/session";
 import { createNotifications } from "@/lib/notifications/create";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 /** Absolute login URL for emails, when APP_URL is configured. */
 function loginUrl(): string | undefined {
@@ -46,6 +47,7 @@ export async function createProject(formData: FormData) {
       companyId,
       name: String(formData.get("name")),
       description: String(formData.get("description") ?? "") || null,
+      registrationCode: generateRegistrationCode(),
     },
   });
   revalidatePath("/app");

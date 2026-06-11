@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { Readable } from "node:stream";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const storageGet = vi.hoisted(() => vi.fn());
 const authMock = vi.hoisted(() => vi.fn());
@@ -40,7 +41,7 @@ beforeAll(async () => {
   userAId = userA.id;
   userBId = userB.id;
 
-  const projectA = await prisma.project.create({ data: { companyId: companyAId, name: `Media Project ${suffix}` } });
+  const projectA = await prisma.project.create({ data: { companyId: companyAId, name: `Media Project ${suffix}`, registrationCode: generateRegistrationCode() } });
   projectAId = projectA.id;
   const partidaA = await prisma.partida.create({ data: { projectId: projectAId, name: "Media Partida" } });
   partidaAId = partidaA.id;

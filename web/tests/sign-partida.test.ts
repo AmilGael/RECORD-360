@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
 import bcrypt from "bcryptjs";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -34,7 +35,7 @@ beforeAll(async () => {
     data: { email: `sig-admin-${s}@x.do`, name: "Admin Test", role: "ADMIN", companyId, passwordHash: hash },
   })).id;
 
-  projectId = (await prisma.project.create({ data: { companyId, name: `Sig Project ${s}` } })).id;
+  projectId = (await prisma.project.create({ data: { companyId, name: `Sig Project ${s}`, registrationCode: generateRegistrationCode() } })).id;
   // Assign user to project (SUPERVISOR needs assignment)
   await prisma.projectAssignment.create({ data: { projectId, userId, role: "SUPERVISOR" } });
 
@@ -45,7 +46,7 @@ beforeAll(async () => {
   userBId = (await prisma.user.create({
     data: { email: `sig-ub-${s}@x.do`, name: "User B", role: "MANAGER", companyId: companyBId, passwordHash: hash },
   })).id;
-  const projectBId = (await prisma.project.create({ data: { companyId: companyBId, name: `Sig Project B ${s}` } })).id;
+  const projectBId = (await prisma.project.create({ data: { companyId: companyBId, name: `Sig Project B ${s}`, registrationCode: generateRegistrationCode() } })).id;
   partidaNoAccessId = (await prisma.partida.create({ data: { projectId: projectBId, name: "No Access Partida" } })).id;
 });
 
