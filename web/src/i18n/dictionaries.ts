@@ -272,6 +272,7 @@ export const dictionaries = {
       sealUpload: "Subir sello",
       noSeal: "Aún no hay sello.",
       assignedObras: "obras asignadas",
+      archivedSuffix: " (archivada)",
       signed: "Firma registrada",
     },
     notifications: {
@@ -569,6 +570,7 @@ export const dictionaries = {
       sealUpload: "Upload seal",
       noSeal: "No seal yet.",
       assignedObras: "assigned sites",
+      archivedSuffix: " (archived)",
       signed: "Signature on file",
     },
     notifications: {
