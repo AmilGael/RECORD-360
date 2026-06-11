@@ -24,7 +24,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ key: string }>
 
     const url = `/api/media/${safeKey}`;
     const accessWhere = projectAccessWhere(sessionUser);
-    const [attachment, changeAttachment, document] = await Promise.all([
+    const [attachment, changeAttachment, document, coverProject, member, company] = await Promise.all([
       prisma.attachment.findFirst({
         where: { url, registro: { partida: { project: accessWhere } } },
         select: { id: true },
@@ -37,8 +37,18 @@ export async function GET(_req: Request, ctx: { params: Promise<{ key: string }>
         where: { url, project: accessWhere },
         select: { id: true },
       }),
+      // Identity images (R1): covers are project-scoped; member photos/firmas and
+      // the company seal are company-scoped.
+      prisma.project.findFirst({ where: { coverImageKey: safeKey, ...accessWhere }, select: { id: true } }),
+      prisma.user.findFirst({
+        where: { companyId: sessionUser.companyId, OR: [{ photoKey: safeKey }, { signatureKey: safeKey }] },
+        select: { id: true },
+      }),
+      prisma.company.findFirst({ where: { id: sessionUser.companyId, sealKey: safeKey }, select: { id: true } }),
     ]);
-    if (!attachment && !changeAttachment && !document) return new Response("Not found", { status: 404 });
+    if (!attachment && !changeAttachment && !document && !coverProject && !member && !company) {
+      return new Response("Not found", { status: 404 });
+    }
 
     const nodeStream = await storage.get(safeKey);
     const webStream = Readable.toWeb(nodeStream as Readable) as ReadableStream;
