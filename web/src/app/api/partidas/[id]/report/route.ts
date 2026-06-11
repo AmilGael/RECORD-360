@@ -6,19 +6,11 @@ import { projectAccessWhere } from "@/lib/authz/projects";
 import { verifyChain } from "@/lib/registro/hash";
 import { toStored } from "@/lib/registro/map";
 import { requireFreshSession } from "@/lib/auth/session";
+import { parseRangeParam, sanitizeFilename } from "@/lib/report/params";
+import QRCode from "qrcode";
 // pdfkit is listed in serverExternalPackages and must be required at runtime.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require("pdfkit") as typeof import("pdfkit");
-
-/** Sanitize a string for use in a Content-Disposition filename. */
-function sanitizeFilename(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip combining diacritics
-    .replace(/[^a-zA-Z0-9._-]/g, "-")
-    .replace(/-{2,}/g, "-")
-    .slice(0, 80);
-}
 
 function sanitizePdfText(s: string): string {
   return s
@@ -41,7 +33,7 @@ function collectPdfBuffer(doc: InstanceType<typeof PDFDocument>): Promise<Buffer
   });
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
   // Resolve author names (scoped to the same company for safety)
@@ -49,6 +41,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     // Auth gate
     const user = await requireFreshSession();
     const sessionUser = { id: user.id, companyId: user.companyId, role: user.role };
+
+    // Parse optional time-range query params
+    const url = new URL(req.url);
+    const from = parseRangeParam(url, "from");
+    const to = parseRangeParam(url, "to");
+    if (from === "invalid" || to === "invalid") return new Response("Rango invalido", { status: 400 });
+    const hasRange = from !== null || to !== null;
+    const fromTo = hasRange
+      ? { serverCreatedAt: { gte: from ?? undefined, lte: to ?? undefined } }
+      : undefined;
 
     // Load partida scoped to tenant + project access
     const partida = await prisma.partida.findFirst({
@@ -59,11 +61,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       },
       include: {
         project: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            registrationCode: true,
             company: { select: { name: true } },
           },
         },
         registros: {
+          where: fromTo,
           orderBy: [{ serverCreatedAt: "asc" }, { id: "asc" }],
           include: {
             attachments: true,
@@ -85,9 +91,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       : [];
     const authorMap = new Map(authors.map((a) => [a.id, a.name]));
 
-    // Chain integrity check
-    const chainResult = verifyChain(partida.registros.map(toStored));
-    const chainStatus = chainResult.ok ? "Cadena integra" : "ALTERADA";
+    // Chain integrity check — skip on partial range (would give false negatives)
+    const chainStatus = hasRange
+      ? "rango parcial (ver reporte completo)"
+      : verifyChain(partida.registros.map(toStored)).ok ? "Cadena integra" : "ALTERADA";
 
     // Progress is stored on the partida itself
     const progressPct = partida.progressPct ?? 0;
@@ -105,10 +112,19 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const MUTED = "#555555";
   const RULE_COLOR = "#cccccc";
 
-  doc.font(FONT_BOLD).fontSize(18).fillColor(PRIMARY).text(sanitizePdfText(partida.project.company.name), { align: "left" });
+  // QR code top-right (verify URL)
+  const qr = await QRCode.toBuffer(
+    `${(process.env.APP_URL ?? "").replace(/\/$/, "")}/verify/${partida.project.registrationCode}`,
+    { margin: 1, width: 110 },
+  );
+  doc.image(qr, doc.page.width - 50 - 80, 50, { width: 80 });
+
+  doc.font(FONT_BOLD).fontSize(18).fillColor(PRIMARY).text(sanitizePdfText(partida.project.company.name), 50, 50, { width: doc.page.width - 200 });
   doc.font(FONT_NORMAL).fontSize(11).fillColor(MUTED);
   doc.text(`Obra: ${sanitizePdfText(partida.project.name)}`);
   doc.text(`Partida: ${sanitizePdfText(partida.name)}`);
+  doc.font(FONT_NORMAL).fontSize(10);
+  doc.text(`Codigo de Registro: ${partida.project.registrationCode}`);
   doc.moveDown(0.3);
   doc.font(FONT_NORMAL).fontSize(10).fillColor(MUTED);
   doc.text(`Avance: ${progressPct}%`);
