@@ -47,11 +47,11 @@ describe("createMailer selection", () => {
 
 describe("templates", () => {
   it("password reset email carries the temp password and a login link", () => {
-    const msg = passwordResetEmail("u@x.do", "Tmp-123", "https://app.raphl/login");
+    const msg = passwordResetEmail("u@x.do", "Tmp-123", "https://app.raphel/login");
     expect(msg.to).toBe("u@x.do");
     expect(msg.text).toContain("Tmp-123");
     expect(msg.html).toContain("Tmp-123");
-    expect(msg.html).toContain('href="https://app.raphl/login"');
+    expect(msg.html).toContain('href="https://app.raphel/login"');
   });
   it("invite email carries user + temp password and escapes HTML", () => {
     const msg = userInviteEmail("u@x.do", "<b>Bob</b>", "Tmp-9", undefined);

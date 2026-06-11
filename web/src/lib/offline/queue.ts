@@ -7,6 +7,10 @@ export class IndexedDbQueue implements OfflineQueue {
   private dbPromise: Promise<IDBPDatabase>;
 
   constructor(dbName = "raphl-offline") {
+    // "raphl-offline" and the "raphl:" event names are stable internal identifiers
+    // (persisted in users' IndexedDB / wired across components). They intentionally
+    // keep the old prefix after the Raphl→Raphel brand rename — renaming them would
+    // orphan queued offline entries on user devices.
     this.dbPromise = openDB(dbName, 1, {
       upgrade(db) {
         const s = db.createObjectStore(STORE, { keyPath: "id" });
