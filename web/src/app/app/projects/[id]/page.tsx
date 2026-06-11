@@ -15,6 +15,7 @@ import { RenameProjectForm } from "@/components/project-edit-controls";
 import { ArchiveButton } from "@/components/archive-button";
 import { PurgeProjectButton } from "@/components/purge-project-button";
 import { restoreProject, updateProjectCover } from "@/app/actions/admin";
+import { registrationQrDataUrl } from "@/lib/project/qr";
 import { SubmitButton } from "@/components/submit-button";
 import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
@@ -238,8 +239,12 @@ export default async function ProjectPage({
         </span>
         {isAdmin && <RenameProjectForm projectId={project.id} currentName={project.name} t={{ rename: P.rename, save: P.save, move: P.move, moveTo: P.moveTo, ungrouped: P.ungrouped }} />}
       </div>
-      <div className="mono text-steel" style={{ fontSize: "0.78rem" }}>
-        {project.company.name} · {allPartidas.length} {P.partidasWord} · {avg}%
+      <div className="mono text-steel" style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span>{project.company.name} · {allPartidas.length} {P.partidasWord} · {avg}%</span>
+        <span className="sep">·</span>
+        <span title={P.registrationCode}>{project.registrationCode}</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={await registrationQrDataUrl(project.registrationCode, 64)} alt={project.registrationCode} style={{ width: 44, height: 44 }} />
       </div>
       {isOwner && (
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>

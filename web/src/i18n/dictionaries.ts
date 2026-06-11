@@ -155,6 +155,7 @@ export const dictionaries = {
       analiticaOverdue: "Recordatorios vencidos",
       analiticaNoBloques: "Sin bloques todavía.",
       changeCover: "Cambiar portada",
+      registrationCode: "Código de Registro",
     },
     // Cambios = the "pull request" surface, in construction terms. A change request
     // is proposed → revisada → Integrada (merged into the record) / Rechazada.
@@ -277,6 +278,16 @@ export const dictionaries = {
       newer: "Siguientes",
       pageLabel: "Página",
       ofLabel: "de",
+    },
+    verify: {
+      title: "Certificado de Registro",
+      valid: "Registro válido",
+      validSince: "Registro válido desde",
+      obra: "Obra",
+      company: "Compañía",
+      invalid: "Código no reconocido",
+      invalidBody: "Este código no corresponde a ninguna obra registrada en Raphel.",
+      tagline: "Cada entrada queda sellada con hora, GPS y cadena de verificación criptográfica.",
     },
   },
   en: {
@@ -431,6 +442,7 @@ export const dictionaries = {
       analiticaOverdue: "Overdue reminders",
       analiticaNoBloques: "No blocks yet.",
       changeCover: "Change cover",
+      registrationCode: "Registration Code",
     },
     // Changes = the "pull request" surface. A change request is
     // proposed → reviewed → Integrated (merged into the record) / Rejected.
@@ -552,6 +564,16 @@ export const dictionaries = {
       newer: "Newer",
       pageLabel: "Page",
       ofLabel: "of",
+    },
+    verify: {
+      title: "Registration Certificate",
+      valid: "Valid registration",
+      validSince: "Registered since",
+      obra: "Site",
+      company: "Company",
+      invalid: "Unrecognized code",
+      invalidBody: "This code does not match any site registered in Raphel.",
+      tagline: "Every entry is sealed with time, GPS and a cryptographic verification chain.",
     },
   },
 };
