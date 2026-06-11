@@ -271,7 +271,7 @@ export default async function ProjectPage({
             authorMap={docAuthorMap}
             lang={lang}
             isAdmin={isAdmin}
-            t={{ empty: t.planos.empty, upload: t.planos.upload, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view }}
+            t={{ empty: t.planos.empty, upload: t.planos.uploadByKind.PLANO, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view }}
           />
         </div>
       ) : activeTab === "analitica" ? (
@@ -328,7 +328,7 @@ export default async function ProjectPage({
             canUpload={canEditStructure}
             canResolve={canEditStructure}
             lang={lang}
-            t={{ emptyDocs: t.planos.empty, upload: t.planos.upload, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder }}
+            t={{ emptyDocs: t.planos.empty, upload: t.planos.upload, uploadByKind: t.planos.uploadByKind, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder }}
           />
           <PartidaRecycle
             rows={deletedPartidas}

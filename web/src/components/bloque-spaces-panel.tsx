@@ -42,7 +42,7 @@ export function BloqueSpacesPanel({
   canUpload: boolean;
   canResolve: boolean;
   lang: Lang;
-  t: { emptyDocs: string; upload: string; title: string; error: string; uploadedBy: string; view: string; resolve: string };
+  t: { emptyDocs: string; upload: string; uploadByKind: Record<DocumentKind, string>; title: string; error: string; uploadedBy: string; view: string; resolve: string };
 }) {
   if (segments.length === 0 || !selectedSegmentId) return null;
   const selected = segments.find((s) => s.id === selectedSegmentId) ?? segments[0];
@@ -79,7 +79,7 @@ export function BloqueSpacesPanel({
 
         {space.kind && (
           <>
-            {canUpload && <PlanosUpload projectId={projectId} segmentId={selected.id} kind={space.kind} t={{ upload: t.upload, title: t.title, error: t.error }} />}
+            {canUpload && <PlanosUpload projectId={projectId} segmentId={selected.id} kind={space.kind} t={{ upload: t.uploadByKind[space.kind] ?? t.upload, title: t.title, error: t.error }} />}
             <DocList docs={docs} lang={lang} t={t} />
           </>
         )}

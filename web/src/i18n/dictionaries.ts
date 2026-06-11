@@ -183,6 +183,14 @@ export const dictionaries = {
       uploadedBy: "subido por",
       view: "Ver plano",
       error: "No se pudo subir. Inténtalo de nuevo.",
+      uploadByKind: {
+        PLANO: "Subir plano",
+        PLANO_ACTUALIZADO: "Subir plano",
+        DOCUMENTO: "Subir documento",
+        LEVANTAMIENTO: "Subir levantamiento",
+        IDEA: "Subir idea",
+        MINUTA: "Subir minuta",
+      },
     },
     partida: {
       progress: "AVANCE",
@@ -441,6 +449,14 @@ export const dictionaries = {
       uploadedBy: "uploaded by",
       view: "View blueprint",
       error: "Upload failed. Please try again.",
+      uploadByKind: {
+        PLANO: "Upload blueprint",
+        PLANO_ACTUALIZADO: "Upload blueprint",
+        DOCUMENTO: "Upload document",
+        LEVANTAMIENTO: "Upload survey",
+        IDEA: "Upload idea",
+        MINUTA: "Upload minutes",
+      },
     },
     partida: {
       progress: "PROGRESS",

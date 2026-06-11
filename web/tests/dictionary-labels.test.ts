@@ -25,3 +25,15 @@ describe("role descriptions include scope and synonyms", () => {
     }
   });
 });
+
+describe("per-space upload labels", () => {
+  it("has an upload label for every DocumentKind in both locales", () => {
+    const kinds = ["PLANO", "DOCUMENTO", "LEVANTAMIENTO", "IDEA", "MINUTA", "PLANO_ACTUALIZADO"] as const;
+    for (const lang of ["es", "en"] as const) {
+      for (const k of kinds) {
+        expect(dictionaries[lang].planos.uploadByKind[k]).toBeTruthy();
+      }
+    }
+    expect(dictionaries.es.planos.uploadByKind.LEVANTAMIENTO).toBe("Subir levantamiento");
+  });
+});
