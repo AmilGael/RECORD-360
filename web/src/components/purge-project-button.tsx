@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { purgeProject } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
+import { Trash } from "@/components/icons";
 
 type T = { purge: string; purgeConfirm: string; yes: string; no: string };
 
@@ -20,7 +21,7 @@ export function PurgeProjectButton({ projectId, t }: { projectId: string; t: T }
           letterSpacing: "0.08em",
         }}
       >
-        {t.purge}
+        <Trash size={11} style={{ verticalAlign: -1, marginRight: 4 }} />{t.purge}
       </button>
     );
   }

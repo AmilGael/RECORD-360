@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { createChangeRequest } from "@/app/actions/cambios";
 import { SubmitButton } from "@/components/submit-button";
+import { ClipboardPlus } from "@/components/icons";
 
 type T = {
   new: string; fieldTitle: string; fieldDescription: string; fieldPartidas: string;
@@ -48,7 +49,7 @@ export function CambiosCreate({ projectId, segments, t }: {
           onClick={() => navigator.geolocation?.getCurrentPosition((pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }))}>
           {coords ? t.gpsOk : t.gps}
         </button>
-        <SubmitButton className="btn btn-accent" style={{ marginLeft: "auto" }}>{t.new}</SubmitButton>
+        <SubmitButton className="btn btn-accent" style={{ marginLeft: "auto" }}><ClipboardPlus size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{t.new}</SubmitButton>
       </div>
     </form>
   );

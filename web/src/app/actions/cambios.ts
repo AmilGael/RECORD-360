@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
-import { parseChangeTitle, parseRejectionReason, parseReminderDueAt, parseResolutionNote } from "@/lib/cambios/validate";
+import { parseChangeTitle, parseReminderDueAt, parseResolutionNote } from "@/lib/cambios/validate";
 import { computeChangeSeal } from "@/lib/cambios/seal";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
