@@ -84,6 +84,7 @@ export const dictionaries = {
       analyticsRed: "Fase de Definición",
       analyticsRisk: "Obras en riesgo",
       analyticsNoRisk: "No hay obras en riesgo por ahora.",
+      cover: "Foto de portada (opcional)",
     },
     sidebar: {
       navigation: "Navegación",
@@ -153,6 +154,7 @@ export const dictionaries = {
       analiticaOpenChanges: "Cambios abiertos",
       analiticaOverdue: "Recordatorios vencidos",
       analiticaNoBloques: "Sin bloques todavía.",
+      changeCover: "Cambiar portada",
     },
     // Cambios = the "pull request" surface, in construction terms. A change request
     // is proposed → revisada → Integrada (merged into the record) / Rechazada.
@@ -358,6 +360,7 @@ export const dictionaries = {
       analyticsRed: "Definition phase",
       analyticsRisk: "Projects at risk",
       analyticsNoRisk: "No projects are at risk right now.",
+      cover: "Cover photo (optional)",
     },
     sidebar: {
       navigation: "Navigation",
@@ -427,6 +430,7 @@ export const dictionaries = {
       analiticaOpenChanges: "Open change requests",
       analiticaOverdue: "Overdue reminders",
       analiticaNoBloques: "No blocks yet.",
+      changeCover: "Change cover",
     },
     // Changes = the "pull request" surface. A change request is
     // proposed → reviewed → Integrated (merged into the record) / Rejected.

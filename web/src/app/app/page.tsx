@@ -85,6 +85,7 @@ export default async function Dashboard() {
       latestAuthor: latest ? authorMap.get(latest.authorId) ?? "—" : null,
       latestTime: latest ? formatTimestamp(latest.serverCreatedAt, lang as Lang) : null,
       latestHash: latest ? latest.hash : null,
+      coverImageKey: p.coverImageKey,
     };
   }));
   const dashboard = buildDashboardAnalytics(projectRows);
@@ -211,7 +212,12 @@ export default async function Dashboard() {
               <div key={p.id} className="repo-card" data-name={p.name.toLowerCase()}>
                 <Link href={`/app/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <div className="repo-title">
-                    <span className="folder-icon"><Folder size={14} /></span>
+                    {p.coverImageKey ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/api/media/${p.coverImageKey}`} alt="" style={{ width: 28, height: 28, objectFit: "cover", borderRadius: "var(--radius-sm)", flexShrink: 0 }} />
+                    ) : (
+                      <span className="folder-icon"><Folder size={14} /></span>
+                    )}
                     {p.name}
                     <span className="state-badge is-active" style={{ marginLeft: 4 }}>
                       {t.project.statusActive}
@@ -307,6 +313,10 @@ export default async function Dashboard() {
               <div className="form-group">
                 <label className="form-label" htmlFor="dash-desc">{D.newSiteDesc}</label>
                 <input id="dash-desc" name="description" placeholder="Av. Winston Churchill, Ens. Naco" className="input" />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="dash-cover">{D.cover}</label>
+                <input id="dash-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" className="input" style={{ padding: 6 }} />
               </div>
               <SubmitButton className="btn btn-accent" style={{ width: "100%", marginTop: 4 }}>
                 {D.create} <span className="arrow">→</span>

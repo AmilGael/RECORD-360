@@ -14,7 +14,8 @@ import { PartidaRecycle } from "@/components/partida-recycle";
 import { RenameProjectForm } from "@/components/project-edit-controls";
 import { ArchiveButton } from "@/components/archive-button";
 import { PurgeProjectButton } from "@/components/purge-project-button";
-import { restoreProject } from "@/app/actions/admin";
+import { restoreProject, updateProjectCover } from "@/app/actions/admin";
+import { SubmitButton } from "@/components/submit-button";
 import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
@@ -227,6 +228,10 @@ export default async function ProjectPage({
         ]}
       />
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "10px 0 2px" }}>
+        {project.coverImageKey && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={`/api/media/${project.coverImageKey}`} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: "var(--radius-sm)", flexShrink: 0 }} />
+        )}
         <h1 className="h-lg" style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)" }}>{project.name}</h1>
         <span className={`state-badge ${project.archivedAt ? "is-archived" : "is-active"}`}>
           {project.archivedAt ? P.statusArchived : P.statusActive}
@@ -238,6 +243,11 @@ export default async function ProjectPage({
       </div>
       {isOwner && (
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
+          <form action={updateProjectCover} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <input type="hidden" name="projectId" value={project.id} />
+            <input type="file" name="cover" required accept="image/jpeg,image/png,image/webp" style={{ fontSize: "0.72rem", maxWidth: 180 }} />
+            <SubmitButton className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{P.changeCover}</SubmitButton>
+          </form>
           <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>
             {project.archivedAt ? P.dangerArchivedHint : P.dangerArchiveHint}
           </span>

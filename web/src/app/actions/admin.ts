@@ -15,6 +15,8 @@ import { passwordResetEmail, userInviteEmail } from "@/lib/email/templates";
 import { requireFreshSession } from "@/lib/auth/session";
 import { createNotifications } from "@/lib/notifications/create";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
+import { storage } from "@/lib/storage";
+import { uploadBrandedImage } from "@/lib/storage/image-upload";
 
 /** Absolute login URL for emails, when APP_URL is configured. */
 function loginUrl(): string | undefined {
@@ -42,12 +44,17 @@ async function requireAdmin() {
 
 export async function createProject(formData: FormData) {
   const { companyId } = await requireAdmin();
+  const cover = formData.get("cover");
+  const coverImageKey = cover instanceof File && cover.size > 0
+    ? await uploadBrandedImage(cover, storage)
+    : null;
   await prisma.project.create({
     data: {
       companyId,
       name: String(formData.get("name")),
       description: String(formData.get("description") ?? "") || null,
       registrationCode: generateRegistrationCode(),
+      coverImageKey,
     },
   });
   revalidatePath("/app");
@@ -94,6 +101,19 @@ export async function restoreProject(formData: FormData) {
   const project = await prisma.project.findFirst({ where: { id, companyId } });
   if (!project) throw new Error("Forbidden");
   await prisma.project.update({ where: { id }, data: { archivedAt: null } });
+  revalidatePath("/app");
+  revalidatePath(`/app/projects/${id}`);
+}
+
+export async function updateProjectCover(formData: FormData) {
+  const { companyId } = await requireAdmin();
+  const id = String(formData.get("projectId"));
+  const project = await prisma.project.findFirst({ where: { id, companyId } });
+  if (!project) throw new Error("Forbidden");
+  const cover = formData.get("cover");
+  if (!(cover instanceof File) || cover.size === 0) throw new Error("Selecciona una imagen.");
+  const coverImageKey = await uploadBrandedImage(cover, storage);
+  await prisma.project.update({ where: { id }, data: { coverImageKey } });
   revalidatePath("/app");
   revalidatePath(`/app/projects/${id}`);
 }
