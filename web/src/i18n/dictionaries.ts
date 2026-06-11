@@ -259,8 +259,8 @@ export const dictionaries = {
       roleDescs: {
         ADMIN: "Control total de la plataforma. Crea y borra obras, gestiona el equipo, los roles y la configuración, cierra solicitudes de cambio y accede a todas las obras, incluidas las archivadas. (Sinónimos: Administrador general, Dueño de la cuenta)",
         MANAGER: "Gerencia de proyectos. Ve todas las obras de la compañía, aprueba o rechaza solicitudes de cambio, sube planos y documentos en todos los espacios y genera reportes ejecutivos. (Sinónimos: Gerente general, Gerente de proyectos, Director de obra)",
-        SUPERVISOR: "Supervisión y control de calidad de las obras a las que está asignado. Valida lo reportado por el residente, registra observaciones y avances, y da seguimiento a los recordatorios pendientes. (Sinónimos: Supervisor de obra, Encargado de QA)",
-        RESIDENT: "Lleva el día a día de la obra asignada. Crea y actualiza partidas, registra notas, fotos, videos y avances desde el campo, y solicita cambios cuando la obra lo requiere. (Sinónimos: Residente de obra, Ingeniero residente)",
+        SUPERVISOR: "Supervisión y control de calidad de las obras a las que está asignado. Valida lo reportado por el residente, registra observaciones y avances, y da seguimiento a los recordatorios pendientes. Pierde el acceso a las obras archivadas. (Sinónimos: Supervisor de obra, Encargado de QA)",
+        RESIDENT: "Lleva el día a día de la obra asignada. Crea y actualiza partidas, registra notas, fotos, videos y avances desde el campo, y solicita cambios cuando la obra lo requiere. Pierde el acceso a las obras archivadas. (Sinónimos: Residente de obra, Ingeniero residente)",
       },
       phone: "Celular / flota",
       photo: "Foto",
@@ -556,8 +556,8 @@ export const dictionaries = {
       roleDescs: {
         ADMIN: "Full platform control. Creates and deletes sites, manages the team, roles and settings, closes change requests and can access every site, including archived ones. (Synonyms: General administrator, Account owner)",
         MANAGER: "Project management. Sees every site in the company, approves or rejects change requests, uploads blueprints and documents in all spaces and generates executive reports. (Synonyms: General manager, Project manager, Site director)",
-        SUPERVISOR: "Supervision and quality control of assigned sites. Validates what the resident reports, logs observations and progress, and follows up on pending reminders. (Synonyms: Site supervisor, QA lead)",
-        RESIDENT: "Runs the day-to-day of the assigned site. Creates and updates work items, logs notes, photos, videos and progress from the field, and requests changes when the site needs them. (Synonyms: Site resident, Resident engineer)",
+        SUPERVISOR: "Supervision and quality control of assigned sites. Validates what the resident reports, logs observations and progress, and follows up on pending reminders. Loses access to archived sites. (Synonyms: Site supervisor, QA lead)",
+        RESIDENT: "Runs the day-to-day of the assigned site. Creates and updates work items, logs notes, photos, videos and progress from the field, and requests changes when the site needs them. Loses access to archived sites. (Synonyms: Site resident, Resident engineer)",
       },
       phone: "Mobile / radio",
       photo: "Photo",

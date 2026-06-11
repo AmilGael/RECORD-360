@@ -116,7 +116,7 @@ test-account role.
 ### R1.3 User profile fields: phone, photo, firma
 > *"Num. de celular o flota, una foto del Usuario y también su firma en formato PNG con fondo transparente o blanco."*
 
-**Schema:** `User.phone String?`, `User.photoKey String?`, `User.signatureKey String?`. Firma upload is **PNG-only** (validated); photo jpeg/png/webp. Editable in Equipo (ADMIN/MANAGER edit anyone; users edit their own). Rendered beside member info.
+**Schema:** `User.phone String?`, `User.photoKey String?`, `User.signatureKey String?`. Firma upload is **PNG-only** (validated); photo jpeg/png/webp. Editable in Equipo by ADMIN/MANAGER (the page is already role-gated); self-service profile editing deferred to a later round. Rendered beside member info.
 
 ### R1.4 Company seal
 > *"se debe poder agregar el sello de la compañía en formato PNG… para agregar en los informes."*

@@ -16,7 +16,10 @@ export function hasCompanyWideAccess(role: Role) {
 export function projectAccessWhere(user: SessionUser): Prisma.ProjectWhereInput {
   const base = { companyId: user.companyId };
   if (hasCompanyWideAccess(user.role)) return base;
-  return { ...base, assignments: { some: { userId: user.id } } };
+  // R1.6: archiving an obra revokes assigned RESIDENT/SUPERVISOR access —
+  // only ADMIN/MANAGER can enter archived obras. Single choke point: this
+  // where-clause feeds lists, detail pages, registros, media and reports.
+  return { ...base, archivedAt: null, assignments: { some: { userId: user.id } } };
 }
 
 export async function canAccessProject(user: SessionUser, projectId: string) {
