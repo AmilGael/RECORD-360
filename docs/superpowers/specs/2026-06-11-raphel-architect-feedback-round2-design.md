@@ -56,8 +56,16 @@
 ### R0.7 Manager can upload in spaces
 > *"El gerente de proyectos debe de poder subir contenido en los distintos espacios."*
 
-**Now (root cause):** `canEditStructure = isAdmin || assignments.some(userId === me)` (`projects/[id]/page.tsx:65`, same in `partidas/[id]/page.tsx:64`) — an **unassigned MANAGER** gets `canUpload=false`. Server action only checks `canAccessProject`.
-**Fix:** company-wide roles (ADMIN, MANAGER) always have structure/upload rights: `canEditStructure = hasCompanyWideAccess(role) || assigned`. Reuse `lib/authz/projects.ts` helper; add test.
+**Now (verified during planning):** code already permits this everywhere — UI gate
+`canEditStructure = hasCompanyWideAccess(role) || assigned` (`projects/[id]/page.tsx:65`)
+and server gates (`createDocument` → `canAccessProject`; `logRegistro` →
+`projectAccessWhere`) all include MANAGER. The architect's report most likely came
+from testing with an account whose role wasn't actually MANAGER (seed only creates
+admin@record360.do/ADMIN).
+**Fix:** lock the behavior with regression tests (unassigned MANAGER can upload a
+document and post a registro). If a test fails, fix the revealed gap; if green, the
+item is closed-by-verification and the user should double-check the architect's
+test-account role.
 
 ### R0.8 Surface "Borrar obra"
 > *"No aparece la opción de poder borrar una obra (en caso de crear una por error)."*
