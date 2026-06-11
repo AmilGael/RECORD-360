@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
-import { parseChangeTitle, parseRejectionReason } from "@/lib/cambios/validate";
+import { parseChangeTitle, parseRejectionReason, parseReminderDueAt, parseResolutionNote } from "@/lib/cambios/validate";
 import { computeChangeSeal } from "@/lib/cambios/seal";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
@@ -21,6 +21,7 @@ export async function createChangeRequest(formData: FormData) {
 
   const title = parseChangeTitle(formData.get("title"));
   const description = (String(formData.get("description") ?? "").trim()) || null;
+  const reminderDueAt = parseReminderDueAt(formData.get("reminderDueAt"));
 
   const segmentIds = [...new Set(formData.getAll("segmentIds").map(String).filter(Boolean))];
   if (segmentIds.length === 0) throw new Error("Selecciona al menos un bloque afectado.");
@@ -38,7 +39,7 @@ export async function createChangeRequest(formData: FormData) {
     const count = await tx.changeRequest.count({ where: { projectId } });
     return tx.changeRequest.create({
       data: {
-        projectId, code: `SC-${count + 1}`, title, description, costImpact: null, daysImpact: null,
+        projectId, code: `SC-${count + 1}`, title, description, reminderDueAt, costImpact: null, daysImpact: null,
         authorId: user.id!, gpsLat, gpsLng,
         segments: { create: segmentIds.map((id) => ({ segmentId: id })) },
         attachments: { create: prepared.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })) },
@@ -78,12 +79,15 @@ export async function resolveChangeRequest(formData: FormData) {
   });
   if (!cr) throw new Error("Forbidden");
   if (cr.status !== "OPEN") throw new Error("La solicitud ya fue resuelta.");
-  if (cr.authorId === user.id) throw new Error("No puedes resolver tu propia solicitud.");
+  // 4-eyes when possible: a MANAGER cannot close their own solicitud. ADMIN may
+  // (small companies often have a single admin who also files requests).
+  if (user.role !== Role.ADMIN && cr.authorId === user.id) throw new Error("No puedes resolver tu propia solicitud.");
+
+  const resolutionNote = parseResolutionNote(formData.get("resolutionNote"));
 
   const resolvedAt = new Date();
   if (action === "REJECT") {
-    const rejectionReason = parseRejectionReason(formData.get("rejectionReason"));
-    await prisma.changeRequest.update({ where: { id: cr.id }, data: { status: "REJECTED", resolvedById: user.id, resolvedAt, rejectionReason } });
+    await prisma.changeRequest.update({ where: { id: cr.id }, data: { status: "REJECTED", resolvedById: user.id, resolvedAt, rejectionReason: resolutionNote, resolutionNote } });
   } else if (action === "INTEGRATE") {
     const segmentIds = cr.segments.map((s) => s.segmentId);
     const markerPartidas = segmentIds.length
@@ -102,7 +106,7 @@ export async function resolveChangeRequest(formData: FormData) {
     });
     const markerText = `Solicitud de cambio ${cr.code} integrada: ${cr.title}`;
     await retryOnConflict(() => prisma.$transaction(async (tx) => {
-      await tx.changeRequest.update({ where: { id: cr.id }, data: { status: "INTEGRATED", resolvedById: user.id!, resolvedAt, seal } });
+      await tx.changeRequest.update({ where: { id: cr.id }, data: { status: "INTEGRATED", resolvedById: user.id!, resolvedAt, seal, resolutionNote } });
       if (segmentIds.length && markerPartidaIds.length) {
         await tx.changeRequestPartida.createMany({
           data: markerPartidaIds.map((partidaId) => ({ changeRequestId: cr.id, partidaId })),
@@ -129,7 +133,7 @@ export async function resolveChangeRequest(formData: FormData) {
     userId: cr.authorId,
     type: "cambio.resolved",
     title: `Solicitud ${cr.code} ${action === "INTEGRATE" ? "integrada" : "rechazada"}`,
-    body: cr.title,
+    body: `${cr.title} — ${resolutionNote}`,
     link: `/app/projects/${cr.projectId}/cambios/${cr.id}`,
   }]);
   revalidatePath(`/app/projects/${cr.projectId}`);

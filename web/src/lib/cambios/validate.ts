@@ -19,3 +19,18 @@ export function parseRejectionReason(raw: unknown): string {
   if (v.length > 1000) throw new Error("El motivo del rechazo es demasiado largo (máx. 1000 caracteres).");
   return v;
 }
+
+export function parseReminderDueAt(raw: unknown): Date {
+  const v = String(raw ?? "").trim();
+  if (v === "") throw new Error("El recordatorio es obligatorio en una solicitud de cambio.");
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) throw new Error("Recordatorio inválido.");
+  return d;
+}
+
+export function parseResolutionNote(raw: unknown): string {
+  const v = String(raw ?? "").trim();
+  if (v === "") throw new Error("Escribe el feedback de la resolución.");
+  if (v.length > 1000) throw new Error("El feedback es demasiado largo (máx. 1000 caracteres).");
+  return v;
+}
