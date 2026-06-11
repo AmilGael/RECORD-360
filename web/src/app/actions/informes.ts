@@ -1,0 +1,84 @@
+"use server";
+import { prisma } from "@/lib/db";
+import { revalidatePath } from "next/cache";
+import { assembleReportData, type ReportScope } from "@/lib/report/data";
+import { INFORME_SYSTEM, buildInformeUserMessage } from "@/lib/informes/prompt";
+import { generateInformeContent, INFORME_MODEL } from "@/lib/informes/client";
+import { requireFreshSession } from "@/lib/auth/session";
+
+export type InformeResult =
+  | { ok: true; informeId: string }
+  | { ok: false; error: string; missingFirma?: boolean };
+
+/**
+ * Generate and persist an AI informe. Any project member may request one (the
+ * informe records who); the requester must have a firma on file because it is
+ * stamped into the PDF footer.
+ *
+ * NOTE (deploy): generation is a synchronous Claude call (~10-30s at
+ * max_tokens 4096). Fine in dev and within Netlify Pro's 26s window; if
+ * production timeouts appear, move to a background function.
+ */
+export async function createInforme(_prev: InformeResult | null, formData: FormData): Promise<InformeResult> {
+  try {
+    const user = await requireFreshSession();
+
+    const requester = await prisma.user.findFirst({
+      where: { id: user.id, companyId: user.companyId },
+      select: { id: true, name: true, signatureKey: true },
+    });
+    if (!requester) return { ok: false, error: "No autorizado." };
+    if (!requester.signatureKey) {
+      return { ok: false, missingFirma: true, error: "Necesitas registrar tu firma en Equipo antes de generar informes." };
+    }
+
+    const brief = String(formData.get("brief") ?? "").trim();
+    if (!brief) return { ok: false, error: "Describe de que va el informe." };
+    if (brief.length > 2000) return { ok: false, error: "La solicitud es demasiado larga (max. 2000 caracteres)." };
+
+    const scopeType = String(formData.get("scopeType"));
+    const scopeId = String(formData.get("scopeId"));
+    if (!["project", "segment", "partida"].includes(scopeType) || !scopeId) {
+      return { ok: false, error: "Alcance invalido." };
+    }
+    const scope = { type: scopeType, id: scopeId } as ReportScope;
+
+    const parseDate = (k: string): Date | null | "invalid" => {
+      const raw = String(formData.get(k) ?? "").trim();
+      if (!raw) return null;
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? "invalid" : d;
+    };
+    const from = parseDate("from");
+    const to = parseDate("to");
+    if (from === "invalid" || to === "invalid") return { ok: false, error: "Rango de fechas invalido." };
+
+    // Tenant + archived scoping happens inside assembleReportData.
+    const data = await assembleReportData({ id: user.id, companyId: user.companyId, role: user.role }, scope, from, to);
+    if (!data) return { ok: false, error: "No autorizado." };
+
+    const contentMd = await generateInformeContent(INFORME_SYSTEM, buildInformeUserMessage(data, brief));
+
+    const informe = await prisma.informe.create({
+      data: {
+        projectId: data.project.id,
+        segmentId: scope.type === "segment" ? scope.id : null,
+        partidaId: scope.type === "partida" ? scope.id : null,
+        requestedById: requester.id,
+        brief,
+        periodFrom: from,
+        periodTo: to,
+        contentMd,
+        model: INFORME_MODEL,
+      },
+    });
+
+    revalidatePath(`/app/projects/${data.project.id}`);
+    return { ok: true, informeId: informe.id };
+  } catch (e) {
+    const message = e instanceof Error && e.message.includes("ANTHROPIC")
+      ? "El generador de informes no esta configurado (falta la clave de API)."
+      : "No se pudo generar el informe. Intentalo de nuevo.";
+    return { ok: false, error: message };
+  }
+}
