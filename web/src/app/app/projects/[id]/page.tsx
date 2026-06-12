@@ -33,10 +33,10 @@ export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; spaceBlock?: string; space?: string; media?: string; mpage?: string }>;
+  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; spaceBlock?: string; space?: string; media?: string; mpage?: string; tags?: string | string[]; pmin?: string; pmax?: string; cambios?: string; ffrom?: string; fto?: string }>;
 }) {
   const { id } = await params;
-  const { p: selectedId, tab, q, block, spaceBlock, space, media, mpage } = await searchParams;
+  const { p: selectedId, tab, q, block, spaceBlock, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto } = await searchParams;
   const session = await auth();
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
@@ -99,14 +99,62 @@ export default async function ProjectPage({
     levantamientos: "LEVANTAMIENTO",
     ideas: "IDEA",
   };
+  // Facet params — only meaningful in bloque view, but parsed unconditionally so
+  // the type is stable. The open-CRs query is gated on inBloqueView.
+  const tagsParam = ([] as string[]).concat(tags ?? []).filter(Boolean);
+  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+  const dateOrNull = (v: unknown) => { const d = new Date(String(v ?? "")); return v && !Number.isNaN(d.getTime()) ? d : null; };
+
+  const openCRs = inBloqueView
+    ? await prisma.changeRequest.findMany({
+        where: { projectId: id, status: "OPEN" },
+        select: { partidas: { select: { partidaId: true } }, segments: { select: { segmentId: true } } },
+      })
+    : [];
+  const openPartidaIds = new Set(openCRs.flatMap((c) => c.partidas.map((p) => p.partidaId)));
+  const openSegmentIds = new Set(openCRs.flatMap((c) => c.segments.map((sg) => sg.segmentId)));
+
+  const enrich = <T extends { id: string; segmentId?: string | null; progressPct: number; createdAt: Date; tags: { tag: { name: string } }[] }>(p: T) => ({
+    ...p,
+    tagNames: p.tags.map((tp) => tp.tag.name),
+    hasOpenCambios: openPartidaIds.has(p.id) || (p.segmentId ? openSegmentIds.has(p.segmentId) : false),
+  });
+
+  const enrichedSegments = project.segments.map((s) => ({
+    ...s,
+    partidas: s.partidas.map(enrich),
+  }));
+  const enrichedUngrouped = project.partidas.map(enrich);
+
   const partidaFilters = {
     q: String(q ?? "").trim(),
-    block: String(block ?? ""),
+    block: blockParam,
+    tags: tagsParam,
+    progressMin: pmin != null && pmin !== "" ? num(pmin) : null,
+    progressMax: pmax != null && pmax !== "" ? num(pmax) : null,
+    openCambios: cambios === "open",
+    createdFrom: dateOrNull(ffrom),
+    createdTo: dateOrNull(fto),
   };
-  const filteredPartidas = filterPartidaGroups(project.segments, project.partidas, {
+  const filteredPartidas = filterPartidaGroups(enrichedSegments, enrichedUngrouped, {
     query: partidaFilters.q,
     segmentId: partidaFilters.block,
+    tags: partidaFilters.tags,
+    progressMin: partidaFilters.progressMin,
+    progressMax: partidaFilters.progressMax,
+    openCambios: partidaFilters.openCambios,
+    createdFrom: partidaFilters.createdFrom,
+    createdTo: partidaFilters.createdTo,
   });
+
+  const tagCounts = new Map<string, number>();
+  if (inBloqueView) {
+    for (const p of [...project.segments.flatMap((s) => s.partidas), ...project.partidas]) {
+      for (const tp of p.tags) tagCounts.set(tp.tag.name, (tagCounts.get(tp.tag.name) ?? 0) + 1);
+    }
+  }
+  // hasActive = facet filters are active (excludes q and block which have their own clear mechanism)
+  const hasActiveFacets = tagsParam.length > 0 || partidaFilters.progressMin != null || partidaFilters.progressMax != null || partidaFilters.openCambios || !!ffrom || !!fto;
 
   const changeRows = activeTab === "cambios"
     ? (await prisma.changeRequest.findMany({
@@ -436,6 +484,11 @@ export default async function ProjectPage({
               selectedId={selectedId}
               isAdmin={canEditStructure}
               filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters }}
+              facets={{
+                tagCounts: [...tagCounts.entries()],
+                selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios },
+                hasActive: hasActiveFacets,
+              }}
               t={{
                 ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add,
                 segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment,
@@ -443,6 +496,9 @@ export default async function ProjectPage({
                 move: P.move, moveTo: P.moveTo, searchPartidas: P.searchPartidas,
                 allBlocks: P.allBlocks, filter: P.filter, clear: P.clear,
                 noResults: P.noResults,
+                facetTags: P.facetTags, facetProgress: P.facetProgress,
+                facetProgressMin: P.facetProgressMin, facetProgressMax: P.facetProgressMax,
+                facetOpenCambios: P.facetOpenCambios, facetCreated: P.facetCreated,
               }}
             />
             {selected ? (

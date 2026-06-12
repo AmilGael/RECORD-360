@@ -177,6 +177,12 @@ export const dictionaries = {
       mediaDocumentos: "Documentos",
       mediaAudio: "Audio",
       mediaEmpty: "Sin archivos de este tipo todavía.",
+      facetTags: "Etiquetas",
+      facetProgress: "Avance",
+      facetProgressMin: "mín %",
+      facetProgressMax: "máx %",
+      facetOpenCambios: "Con cambios abiertos",
+      facetCreated: "Creada entre",
     },
     // Cambios = the "pull request" surface, in construction terms. A change request
     // is proposed → revisada → Integrada (merged into the record) / Rechazada.
@@ -519,6 +525,12 @@ export const dictionaries = {
       mediaDocumentos: "Documents",
       mediaAudio: "Audio",
       mediaEmpty: "No files of this type yet.",
+      facetTags: "Tags",
+      facetProgress: "Progress",
+      facetProgressMin: "min %",
+      facetProgressMax: "max %",
+      facetOpenCambios: "With open changes",
+      facetCreated: "Created between",
     },
     // Changes = the "pull request" surface. A change request is
     // proposed → reviewed → Integrated (merged into the record) / Rejected.

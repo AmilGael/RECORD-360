@@ -19,11 +19,19 @@ type TreeT = {
   segmentPlaceholder: string; newSegment: string; addSegment: string;
   rename: string; save: string; move: string; moveTo: string;
   searchPartidas: string; allBlocks: string; filter: string; clear: string; noResults: string;
+  facetTags: string; facetProgress: string; facetProgressMin: string; facetProgressMax: string;
+  facetOpenCambios: string; facetCreated: string;
+};
+
+type FacetsState = {
+  tagCounts: [string, number][];
+  selected: { tags: string[]; progressMin: number | null; progressMax: number | null; openCambios: boolean };
+  hasActive: boolean;
 };
 
 type SegmentOption = { id: string; name: string };
 
-type FilterState = { q: string; block: string; total: number; hasFilters: boolean };
+type FilterState = { q: string; block: string; tags: string[]; progressMin: number | null; progressMax: number | null; openCambios: boolean; createdFrom: Date | null; createdTo: Date | null; total: number; hasFilters: boolean };
 
 function projectHref(projectId: string, params: Record<string, string | undefined>) {
   const search = new URLSearchParams();
@@ -76,7 +84,7 @@ function FileRow({
 }
 
 export function ProjectFileTree({
-  projectId, segments, ungrouped, segmentNames, segmentOptions, selectedId, isAdmin, filters, t,
+  projectId, segments, ungrouped, segmentNames, segmentOptions, selectedId, isAdmin, filters, facets, t,
 }: {
   projectId: string;
   segments: { id: string; name: string; partidas: PartidaRow[] }[];
@@ -86,6 +94,7 @@ export function ProjectFileTree({
   selectedId?: string;
   isAdmin: boolean;
   filters: FilterState;
+  facets: FacetsState;
   t: TreeT;
 }) {
   const segListId = `segment-opts-${projectId}`;
@@ -102,9 +111,39 @@ export function ProjectFileTree({
           <option value={UNGROUPED_FILTER}>{t.ungrouped}</option>
           {segmentOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
+        <details className="facet-panel" open={facets.hasActive}>
+          <summary className="form-label" style={{ cursor: "pointer" }}>{t.filter}</summary>
+          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+            {facets.tagCounts.length > 0 && (
+              <div>
+                <div className="form-label">{t.facetTags}</div>
+                {facets.tagCounts.map(([name, count]) => (
+                  <label key={name} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.8rem" }}>
+                    <input type="checkbox" name="tags" value={name} defaultChecked={facets.selected.tags.includes(name)} />
+                    {name} <span className="mono text-steel" style={{ fontSize: "0.66rem" }}>({count})</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span className="form-label" style={{ margin: 0 }}>{t.facetProgress}</span>
+              <input name="pmin" type="number" min={0} max={100} defaultValue={facets.selected.progressMin ?? ""} placeholder={t.facetProgressMin} className="input" style={{ width: 80 }} />
+              <input name="pmax" type="number" min={0} max={100} defaultValue={facets.selected.progressMax ?? ""} placeholder={t.facetProgressMax} className="input" style={{ width: 80 }} />
+            </div>
+            <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.8rem" }}>
+              <input type="checkbox" name="cambios" value="open" defaultChecked={facets.selected.openCambios} />
+              {t.facetOpenCambios}
+            </label>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span className="form-label" style={{ margin: 0 }}>{t.facetCreated}</span>
+              <input name="ffrom" type="date" className="input" style={{ width: 140 }} />
+              <input name="fto" type="date" className="input" style={{ width: 140 }} />
+            </div>
+          </div>
+        </details>
         <div style={{ display: "flex", gap: 8 }}>
           <SubmitButton className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.filter}</SubmitButton>
-          {filters.hasFilters && <Link href={`/app/projects/${projectId}?tab=code`} className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.clear}</Link>}
+          {filters.hasFilters && <Link href={`/app/projects/${projectId}?tab=code&block=${encodeURIComponent(filters.block)}`} className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.clear}</Link>}
         </div>
       </form>
       {filters.hasFilters && filters.total === 0 && (
