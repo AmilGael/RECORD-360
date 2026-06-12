@@ -23,83 +23,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const D = t.dash;
   const { view, sort, dir } = await searchParams;
 
-  // Fetch active projects with their partidas AND the single most-recent registro per project
-  const projects = await prisma.project.findMany({
-    where: { ...projectAccessWhere(u), archivedAt: null },
-    orderBy: { createdAt: "desc" },
-    include: {
-      partidas: {
-        where: { deletedAt: null },
-        select: {
-          progressPct: true,
-          registros: {
-            orderBy: { serverCreatedAt: "desc" },
-            take: 1,
-            select: { serverCreatedAt: true, authorId: true, hash: true },
-          },
-        },
-      },
-    },
-  });
-
-  // Fetch author names for the most recent registros
-  const authorIds = new Set<string>();
-  for (const p of projects) {
-    for (const pa of p.partidas) {
-      if (pa.registros[0]) authorIds.add(pa.registros[0].authorId);
-    }
-  }
-  const authors = authorIds.size > 0
-    ? await prisma.user.findMany({ where: { id: { in: [...authorIds] }, companyId: u.companyId }, select: { id: true, name: true } })
-    : [];
-  const authorMap = new Map(authors.map((a) => [a.id, a.name]));
-
-  const now = new Date();
-  const projectRows = await Promise.all(projects.map(async (p) => {
-    const pct = projectProgress(p.partidas);
-    // Find the most recent registro across all partidas.
-    let latest: { serverCreatedAt: Date; authorId: string; hash: string } | null = null;
-    for (const pa of p.partidas) {
-      const r = pa.registros[0];
-      if (r && (!latest || r.serverCreatedAt > latest.serverCreatedAt)) {
-        latest = r;
-      }
-    }
-    const [openChanges, overdueReminders] = await Promise.all([
-      prisma.changeRequest.count({ where: { projectId: p.id, status: "OPEN" } }),
-      prisma.registro.count({
-        where: {
-          partida: { projectId: p.id, deletedAt: null },
-          reminderDueAt: { lt: now },
-          reminderResolvedAt: null,
-        },
-      }),
-    ]);
-    return {
-      id: p.id,
-      name: p.name,
-      progress: pct,
-      partidas: p.partidas.length,
-      openChanges,
-      overdueReminders,
-      latestAuthor: latest ? authorMap.get(latest.authorId) ?? "—" : null,
-      latestTime: latest ? formatTimestamp(latest.serverCreatedAt, lang as Lang) : null,
-      latestHash: latest ? latest.hash : null,
-      coverImageKey: p.coverImageKey,
-    };
-  }));
-
-  const archived = isAdmin
-    ? await prisma.project.findMany({
-        where: { companyId: u.companyId, archivedAt: { not: null } },
-        orderBy: { archivedAt: "desc" },
-      })
-    : [];
-
   // Table view: sortable general table for activas / archivadas
   const tableView = view === "activas" ? "activas" : view === "archivadas" && isAdmin ? "archivadas" : null;
-  let tableRows: { id: string; name: string; code: string; progress: number; resident: string; createdAt: Date }[] = [];
   if (tableView) {
+    let tableRows: { id: string; name: string; code: string; progress: number; resident: string; createdAt: Date }[] = [];
     const rows = await prisma.project.findMany({
       where: tableView === "activas"
         ? { ...projectAccessWhere(u), archivedAt: null }
@@ -124,10 +51,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       const bv = key === "name" ? b.name : key === "code" ? b.code : b.resident;
       return av.localeCompare(bv) * mul;
     });
-  }
-
-  // Render sortable table view when requested
-  if (tableView) {
     const th = (label: string, key: string) => {
       const nextDir = sort === key && dir !== "desc" ? "desc" : "asc";
       return (
@@ -163,6 +86,66 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </div>
     );
   }
+
+  // Fetch active projects with their partidas AND the single most-recent registro per project
+  const projects = await prisma.project.findMany({
+    where: { ...projectAccessWhere(u), archivedAt: null },
+    orderBy: { createdAt: "desc" },
+    include: {
+      partidas: {
+        where: { deletedAt: null },
+        select: {
+          progressPct: true,
+          registros: {
+            orderBy: { serverCreatedAt: "desc" },
+            take: 1,
+            select: { serverCreatedAt: true, authorId: true, hash: true },
+          },
+        },
+      },
+    },
+  });
+
+  // Fetch author names for the most recent registros
+  const authorIds = new Set<string>();
+  for (const p of projects) {
+    for (const pa of p.partidas) {
+      if (pa.registros[0]) authorIds.add(pa.registros[0].authorId);
+    }
+  }
+  const authors = authorIds.size > 0
+    ? await prisma.user.findMany({ where: { id: { in: [...authorIds] }, companyId: u.companyId }, select: { id: true, name: true } })
+    : [];
+  const authorMap = new Map(authors.map((a) => [a.id, a.name]));
+
+  const projectRows = projects.map((p) => {
+    const pct = projectProgress(p.partidas);
+    // Find the most recent registro across all partidas.
+    let latest: { serverCreatedAt: Date; authorId: string; hash: string } | null = null;
+    for (const pa of p.partidas) {
+      const r = pa.registros[0];
+      if (r && (!latest || r.serverCreatedAt > latest.serverCreatedAt)) {
+        latest = r;
+      }
+    }
+    return {
+      id: p.id,
+      name: p.name,
+      progress: pct,
+      partidas: p.partidas.length,
+      latestAuthor: latest ? authorMap.get(latest.authorId) ?? "—" : null,
+      latestTime: latest ? formatTimestamp(latest.serverCreatedAt, lang as Lang) : null,
+      latestHash: latest ? latest.hash : null,
+      coverImageKey: p.coverImageKey,
+    };
+  });
+
+  const archived = isAdmin
+    ? await prisma.project.findMany({
+        where: { companyId: u.companyId, archivedAt: { not: null } },
+        orderBy: { archivedAt: "desc" },
+      })
+    : [];
 
   return (
     <div className="reveal">

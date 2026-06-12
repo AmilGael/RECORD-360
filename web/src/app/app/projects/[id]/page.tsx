@@ -114,18 +114,6 @@ export default async function ProjectPage({
   const openPartidaIds = new Set(openCRs.flatMap((c) => c.partidas.map((p) => p.partidaId)));
   const openSegmentIds = new Set(openCRs.flatMap((c) => c.segments.map((sg) => sg.segmentId)));
 
-  const enrich = <T extends { id: string; segmentId?: string | null; progressPct: number; createdAt: Date; tags: { tag: { name: string } }[] }>(p: T) => ({
-    ...p,
-    tagNames: p.tags.map((tp) => tp.tag.name),
-    hasOpenCambios: openPartidaIds.has(p.id) || (p.segmentId ? openSegmentIds.has(p.segmentId) : false),
-  });
-
-  const enrichedSegments = project.segments.map((s) => ({
-    ...s,
-    partidas: s.partidas.map(enrich),
-  }));
-  const enrichedUngrouped = project.partidas.map(enrich);
-
   const partidaFilters = {
     q: String(q ?? "").trim(),
     block: blockParam,
@@ -136,16 +124,30 @@ export default async function ProjectPage({
     createdFrom: dateOrNull(ffrom),
     createdTo: dateOrNull(fto),
   };
-  const filteredPartidas = filterPartidaGroups(enrichedSegments, enrichedUngrouped, {
-    query: partidaFilters.q,
-    segmentId: partidaFilters.block,
-    tags: partidaFilters.tags,
-    progressMin: partidaFilters.progressMin,
-    progressMax: partidaFilters.progressMax,
-    openCambios: partidaFilters.openCambios,
-    createdFrom: partidaFilters.createdFrom,
-    createdTo: partidaFilters.createdTo,
-  });
+  const filteredPartidas = inBloqueView
+    ? (() => {
+        const enrich = <T extends { id: string; segmentId?: string | null; progressPct: number; createdAt: Date; tags: { tag: { name: string } }[] }>(p: T) => ({
+          ...p,
+          tagNames: p.tags.map((tp) => tp.tag.name),
+          hasOpenCambios: openPartidaIds.has(p.id) || (p.segmentId ? openSegmentIds.has(p.segmentId) : false),
+        });
+        const enrichedSegments = project.segments.map((s) => ({
+          ...s,
+          partidas: s.partidas.map(enrich),
+        }));
+        const enrichedUngrouped = project.partidas.map(enrich);
+        return filterPartidaGroups(enrichedSegments, enrichedUngrouped, {
+          query: partidaFilters.q,
+          segmentId: partidaFilters.block,
+          tags: partidaFilters.tags,
+          progressMin: partidaFilters.progressMin,
+          progressMax: partidaFilters.progressMax,
+          openCambios: partidaFilters.openCambios,
+          createdFrom: partidaFilters.createdFrom,
+          createdTo: partidaFilters.createdTo,
+        });
+      })()
+    : { segments: [], ungrouped: [], total: 0, hasFilters: false };
 
   const tagCounts = new Map<string, number>();
   if (inBloqueView) {
@@ -486,7 +488,7 @@ export default async function ProjectPage({
               filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters }}
               facets={{
                 tagCounts: [...tagCounts.entries()],
-                selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios },
+                selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios, createdFrom: String(ffrom ?? ""), createdTo: String(fto ?? "") },
                 hasActive: hasActiveFacets,
               }}
               t={{

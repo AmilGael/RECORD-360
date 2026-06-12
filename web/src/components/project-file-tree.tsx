@@ -25,7 +25,7 @@ type TreeT = {
 
 type FacetsState = {
   tagCounts: [string, number][];
-  selected: { tags: string[]; progressMin: number | null; progressMax: number | null; openCambios: boolean };
+  selected: { tags: string[]; progressMin: number | null; progressMax: number | null; openCambios: boolean; createdFrom: string; createdTo: string };
   hasActive: boolean;
 };
 
@@ -136,8 +136,8 @@ export function ProjectFileTree({
             </label>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span className="form-label" style={{ margin: 0 }}>{t.facetCreated}</span>
-              <input name="ffrom" type="date" className="input" style={{ width: 140 }} />
-              <input name="fto" type="date" className="input" style={{ width: 140 }} />
+              <input name="ffrom" type="date" className="input" style={{ width: 140 }} defaultValue={facets.selected.createdFrom} />
+              <input name="fto" type="date" className="input" style={{ width: 140 }} defaultValue={facets.selected.createdTo} />
             </div>
           </div>
         </details>
