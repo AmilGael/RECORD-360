@@ -7,7 +7,9 @@ import { PartidaSummary } from "@/components/partida-summary";
 import { CambiosList } from "@/components/cambios-list";
 import { PlanosTab } from "@/components/planos-tab";
 import { AnaliticaTab } from "@/components/analitica-tab";
-import { Layers, Branch, BarChart, Sliders, Folder } from "@/components/icons";
+import { InformesTab } from "@/components/informes-tab";
+import { Layers, Branch, BarChart, Sliders, Folder, FileText } from "@/components/icons";
+import { formatTimestamp } from "@/lib/format/datetime";
 import { projectProgress } from "@/lib/project/progress";
 import { filterPartidaGroups } from "@/lib/project/partida-filter";
 import { PartidaRecycle } from "@/components/partida-recycle";
@@ -78,7 +80,7 @@ export default async function ProjectPage({
     count: s.partidas.length,
   }));
 
-  const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : tab === "analitica" ? "analitica" : "code";
+  const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : tab === "analitica" ? "analitica" : tab === "informes" ? "informes" : "code";
   const selectedSpaceBlock = segmentSummaries.some((s) => s.id === spaceBlock) ? String(spaceBlock) : (segmentSummaries[0]?.id ?? null);
   const selectedSpace = (["cuaderno", "planos", "levantamientos", "ideas", "media", "recordatorios", "indicadores"].includes(String(space))
     ? String(space)
@@ -180,6 +182,20 @@ export default async function ProjectPage({
     ? await prisma.user.findMany({ where: { id: { in: uploaderIds }, companyId }, select: { id: true, name: true } })
     : [];
   const docAuthorMap = new Map(uploaders.map((u) => [u.id, u.name]));
+
+  const informeRows = activeTab === "informes"
+    ? await prisma.informe.findMany({
+        where: { projectId: id },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true },
+      })
+    : [];
+  const informeRequesterIds = [...new Set(informeRows.map((i) => i.requestedById))];
+  const informeRequesters = informeRequesterIds.length
+    ? await prisma.user.findMany({ where: { id: { in: informeRequesterIds }, companyId }, select: { id: true, name: true } })
+    : [];
+  const informeRequesterMap = new Map(informeRequesters.map((u) => [u.id, u.name]));
 
   const selected = selectedId
     ? await prisma.partida.findFirst({
@@ -286,6 +302,7 @@ export default async function ProjectPage({
         <Link href={`/app/projects/${id}?tab=planos`} className={`tab ${activeTab === "planos" ? "is-on" : ""}`} aria-current={activeTab === "planos" ? "page" : undefined}><Folder size={13} />{P.tabPlanos}</Link>
         <Link href={`/app/projects/${id}?tab=cambios`} className={`tab ${activeTab === "cambios" ? "is-on" : ""}`} aria-current={activeTab === "cambios" ? "page" : undefined}><Branch size={13} />{P.tabChanges}</Link>
         <Link href={`/app/projects/${id}?tab=analitica`} className={`tab ${activeTab === "analitica" ? "is-on" : ""}`} aria-current={activeTab === "analitica" ? "page" : undefined}><BarChart size={13} />{P.tabAnalytics}</Link>
+        <Link href={`/app/projects/${id}?tab=informes`} className={`tab ${activeTab === "informes" ? "is-on" : ""}`} aria-current={activeTab === "informes" ? "page" : undefined}><FileText size={13} />{P.tabInformes}</Link>
         <span className="tab is-off" aria-disabled="true"><Sliders size={13} />{P.tabSettings} <span className="soon">{P.soon}</span></span>
       </div>
 
@@ -322,6 +339,20 @@ export default async function ProjectPage({
           bloques={analiticaBloques}
           ungrouped={analiticaUngrouped}
           t={{ general: P.analiticaGeneral, byBloque: P.analiticaByBloque, openChanges: P.analiticaOpenChanges, overdue: P.analiticaOverdue, partidasWord: P.partidasWord, noBloques: P.analiticaNoBloques }}
+        />
+      ) : activeTab === "informes" ? (
+        <InformesTab
+          projectId={project.id}
+          segments={segmentOptions}
+          partidas={allPartidas.map((p) => ({ id: p.id, name: p.name }))}
+          informes={informeRows.map((i) => ({
+            id: i.id,
+            brief: i.brief,
+            createdAt: formatTimestamp(i.createdAt, lang),
+            requesterName: informeRequesterMap.get(i.requestedById) ?? "—",
+            scopeLabel: i.partidaId ? t.informes.scopePartida : i.segmentId ? t.informes.scopeSegment : t.informes.scopeProject,
+          }))}
+          t={t.informes}
         />
       ) : (
         <>

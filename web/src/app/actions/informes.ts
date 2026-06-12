@@ -36,8 +36,8 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     if (!brief) return { ok: false, error: "Describe de que va el informe." };
     if (brief.length > 2000) return { ok: false, error: "La solicitud es demasiado larga (max. 2000 caracteres)." };
 
-    const scopeType = String(formData.get("scopeType"));
-    const scopeId = String(formData.get("scopeId"));
+    const scopeRef = String(formData.get("scopeRef") ?? "");
+    const [scopeType, scopeId] = scopeRef ? scopeRef.split(":", 2) : [String(formData.get("scopeType")), String(formData.get("scopeId"))];
     if (!["project", "segment", "partida"].includes(scopeType) || !scopeId) {
       return { ok: false, error: "Alcance invalido." };
     }

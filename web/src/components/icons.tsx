@@ -242,3 +242,13 @@ export function ClipboardPlus({ size = 14, className, style }: IconProps) {
     </svg>
   );
 }
+
+export function FileText({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z" />
+      <polyline points="14 2 14 7 19 7" />
+      <path d="M9 12h6M9 16h6" />
+    </svg>
+  );
+}
