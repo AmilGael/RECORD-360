@@ -79,6 +79,58 @@ export async function createSegment(formData: FormData) {
   revalidatePath("/app");
 }
 
+// Permanent bloque delete (R3.3). Same policy family as purgeProject/purgePartida:
+// ADMIN-only, empty-only (no partidas incl. recycled, no documents, no cambios links),
+// audited, and notified as delete.permanent.
+export async function deleteSegment(formData: FormData) {
+  const { id: actorId, companyId, role } = await requireSession();
+  if (role !== Role.ADMIN) throw new Error("Forbidden");
+
+  const segmentId = String(formData.get("segmentId"));
+  const segment = await prisma.segment.findFirst({
+    where: { id: segmentId, project: { companyId } },
+    select: { id: true, name: true, projectId: true },
+  });
+  if (!segment) throw new Error("Forbidden");
+
+  const [partidas, documents, crLinks] = await Promise.all([
+    prisma.partida.count({ where: { segmentId } }), // includes soft-deleted — history must move first
+    prisma.document.count({ where: { segmentId } }),
+    prisma.changeRequestSegment.count({ where: { segmentId } }),
+  ]);
+  if (partidas > 0 || documents > 0 || crLinks > 0) {
+    throw new Error("No se puede borrar: el bloque contiene partidas, documentos o cambios. Muevelos o borralos primero.");
+  }
+
+  const [staff, assignments, actor] = await Promise.all([
+    prisma.user.findMany({ where: { companyId, role: { in: [Role.ADMIN, Role.MANAGER] }, disabledAt: null }, select: { id: true } }),
+    prisma.projectAssignment.findMany({ where: { projectId: segment.projectId }, select: { userId: true } }),
+    prisma.user.findFirst({ where: { id: actorId }, select: { name: true } }),
+  ]);
+  const recipientIds = [...new Set([...staff.map((u) => u.id), ...assignments.map((a) => a.userId)])].filter((uid) => uid !== actorId);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.segment.delete({ where: { id: segment.id } });
+    await writeAudit(tx, {
+      companyId,
+      actorId,
+      action: "segment.purge",
+      targetType: "Segment",
+      targetId: segment.id,
+      summary: `Bloque borrado definitivamente: ${segment.name}`,
+      metadata: { projectId: segment.projectId },
+    });
+  });
+  await createNotifications(recipientIds.map((userId) => ({
+    companyId,
+    userId,
+    type: "delete.permanent",
+    title: `Bloque borrado definitivamente: ${segment.name}`,
+    body: `Borrado por ${actor?.name ?? "—"}.`,
+  })));
+  revalidatePath(`/app/projects/${segment.projectId}`);
+}
+
 // Soft delete: archive an obra. Its partidas and immutable registros are
 // preserved (never destroyed) — the obra is just hidden from the dashboard.
 export async function archiveProject(formData: FormData) {
