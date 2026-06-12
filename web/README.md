@@ -35,6 +35,7 @@ All variables are documented in [`.env.example`](./.env.example). Summary:
 | `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | prod | Media object storage; without `S3_BUCKET`, files go to local disk |
 | `S3_REGION` | optional | Defaults to `auto` (R2 convention) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | for email | Notifications and member invites |
+| `ANTHROPIC_API_KEY` | for informes | AI report generation (Claude API) |
 | `DEV_TUNNEL` | dev only | `1` allows `*.trycloudflare.com` origins under `next dev` |
 
 ## Scripts

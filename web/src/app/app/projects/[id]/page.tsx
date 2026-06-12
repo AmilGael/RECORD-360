@@ -185,7 +185,7 @@ export default async function ProjectPage({
 
   const informeRows = activeTab === "informes"
     ? await prisma.informe.findMany({
-        where: { projectId: id },
+        where: { projectId: id, project: projectAccessWhere(sessionUser) },
         orderBy: { createdAt: "desc" },
         take: 30,
         select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true },

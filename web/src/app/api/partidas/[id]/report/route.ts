@@ -91,6 +91,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       : [];
     const authorMap = new Map(authors.map((a) => [a.id, a.name]));
 
+    // Resolve requester name for the "Generado por" header line (scoped to same company)
+    const requesterRecord = await prisma.user.findFirst({
+      where: { id: user.id, companyId: user.companyId },
+      select: { name: true },
+    });
+    const requesterName = requesterRecord?.name ?? user.id;
+
     // Chain integrity check — skip on partial range (would give false negatives)
     const chainStatus = hasRange
       ? "rango parcial (ver reporte completo)"
@@ -128,7 +135,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   doc.moveDown(0.3);
   doc.font(FONT_NORMAL).fontSize(10).fillColor(MUTED);
   doc.text(`Avance: ${progressPct}%`);
-  doc.text(`Generado: ${generatedAt}`);
+  doc.text(`Generado: ${generatedAt}  ·  por ${sanitizePdfText(requesterName)}`);
   doc.text(`Integridad: ${chainStatus}`);
   doc.text(`Registros: ${partida.registros.length}`);
   doc.moveDown(0.5);
