@@ -455,7 +455,7 @@ export default async function ProjectPage({
           general={{ progress: avg, partidas: allPartidas.length, openCambios, overdueReminders }}
           bloques={analiticaBloques}
           ungrouped={analiticaUngrouped}
-          t={{ general: P.analiticaGeneral, byBloque: P.analiticaByBloque, openChanges: P.analiticaOpenChanges, overdue: P.analiticaOverdue, partidasWord: P.partidasWord, noBloques: P.analiticaNoBloques }}
+          t={{ general: P.analiticaGeneral, byBloque: P.analiticaByBloque, openChanges: P.analiticaOpenChanges, overdue: P.analiticaOverdue, partidasWord: P.partidasWord, noBloques: P.analiticaNoBloques, phaseRed: t.dash.analyticsRed, phaseYellow: t.dash.analyticsYellow, phaseGreen: t.dash.analyticsGreen }}
         />
       ) : activeTab === "informes" ? (
         <InformesTab
