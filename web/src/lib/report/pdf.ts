@@ -93,6 +93,7 @@ export async function buildReportPdf(opts: {
       }
     }
     // ── Footer block: requester + firma + seal ────────────────────────────────
+    if (doc.y > doc.page.height - 180) doc.addPage();
     doc.moveDown(1.2);
     rule(doc);
     doc.moveDown(0.6);

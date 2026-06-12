@@ -22,6 +22,7 @@ function fd(obj: Record<string, string>) {
 }
 
 beforeAll(async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key";
   const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   companyId = (await prisma.company.create({ data: { name: `Inf Co ${s}`, sealKey: "seal-inf.png" } })).id;
   outCompanyId = (await prisma.company.create({ data: { name: `Inf Out ${s}` } })).id;
@@ -32,6 +33,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  delete process.env.ANTHROPIC_API_KEY;
   await prisma.informe.deleteMany({ where: { projectId } });
   await prisma.project.deleteMany({ where: { companyId } });
   await prisma.user.deleteMany({ where: { companyId: { in: [companyId, outCompanyId] } } });
@@ -70,5 +72,17 @@ describe("createInforme", () => {
     generateMock.mockRejectedValue(new Error("api down"));
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "y" }));
     expect(res).toMatchObject({ ok: false });
+  });
+  it("returns a missing-key error immediately when ANTHROPIC_API_KEY is absent", async () => {
+    const saved = process.env.ANTHROPIC_API_KEY;
+    try {
+      delete process.env.ANTHROPIC_API_KEY;
+      authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+      const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "z" }));
+      expect(res).toMatchObject({ ok: false });
+      expect((res as { error?: string }).error).toMatch(/clave de API/i);
+    } finally {
+      process.env.ANTHROPIC_API_KEY = saved;
+    }
   });
 });

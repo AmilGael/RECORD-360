@@ -4,10 +4,15 @@
  * constraint: extra exports from route files cause build failures).
  */
 
-/** Parse a from/to date query param. Returns null if absent, "invalid" if not a valid date. */
+/** Parse a from/to date query param. Returns null if absent, "invalid" if not a valid date.
+ * For "to" params with a date-only value (YYYY-MM-DD), the time is set to end-of-day (T23:59:59.999Z).
+ */
 export function parseRangeParam(url: URL, key: "from" | "to"): Date | null | "invalid" {
   const raw = url.searchParams.get(key);
   if (!raw) return null;
+  if (key === "to" && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return new Date(`${raw}T23:59:59.999Z`);
+  }
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? "invalid" : d;
 }

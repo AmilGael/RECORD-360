@@ -15,6 +15,8 @@ Formato OBLIGATORIO (markdown simple, sin tablas ni enlaces ni emojis):
 Si una seccion no tiene datos, escribe "Sin novedades en el periodo."
 Maximo 900 palabras. No incluyas encabezado de obra ni firmas: el PDF los agrega.`;
 
+const MAX_PROMPT_REGISTROS = 400;
+
 export function buildInformeUserMessage(data: ReportData, brief: string): string {
   const lines: string[] = [];
   lines.push(`OBRA: ${data.project.name} (${data.project.registrationCode}) — ${data.project.companyName}`);
@@ -23,8 +25,12 @@ export function buildInformeUserMessage(data: ReportData, brief: string): string
   lines.push("", "PARTIDAS Y AVANCE:");
   for (const p of data.partidas) lines.push(`- ${p.name}${p.segmentName ? ` (${p.segmentName})` : ""}: ${p.progressPct}%`);
   lines.push("", `REGISTROS DEL PERIODO (${data.registros.length}):`);
-  for (const r of data.registros) {
+  const shown = data.registros.slice(-MAX_PROMPT_REGISTROS);
+  for (const r of shown) {
     lines.push(`- [${r.serverCreatedAt.toISOString().slice(0, 16).replace("T", " ")}] ${r.authorName} @ ${r.partidaName}${r.category ? ` [${r.category}]` : ""}: ${r.text ?? "(solo adjuntos)"}${r.attachmentCount ? ` (${r.attachmentCount} adjuntos)` : ""}`);
+  }
+  if (data.registros.length > MAX_PROMPT_REGISTROS) {
+    lines.push(`- (...y ${data.registros.length - MAX_PROMPT_REGISTROS} registros anteriores omitidos por espacio)`);
   }
   lines.push("", `SOLICITUDES DE CAMBIO (${data.cambios.length}):`);
   for (const c of data.cambios) lines.push(`- ${c.code} ${c.title} [${c.status}]${c.resolutionNote ? ` — ${c.resolutionNote}` : ""}`);

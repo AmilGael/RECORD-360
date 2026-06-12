@@ -5,6 +5,7 @@ import { assembleReportData, type ReportScope } from "@/lib/report/data";
 import { INFORME_SYSTEM, buildInformeUserMessage } from "@/lib/informes/prompt";
 import { generateInformeContent, INFORME_MODEL } from "@/lib/informes/client";
 import { requireFreshSession } from "@/lib/auth/session";
+import Anthropic from "@anthropic-ai/sdk";
 
 export type InformeResult =
   | { ok: true; informeId: string }
@@ -21,6 +22,8 @@ export type InformeResult =
  */
 export async function createInforme(_prev: InformeResult | null, formData: FormData): Promise<InformeResult> {
   try {
+    if (!process.env.ANTHROPIC_API_KEY) return { ok: false, error: "El generador de informes no esta configurado (falta la clave de API)." };
+
     const user = await requireFreshSession();
 
     const requester = await prisma.user.findFirst({
@@ -46,6 +49,9 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     const parseDate = (k: string): Date | null | "invalid" => {
       const raw = String(formData.get(k) ?? "").trim();
       if (!raw) return null;
+      if (k === "to" && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        return new Date(`${raw}T23:59:59.999Z`);
+      }
       const d = new Date(raw);
       return Number.isNaN(d.getTime()) ? "invalid" : d;
     };
@@ -76,9 +82,12 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     revalidatePath(`/app/projects/${data.project.id}`);
     return { ok: true, informeId: informe.id };
   } catch (e) {
-    const message = e instanceof Error && e.message.includes("ANTHROPIC")
-      ? "El generador de informes no esta configurado (falta la clave de API)."
-      : "No se pudo generar el informe. Intentalo de nuevo.";
-    return { ok: false, error: message };
+    if (e instanceof Anthropic.AuthenticationError) {
+      return { ok: false, error: "El generador de informes no esta configurado (clave de API invalida)." };
+    }
+    if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.APIConnectionTimeoutError || (e instanceof Anthropic.APIError && Number(e.status) >= 529)) {
+      return { ok: false, error: "El servicio esta ocupado. Intentalo de nuevo en un momento." };
+    }
+    return { ok: false, error: "No se pudo generar el informe. Intentalo de nuevo." };
   }
 }

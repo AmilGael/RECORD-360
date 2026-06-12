@@ -3,7 +3,6 @@ import { assembleReportData } from "@/lib/report/data";
 import { buildReportPdf } from "@/lib/report/pdf";
 import { requireFreshSession } from "@/lib/auth/session";
 import { parseRangeParam, sanitizeFilename } from "@/lib/report/params";
-import { prisma } from "@/lib/db";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -21,8 +20,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     );
     if (!data) return new Response("Not found", { status: 404 });
 
-    const requester = await prisma.user.findFirst({ where: { id: user.id }, select: { name: true } });
-    const pdf = await buildReportPdf({ data, generatedBy: requester?.name ?? "-" });
+    const pdf = await buildReportPdf({ data, generatedBy: user.name });
     const filename = `${sanitizeFilename(data.project.name)}-reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
     return new Response(new Uint8Array(pdf), {
       status: 200,
