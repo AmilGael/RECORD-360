@@ -24,15 +24,19 @@ import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import type { DocumentKind, Role } from "@prisma/client";
+import { BloqueCards } from "@/components/bloque-cards";
+import { ProjectSearchResultsPanel } from "@/components/project-search-results";
+import { MediaGalleries, isMediaTab, type MediaItem, type MediaTab } from "@/components/media-galleries";
+import { searchProject } from "@/lib/project/search";
 
 export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; spaceBlock?: string; space?: string }>;
+  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; spaceBlock?: string; space?: string; media?: string; mpage?: string }>;
 }) {
   const { id } = await params;
-  const { p: selectedId, tab, q, block, spaceBlock, space } = await searchParams;
+  const { p: selectedId, tab, q, block, spaceBlock, space, media, mpage } = await searchParams;
   const session = await auth();
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
@@ -81,7 +85,12 @@ export default async function ProjectPage({
   }));
 
   const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : tab === "analitica" ? "analitica" : tab === "informes" ? "informes" : "code";
-  const selectedSpaceBlock = segmentSummaries.some((s) => s.id === spaceBlock) ? String(spaceBlock) : (segmentSummaries[0]?.id ?? null);
+  const blockParam = String(block ?? "");
+  const inBloqueView = activeTab === "code" && Boolean(blockParam);
+  // When in bloque view, selectedSpaceBlock derives from blockParam (fall back to first segment for UNGROUPED).
+  const selectedSpaceBlock = inBloqueView
+    ? (segmentSummaries.some((s) => s.id === blockParam) ? blockParam : (segmentSummaries[0]?.id ?? null))
+    : (segmentSummaries.some((s) => s.id === spaceBlock) ? String(spaceBlock) : (segmentSummaries[0]?.id ?? null));
   const selectedSpace = (["cuaderno", "planos", "levantamientos", "ideas", "media", "recordatorios", "indicadores"].includes(String(space))
     ? String(space)
     : "cuaderno") as SpaceKey;
@@ -114,7 +123,7 @@ export default async function ProjectPage({
   const docs = activeTab === "planos"
     ? await prisma.document.findMany({ where: { projectId: id, kind: { in: ["PLANO", "PLANO_ACTUALIZADO"] } }, orderBy: { createdAt: "desc" } })
     : [];
-  const spaceDocs = activeTab === "code" && selectedSpaceBlock && spaceKind[selectedSpace]
+  const spaceDocs = activeTab === "code" && inBloqueView && selectedSpaceBlock && spaceKind[selectedSpace]
     ? await prisma.document.findMany({
         where: {
           projectId: id,
@@ -126,7 +135,7 @@ export default async function ProjectPage({
         orderBy: { createdAt: "desc" },
       })
     : [];
-  const spaceNotes = activeTab === "code" && selectedSpaceBlock && selectedSpace === "cuaderno"
+  const spaceNotes = activeTab === "code" && inBloqueView && selectedSpaceBlock && selectedSpace === "cuaderno"
     ? (await prisma.registro.findMany({
         where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null } },
         orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
@@ -134,7 +143,7 @@ export default async function ProjectPage({
         select: { id: true, partidaId: true, text: true, serverCreatedAt: true, hash: true, partida: { select: { name: true } } },
       })).map((r) => ({ id: r.id, partidaId: r.partidaId, text: r.text, serverCreatedAt: r.serverCreatedAt, hash: r.hash, partidaName: r.partida.name }))
     : [];
-  const spaceMedia = activeTab === "code" && selectedSpaceBlock && selectedSpace === "media"
+  const spaceMedia = activeTab === "code" && inBloqueView && selectedSpaceBlock && selectedSpace === "media"
     ? (await prisma.attachment.findMany({
         where: { registro: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null } } },
         orderBy: { id: "desc" },
@@ -154,7 +163,7 @@ export default async function ProjectPage({
     partidas: s.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct })),
   }));
   const analiticaUngrouped = project.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct }));
-  const reminderRows = activeTab === "code" && selectedSpaceBlock
+  const reminderRows = activeTab === "code" && inBloqueView && selectedSpaceBlock
     ? await prisma.registro.findMany({
         where: {
           partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null },
@@ -167,16 +176,74 @@ export default async function ProjectPage({
       })
     : [];
   const spaceReminders = reminderRows.map((r) => ({ id: r.id, partidaId: r.partidaId, text: r.text, serverCreatedAt: r.serverCreatedAt, hash: r.hash, partidaName: r.partida.name }));
-  const overdueCount = activeTab === "code" && selectedSpaceBlock
+  const overdueCount = activeTab === "code" && inBloqueView && selectedSpaceBlock
     ? await prisma.registro.count({
         where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null }, reminderDueAt: { lt: now }, reminderResolvedAt: null },
       })
     : 0;
-  const noReminderCount = activeTab === "code" && selectedSpaceBlock
+  const noReminderCount = activeTab === "code" && inBloqueView && selectedSpaceBlock
     ? await prisma.registro.count({
         where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null }, reminderDueAt: null },
       })
     : 0;
+  // Overview data — only computed when NOT in the bloque workspace view.
+  const searchResults = !inBloqueView && activeTab === "code" && partidaFilters.q
+    ? await searchProject(sessionUser, id, partidaFilters.q)
+    : null;
+
+  // Deletable = empty by the same rule the action enforces.
+  const segmentIdsAll = project.segments.map((s) => s.id);
+  const [partidaCounts, docCounts, crCounts] = !inBloqueView && activeTab === "code" && segmentIdsAll.length
+    ? await Promise.all([
+        prisma.partida.groupBy({ by: ["segmentId"], where: { segmentId: { in: segmentIdsAll } }, _count: { _all: true } }),
+        prisma.document.groupBy({ by: ["segmentId"], where: { segmentId: { in: segmentIdsAll } }, _count: { _all: true } }),
+        prisma.changeRequestSegment.groupBy({ by: ["segmentId"], where: { segmentId: { in: segmentIdsAll } }, _count: { _all: true } }),
+      ])
+    : [[], [], []];
+  const nonEmpty = new Set<string>([
+    ...partidaCounts.map((c) => c.segmentId as string),
+    ...docCounts.map((c) => c.segmentId as string),
+    ...crCounts.map((c) => c.segmentId as string),
+  ].filter(Boolean));
+  const bloqueCards = segmentSummaries.map((s) => ({ ...s, deletable: !nonEmpty.has(s.id) }));
+
+  // Media gallery data.
+  const MEDIA_PAGE = 24;
+  const mediaTab = isMediaTab(String(media ?? "")) ? (String(media) as MediaTab) : "fotos";
+  const mediaPage = Math.max(1, Number(mpage ?? "1") || 1);
+  const mediaType = ({ fotos: "IMAGE", videos: "VIDEO", documentos: "PDF", audio: "AUDIO" } as const)[mediaTab];
+  let mediaItems: MediaItem[] = [];
+  let mediaHasMore = false;
+  if (!inBloqueView && activeTab === "code") {
+    const atts = await prisma.attachment.findMany({
+      where: { fileType: mediaType, registro: { partida: { projectId: id, deletedAt: null } } },
+      orderBy: { id: "desc" },
+      skip: (mediaPage - 1) * MEDIA_PAGE,
+      take: MEDIA_PAGE + 1,
+      select: { id: true, url: true, registro: { select: { serverCreatedAt: true, partida: { select: { name: true } } } } },
+    });
+    mediaHasMore = atts.length > MEDIA_PAGE;
+    mediaItems = atts.slice(0, MEDIA_PAGE).map((a) => ({
+      id: a.id, url: a.url,
+      label: a.registro.partida.name,
+      date: formatTimestamp(a.registro.serverCreatedAt, lang).slice(0, 10),
+      kind: mediaTab === "fotos" ? "image" : mediaTab === "videos" ? "video" : mediaTab === "audio" ? "audio" : "pdf",
+    }));
+    if (mediaTab === "documentos" && mediaPage === 1) {
+      // Uploaded documents (planos, minutas, etc.) join the PDF attachments on page 1.
+      const docs2 = await prisma.document.findMany({
+        where: { projectId: id },
+        orderBy: { createdAt: "desc" },
+        take: MEDIA_PAGE,
+        select: { id: true, url: true, title: true, kind: true, createdAt: true },
+      });
+      mediaItems = [
+        ...docs2.map((d) => ({ id: d.id, url: d.url, label: d.title ?? d.kind, date: formatTimestamp(d.createdAt, lang).slice(0, 10), kind: "doc" as const })),
+        ...mediaItems,
+      ].slice(0, MEDIA_PAGE * 2);
+    }
+  }
+
   const uploaderIds = [...new Set(docs.map((d) => d.uploadedById))];
   const uploaders = uploaderIds.length
     ? await prisma.user.findMany({ where: { id: { in: uploaderIds }, companyId }, select: { id: true, name: true } })
@@ -215,7 +282,7 @@ export default async function ProjectPage({
     ? (await prisma.user.findFirst({ where: { id: latestAuthorId, companyId }, select: { name: true } }))?.name ?? null
     : null;
 
-  const deletedPartidas = activeTab === "code" && isOwner
+  const deletedPartidas = activeTab === "code" && inBloqueView && isOwner
     ? await prisma.partida.findMany({
         where: { projectId: id, deletedAt: { not: null } },
         include: { _count: { select: { registros: true } } },
@@ -354,8 +421,11 @@ export default async function ProjectPage({
           }))}
           t={t.informes}
         />
-      ) : (
+      ) : inBloqueView ? (
         <>
+          <Link href={`/app/projects/${project.id}`} className="kicker" style={{ textDecoration: "none", display: "inline-block", margin: "12px 0 0" }}>
+            ← {P.backToBloques}
+          </Link>
           <div className="workspace">
             <ProjectFileTree
               projectId={project.id}
@@ -409,6 +479,32 @@ export default async function ProjectPage({
             lang={lang}
             canPurge={sessionUser.role === "ADMIN"}
             t={{ recycleTitle: P.recycleTitle, restore: P.restore, deleteForever: P.deleteForever, deletedBy: P.deletedBy, hasRecords: P.hasRecords }}
+          />
+        </>
+      ) : (
+        <>
+          <BloqueCards
+            projectId={project.id}
+            bloques={bloqueCards}
+            ungroupedCount={project.partidas.length}
+            canEdit={canEditStructure}
+            isOwner={isOwner}
+            t={{ bloquesTitle: P.bloquesTitle, bloqueCard: P.bloqueCard, openBloque: P.openBloque, ungrouped: P.ungrouped, newSegment: P.newSegment, addSegment: P.addSegment, deleteBloque: P.deleteBloque, deleteBloqueConfirm: P.deleteBloqueConfirm, yes: P.yes, no: P.no }}
+          />
+          <form action={`/app/projects/${project.id}`} style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            <input name="q" defaultValue={partidaFilters.q} placeholder={P.searchObra} className="search-input" style={{ flex: 1 }} />
+            <SubmitButton className="btn btn-ghost" style={{ fontSize: "0.78rem" }}>{P.filter}</SubmitButton>
+          </form>
+          {partidaFilters.q && searchResults && (
+            <ProjectSearchResultsPanel projectId={project.id} results={searchResults} t={{ searchResults: P.searchResults, searchNoResults: P.searchNoResults, searchInPartidas: P.searchInPartidas, searchInRegistros: P.searchInRegistros, searchInDocumentos: P.searchInDocumentos, searchInCambios: P.searchInCambios }} />
+          )}
+          <MediaGalleries
+            projectId={project.id}
+            tab={mediaTab}
+            items={mediaItems}
+            page={mediaPage}
+            hasMore={mediaHasMore}
+            t={{ mediaTitle: P.mediaTitle, mediaFotos: P.mediaFotos, mediaVideos: P.mediaVideos, mediaDocumentos: P.mediaDocumentos, mediaAudio: P.mediaAudio, mediaEmpty: P.mediaEmpty, older: t.pager.older, newer: t.pager.newer }}
           />
         </>
       )}

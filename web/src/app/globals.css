@@ -250,6 +250,10 @@ body {
 /* generic card */
 .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); box-shadow: var(--shadow-card); }
 
+/* search hit rows (obra search results panel) */
+.search-hit { font-size: 0.84rem; color: inherit; text-decoration: none; padding: 4px 6px; border-radius: var(--radius-sm); }
+.search-hit:hover { background: var(--paper-2); }
+
 /* ---------- project workspace (GitHub structure, warm) ---------- */
 .state-badge {
   font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.08em;
