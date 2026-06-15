@@ -50,7 +50,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 16px", borderTop: "1px solid var(--line)" }}>
             <Link href="/" className="mono text-steel" style={{ fontSize: "0.66rem", textDecoration: "none" }}>← {T.back}</Link>
-            <span className="mono text-steel" style={{ fontSize: "0.56rem" }}>{T.demo}</span>
           </div>
         </form>
       </main>

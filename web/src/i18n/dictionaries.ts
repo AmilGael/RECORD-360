@@ -49,7 +49,6 @@ export const dictionaries = {
       submit: "Entrar",
       error: "Credenciales inválidas. Inténtalo de nuevo.",
       back: "Volver al inicio",
-      demo: "Demo: admin@record360.do / demo1234",
     },
     dash: {
       kicker: "OBRAS",
@@ -406,7 +405,6 @@ export const dictionaries = {
       submit: "Enter",
       error: "Invalid credentials. Please try again.",
       back: "Back to home",
-      demo: "Demo: admin@record360.do / demo1234",
     },
     dash: {
       kicker: "SITES",
