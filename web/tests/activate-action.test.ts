@@ -41,6 +41,17 @@ describe("activateAccount", () => {
     const u = await pendingUser("short");
     const raw = await createActivationToken(u.id);
     expect((await activateAccount({ status: "idle" }, fd({ token: raw, password: "short", confirm: "short" }))).status).toBe("error");
+    const after = await prisma.user.findUnique({ where: { id: u.id } });
+    expect(after?.emailVerifiedAt).toBeNull();
+    expect(after?.passwordHash).toBeNull();
+  });
+
+  it("rejects an already-consumed token", async () => {
+    const u = await pendingUser("consumed");
+    const raw = await createActivationToken(u.id);
+    await prisma.verificationToken.updateMany({ where: { userId: u.id }, data: { consumedAt: new Date() } });
+    const res = await activateAccount({ status: "idle" }, fd({ token: raw, password: "longpassword12", confirm: "longpassword12" }));
+    expect(res.status).toBe("error");
   });
 
   it("rejects mismatched confirmation", async () => {

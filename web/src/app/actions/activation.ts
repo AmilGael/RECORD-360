@@ -31,11 +31,20 @@ export async function activateAccount(_prev: ActivateState, formData: FormData):
 
   const passwordHash = await bcrypt.hash(password, 10);
   await prisma.$transaction(async (tx) => {
+    // Atomically claim THIS token (guards on consumedAt: null). Under Postgres read-committed,
+    // a racing request that already consumed it matches 0 rows here → we abort, preventing
+    // double-activation of a single-use token.
+    const claimed = await tx.verificationToken.updateMany({
+      where: { id: valid.id, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+    if (claimed.count !== 1) throw new Error("Token already consumed");
+    // Invalidate any other outstanding activation tokens for this user.
+    await consumeActivationTokens(tx, valid.userId);
     const user = await tx.user.update({
       where: { id: valid.userId },
       data: { passwordHash, emailVerifiedAt: new Date() },
     });
-    await consumeActivationTokens(tx, valid.userId);
     await writeAudit(tx, {
       companyId: user.companyId,
       actorId: user.id,
