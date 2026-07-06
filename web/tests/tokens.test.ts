@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
-import { createActivationToken, verifyActivationToken, hashToken, activationUrl } from "@/lib/auth/tokens";
+import { createActivationToken, verifyActivationToken, hashToken, activationUrl, consumeActivationTokens } from "@/lib/auth/tokens";
 import { Role } from "@prisma/client";
 
 const tag = `schema-smoke-${Date.now()}`;
@@ -46,6 +46,18 @@ describe("activation tokens", () => {
 
   it("builds an absolute activation URL", () => {
     expect(activationUrl("abc")).toMatch(/\/activate\/abc$/);
+  });
+
+  it("consumes tokens so they no longer verify (single-use)", async () => {
+    const { user } = await makeUser(`c-${Date.now()}`);
+    const raw = await createActivationToken(user.id);
+    expect(await verifyActivationToken(raw)).not.toBeNull();
+    await prisma.$transaction((tx) => consumeActivationTokens(tx, user.id));
+    expect(await verifyActivationToken(raw)).toBeNull();
+  });
+
+  it("returns null for an unknown token", async () => {
+    expect(await verifyActivationToken("no-such-token")).toBeNull();
   });
 });
 
