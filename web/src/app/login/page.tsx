@@ -5,8 +5,8 @@ import { getDict } from "@/i18n/server";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SubmitButton } from "@/components/submit-button";
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; activated?: string }> }) {
+  const { error, activated } = await searchParams;
   const { lang, t } = await getDict();
   const T = t.login;
 
@@ -43,6 +43,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <h1 className="h-md" style={{ fontSize: "1.7rem", marginBottom: 20 }}>{T.title}</h1>
             {error && (
               <p style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 3, fontSize: "0.84rem", marginBottom: 14 }}>{T.error}</p>
+            )}
+            {activated && (
+              <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 3, fontSize: "0.84rem", marginBottom: 14 }}>{T.activated}</p>
             )}
             <input name="email" type="email" placeholder={T.email} required className="input" style={{ marginBottom: 10 }} autoComplete="email" autoFocus />
             <input name="password" type="password" placeholder={T.password} required className="input" style={{ marginBottom: 18 }} autoComplete="current-password" />

@@ -13,7 +13,12 @@ export const authConfig = {
       // (disabled user, changed tenant/role) is enforced by requireFreshSession in the
       // /app layout and in every server action/API route (Node runtime — Prisma can't
       // run on the edge, and a self-fetch from middleware breaks behind a proxy/tunnel).
-      const isPublic = pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/verify/");
+      const isPublic =
+        pathname === "/" ||
+        pathname.startsWith("/login") ||
+        pathname.startsWith("/request-access") ||
+        pathname.startsWith("/activate") ||
+        pathname.startsWith("/verify/");
       if (isPublic) return true;
       return !!auth?.user;
     },

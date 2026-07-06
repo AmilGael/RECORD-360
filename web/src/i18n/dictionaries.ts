@@ -49,6 +49,7 @@ export const dictionaries = {
       submit: "Entrar",
       error: "Credenciales inválidas. Inténtalo de nuevo.",
       back: "Volver al inicio",
+      activated: "Cuenta activada. Inicia sesión.",
     },
     dash: {
       kicker: "OBRAS",
@@ -405,6 +406,7 @@ export const dictionaries = {
       submit: "Enter",
       error: "Invalid credentials. Please try again.",
       back: "Back to home",
+      activated: "Account activated. Please sign in.",
     },
     dash: {
       kicker: "SITES",
