@@ -10,8 +10,9 @@ import { parseSegment } from "@/lib/registro/validate";
 import { resolveSegment } from "@/lib/project/segments";
 import { requireProjectStructureAccess } from "@/lib/authz/projects";
 import { writeAudit } from "@/lib/audit/log";
-import { sendBestEffort } from "@/lib/email";
-import { passwordResetEmail, userInviteEmail } from "@/lib/email/templates";
+import { mailer, sendBestEffort } from "@/lib/email";
+import { accountActivationEmail, passwordResetEmail } from "@/lib/email/templates";
+import { createActivationToken, activationUrl } from "@/lib/auth/tokens";
 import { requireFreshSession } from "@/lib/auth/session";
 import { createNotifications } from "@/lib/notifications/create";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
@@ -224,29 +225,34 @@ export async function createUser(formData: FormData) {
   const { companyId, role } = await requireSession();
   if (role !== Role.ADMIN) throw new Error("Forbidden");
 
-  // Validate the submitted role against the enum instead of blindly casting.
   const submitted = String(formData.get("role"));
   if (!Object.values(Role).includes(submitted as Role)) throw new Error("Invalid role");
 
-  const email = String(formData.get("email"));
-  const name = String(formData.get("name"));
+  const email = String(formData.get("email")).trim().toLowerCase();
+  const name = String(formData.get("name")).trim();
 
-  // CSPRNG temp password (~96 bits), not Math.random().
-  const tempPassword = randomBytes(12).toString("base64url");
-  await prisma.user.create({
-    data: {
-      email,
-      name,
-      role: submitted as Role,
-      companyId,
-      passwordHash: await bcrypt.hash(tempPassword, 10),
-    },
+  // Inactive user: no password, not verified. They activate via the emailed link.
+  const user = await prisma.user.create({
+    data: { email, name, role: submitted as Role, companyId },
   });
-  // Email the new user their access (best-effort; the temp password is also
-  // shown once to the admin via the return value + banner).
-  await sendBestEffort(userInviteEmail(email, name, tempPassword, loginUrl()));
+
+  const raw = await createActivationToken(user.id);
+  await mailer.send(accountActivationEmail(email, name, activationUrl(raw)));
   revalidatePath("/app/admin");
-  return tempPassword;
+}
+
+export async function resendInvite(formData: FormData) {
+  const { companyId, role } = await requireSession();
+  if (role !== Role.ADMIN) throw new Error("Forbidden");
+
+  const userId = String(formData.get("userId"));
+  const target = await prisma.user.findFirst({ where: { id: userId, companyId } });
+  if (!target) throw new Error("Forbidden");
+  if (target.emailVerifiedAt) throw new Error("Already activated"); // only pending users
+
+  const raw = await createActivationToken(target.id);
+  await mailer.send(accountActivationEmail(target.email, target.name, activationUrl(raw)));
+  revalidatePath("/app/admin");
 }
 
 /**

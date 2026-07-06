@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getDict } from "@/i18n/server";
-import { createUser } from "@/app/actions/admin";
+import { createUser, resendInvite } from "@/app/actions/admin";
 import { updateCompanySeal } from "@/app/actions/profile";
 import { SubmitButton } from "@/components/submit-button";
 import { ResetPasswordButton } from "@/components/reset-password-button";
@@ -14,6 +14,7 @@ import { Key, Plus, Upload } from "@/components/icons";
 import Link from "next/link";
 
 const TEMP_PW_COOKIE = "r360_temp_pw";
+const INVITE_SENT_COOKIE = "r360_invite_sent";
 
 /** Role hierarchy for ordering and display */
 const ROLE_ORDER = ["ADMIN", "MANAGER", "SUPERVISOR", "RESIDENT"] as const;
@@ -74,16 +75,12 @@ export default async function AdminPage() {
   // Flash the freshly-created temp password from a short-lived httpOnly cookie
   // (kept out of the URL). It auto-expires; cookies can't be cleared at render.
   const temp = (await cookies()).get(TEMP_PW_COOKIE)?.value;
+  const inviteSent = (await cookies()).get(INVITE_SENT_COOKIE)?.value === "1";
 
   async function addUser(formData: FormData) {
     "use server";
-    const tempPassword = await createUser(formData);
-    (await cookies()).set(TEMP_PW_COOKIE, tempPassword, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/app/admin",
-      maxAge: 30,
-    });
+    await createUser(formData);
+    (await cookies()).set(INVITE_SENT_COOKIE, "1", { httpOnly: true, sameSite: "lax", path: "/app/admin", maxAge: 30 });
     redirect("/app/admin");
   }
 
@@ -124,6 +121,13 @@ export default async function AdminPage() {
           <p className="mono" style={{ fontSize: "0.78rem", margin: 0 }}>
             {A.tempPre} <strong style={{ color: "var(--accent)" }}>{temp}</strong> {A.tempPost}
           </p>
+        </div>
+      )}
+
+      {inviteSent && (
+        <div className="card" style={{ padding: "14px 18px", marginBottom: 24, borderColor: "var(--line-strong)", display: "flex", alignItems: "center", gap: 12 }}>
+          <Key size={18} style={{ color: "var(--accent)", flexShrink: 0 }} />
+          <p className="mono" style={{ fontSize: "0.78rem", margin: 0 }}>Invitación enviada. El usuario recibirá un enlace para activar su cuenta.</p>
         </div>
       )}
 
@@ -172,6 +176,12 @@ export default async function AdminPage() {
                   userId={u.id}
                   t={{ resetPw: A.resetPw, resetConfirm: A.resetConfirm, yes: A.yes, no: A.no }}
                 />
+              )}
+              {user.role === "ADMIN" && !u.emailVerifiedAt && (
+                <form action={resendInvite}>
+                  <input type="hidden" name="userId" value={u.id} />
+                  <SubmitButton className="btn btn-ghost" style={{ fontSize: "0.7rem" }}>Reenviar invitación</SubmitButton>
+                </form>
               )}
             </div>
           ))}
