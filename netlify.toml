@@ -8,9 +8,11 @@
 
 [build]
   base = "web"
-  # Publish dir is resolved relative to the repo root (where this file lives), so
-  # this points at web/.next — the Next.js build output in this monorepo layout.
-  publish = "web/.next"
+  # Publish is resolved relative to `base` (web/), so ".next" = web/.next — the
+  # Next.js build output. (Local `netlify deploy --build` resolves this relative
+  # to base; remote/git builds do the same. The permanent fix for path stability
+  # is git-based CD — see deploy notes.)
+  publish = ".next"
   # DEFAULT for every context (incl. deploy-preview / branch-deploy): build only,
   # NO migrations. Untrusted PR code must never run `prisma migrate deploy`.
   command = "npx prisma generate && npm run build"
