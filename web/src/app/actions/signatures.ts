@@ -33,7 +33,7 @@ export async function signPartida(formData: FormData): Promise<void> {
     if (!signerRecord || signerRecord.disabledAt) throw new Error("Unauthorized");
     if (signerRecord.companyId !== user.companyId || signerRecord.role !== user.role) throw new Error("Forbidden");
 
-    const passwordOk = await bcrypt.compare(password, signerRecord.passwordHash);
+    const passwordOk = signerRecord.passwordHash ? await bcrypt.compare(password, signerRecord.passwordHash) : false;
     if (!passwordOk) throw new Error("Contraseña incorrecta.");
 
     const latestRegistro = await tx.registro.findFirst({

@@ -101,7 +101,7 @@ describe("resetUserPassword", () => {
     expect(name).toBe("r360_temp_pw");
     // The flashed value must actually match what was stored in the DB.
     const user = await prisma.user.findUniqueOrThrow({ where: { id: memberId } });
-    const valid = await bcrypt.compare(value, user.passwordHash);
+    const valid = await bcrypt.compare(value, user.passwordHash!);
     expect(valid).toBe(true);
   });
 
