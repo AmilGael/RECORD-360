@@ -6,6 +6,11 @@ const headerGet = vi.hoisted(() => vi.fn().mockReturnValue("9.9.9.9"));
 vi.mock("@/lib/email", () => ({ mailer: { send: sendMock }, sendBestEffort: sendMock }));
 vi.mock("next/headers", () => ({ headers: vi.fn().mockResolvedValue({ get: headerGet }) }));
 vi.mock("next/server", () => ({ after: () => {} }));
+// access.ts now also imports the operator/session auth chain (for approveRequest et
+// al.); mock @/auth so this file — which only exercises requestAccess — never loads
+// the real next-auth package (whose lib/env.js has an ESM-resolution issue for
+// "next/server" outside of Next's own bundler).
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
 
 import { requestAccess } from "@/app/actions/access";
 
