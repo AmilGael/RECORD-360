@@ -135,8 +135,20 @@ model AccessRequest {
 
 - [ ] **Step 4: Create the migration**
 
-Run: `npx prisma migrate dev --name access_request_onboarding`
-Expected: migration `*_access_request_onboarding` created and applied; `prisma generate` runs. (Widening `passwordHash` to nullable is safe on existing rows.)
+Run: `npx prisma migrate dev --name access_request_onboarding --create-only`
+Expected: migration `*_access_request_onboarding` created but **not yet applied** (`--create-only` lets us add a backfill before it runs).
+
+- [ ] **Step 4b: Backfill `emailVerifiedAt` for existing accounts** — CRITICAL. Every existing user (including the two live production admins provisioned directly) already has a `passwordHash` but will get `emailVerifiedAt = NULL`, and the Task 6 login guard rejects `!emailVerifiedAt`. Without this backfill they are locked out. Append to the generated `prisma/migrations/*_access_request_onboarding/migration.sql`:
+
+```sql
+-- Backfill: existing password-holding accounts are already "verified" (they
+-- pre-date the activation flow). Without this they can no longer log in.
+UPDATE "User" SET "emailVerifiedAt" = CURRENT_TIMESTAMP
+WHERE "passwordHash" IS NOT NULL AND "emailVerifiedAt" IS NULL;
+```
+Then apply it:
+Run: `npx prisma migrate dev`
+Expected: the migration applies and `prisma generate` runs. (Widening `passwordHash` to nullable is safe on existing rows.)
 
 - [ ] **Step 5: Schema smoke test** — create `tests/tokens.test.ts`:
 
