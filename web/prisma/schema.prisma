@@ -14,6 +14,7 @@ datasource db {
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   MANAGER
   SUPERVISOR
@@ -49,7 +50,8 @@ model Company {
 model User {
   id                 String              @id @default(cuid())
   email              String              @unique
-  passwordHash       String
+  passwordHash       String?
+  emailVerifiedAt    DateTime?
   name               String
   role               Role
   phone        String?
@@ -60,6 +62,7 @@ model User {
   projectAssignments ProjectAssignment[]
   notifications      Notification[]
   signatures         Signature[]
+  verificationTokens VerificationToken[]
   disabledAt         DateTime?
   createdAt          DateTime            @default(now())
 }
@@ -378,4 +381,45 @@ model Signature {
   signedAt   DateTime @default(now())
 
   @@index([partidaId])
+}
+
+enum TokenPurpose {
+  ACTIVATION
+}
+
+model VerificationToken {
+  id         String       @id @default(cuid())
+  tokenHash  String       @unique
+  purpose    TokenPurpose
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  @@index([userId])
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AccessRequest {
+  id               String        @id @default(cuid())
+  businessName     String
+  contactName      String
+  email            String
+  phone            String
+  website          String?
+  message          String?
+  status           RequestStatus @default(PENDING)
+  reviewedById     String?
+  reviewedAt       DateTime?
+  createdCompanyId String?
+  createdUserId    String?
+  createdAt        DateTime      @default(now())
+
+  @@index([status, createdAt])
 }
