@@ -171,7 +171,7 @@ export default async function AdminPage() {
                 {A.added} {formatTimestamp(u.createdAt, lang as Lang)}
               </span>
               <MemberProfileForm userId={u.id} phone={u.phone} t={{ editProfile: A.editProfile, phone: A.phone, photo: A.photo, signature: A.signature, saveProfile: A.saveProfile }} />
-              {user.role === "ADMIN" && (
+              {user.role === "ADMIN" && u.emailVerifiedAt && (
                 <ResetPasswordButton
                   userId={u.id}
                   t={{ resetPw: A.resetPw, resetConfirm: A.resetConfirm, yes: A.yes, no: A.no }}

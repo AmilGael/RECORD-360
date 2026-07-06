@@ -40,4 +40,9 @@ describe("createUser (invite via activation link)", () => {
     expect(await prisma.verificationToken.count({ where: { userId: u!.id } })).toBe(1);
     expect(sendMock).toHaveBeenCalledTimes(1);
   });
+
+  it("rejects an attempt to create a SUPERADMIN (privilege escalation)", async () => {
+    await expect(createUser(fd({ name: "Esc", email: `${tag}-esc@x.com`, role: "SUPERADMIN" }))).rejects.toThrow();
+    expect(await prisma.user.findUnique({ where: { email: `${tag}-esc@x.com` } })).toBeNull();
+  });
 });

@@ -225,8 +225,11 @@ export async function createUser(formData: FormData) {
   const { companyId, role } = await requireSession();
   if (role !== Role.ADMIN) throw new Error("Forbidden");
 
+  // Tenant admins may only assign tenant roles — NEVER the platform SUPERADMIN
+  // (which is created out-of-band via scripts/create-admin.ts).
+  const ASSIGNABLE_ROLES: Role[] = [Role.ADMIN, Role.MANAGER, Role.SUPERVISOR, Role.RESIDENT];
   const submitted = String(formData.get("role"));
-  if (!Object.values(Role).includes(submitted as Role)) throw new Error("Invalid role");
+  if (!ASSIGNABLE_ROLES.includes(submitted as Role)) throw new Error("Invalid role");
 
   const email = String(formData.get("email")).trim().toLowerCase();
   const name = String(formData.get("name")).trim();
