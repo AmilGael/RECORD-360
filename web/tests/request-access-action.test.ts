@@ -5,6 +5,7 @@ const sendMock = vi.hoisted(() => vi.fn());
 const headerGet = vi.hoisted(() => vi.fn().mockReturnValue("9.9.9.9"));
 vi.mock("@/lib/email", () => ({ mailer: { send: sendMock }, sendBestEffort: sendMock }));
 vi.mock("next/headers", () => ({ headers: vi.fn().mockResolvedValue({ get: headerGet }) }));
+vi.mock("next/server", () => ({ after: () => {} }));
 
 import { requestAccess } from "@/app/actions/access";
 
@@ -48,5 +49,13 @@ describe("requestAccess", () => {
     const res = await requestAccess({ status: "idle" }, fd({ business: `${tag}-Hp`, name: "H", email, phone: "809-3", company_site: "bot" }));
     expect(res.status).toBe("sent");
     expect(await prisma.accessRequest.findFirst({ where: { email } })).toBeNull();
+  });
+
+  it("is enumeration-safe for an existing PENDING request (neutral, no duplicate)", async () => {
+    const email = `${tag}-pending@x.com`;
+    await prisma.accessRequest.create({ data: { businessName: `${tag}-P`, contactName: "P", email, phone: "809-9" } });
+    const res = await requestAccess({ status: "idle" }, fd({ business: `${tag}-Dup`, name: "P", email, phone: "809-9" }));
+    expect(res.status).toBe("sent");
+    expect(await prisma.accessRequest.count({ where: { email } })).toBe(1);
   });
 });

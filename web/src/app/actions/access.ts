@@ -1,5 +1,6 @@
 "use server";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendBestEffort } from "@/lib/email";
 import { newAccessRequestEmail } from "@/lib/email/templates";
@@ -49,13 +50,24 @@ export async function requestAccess(_prev: RequestAccessState, formData: FormDat
     data: { businessName, contactName, email, phone, website, message },
   });
 
-  // Notify operators (best-effort — never blocks the neutral result).
-  const operators = await prisma.user.findMany({ where: { role: Role.SUPERADMIN, disabledAt: null }, select: { email: true } });
-  await Promise.all(
-    operators.map((op) =>
-      sendBestEffort(newAccessRequestEmail(op.email, { businessName, contactName, email, phone, website, message }, reviewUrl())),
-    ),
-  );
+  // Notify operators AFTER the response is sent: keeps the response fast (so the
+  // existing-vs-new branches return at comparable latency — no enumeration timing
+  // oracle) and ensures a lookup/send failure can never reject the user's request.
+  after(async () => {
+    try {
+      const operators = await prisma.user.findMany({
+        where: { role: Role.SUPERADMIN, disabledAt: null },
+        select: { email: true },
+      });
+      await Promise.all(
+        operators.map((op) =>
+          sendBestEffort(newAccessRequestEmail(op.email, { businessName, contactName, email, phone, website, message }, reviewUrl())),
+        ),
+      );
+    } catch (err) {
+      console.error("[access] operator notification failed:", err);
+    }
+  });
 
   return NEUTRAL;
 }
