@@ -139,7 +139,8 @@ describe("logRegistro corrections", () => {
   });
 
   it("stores reminderDueAt as registro metadata", async () => {
-    const due = "2026-06-12T09:30";
+    // datetime-local format, one day ahead so the future-date guard accepts it
+    const due = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
     const fd = new FormData();
     fd.set("partidaId", partidaId);
     fd.set("text", "reminder note");
