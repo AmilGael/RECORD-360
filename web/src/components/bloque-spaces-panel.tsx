@@ -7,14 +7,13 @@ import { SubmitButton } from "@/components/submit-button";
 import { resolveReminder } from "@/app/actions/reminders";
 
 type SegmentSummary = { id: string; name: string; progress: number; count: number };
-type SpaceKey = "cuaderno" | "planos" | "actualizados" | "levantamientos" | "ideas" | "media" | "recordatorios" | "indicadores";
+type SpaceKey = "cuaderno" | "planos" | "levantamientos" | "ideas" | "media" | "recordatorios" | "indicadores";
 type MediaItem = { id: string; url: string; fileType: AttachmentType; text: string | null; createdAt: Date };
 type NoteItem = Pick<Registro, "id" | "text" | "serverCreatedAt" | "hash" | "partidaId"> & { partidaName: string };
 
 const SPACES: { key: SpaceKey; label: string; kind?: DocumentKind }[] = [
   { key: "cuaderno", label: "Cuaderno" },
   { key: "planos", label: "Planos", kind: "PLANO" },
-  { key: "actualizados", label: "Planos actualizados", kind: "PLANO_ACTUALIZADO" },
   { key: "levantamientos", label: "Levantamientos", kind: "LEVANTAMIENTO" },
   { key: "ideas", label: "Ideas", kind: "IDEA" },
   { key: "media", label: "Media" },
@@ -42,7 +41,7 @@ export function BloqueSpacesPanel({
   canUpload: boolean;
   canResolve: boolean;
   lang: Lang;
-  t: { emptyDocs: string; upload: string; title: string; error: string; uploadedBy: string; view: string; resolve: string };
+  t: { emptyDocs: string; upload: string; uploadByKind: Record<DocumentKind, string>; title: string; error: string; uploadedBy: string; view: string; resolve: string };
 }) {
   if (segments.length === 0 || !selectedSegmentId) return null;
   const selected = segments.find((s) => s.id === selectedSegmentId) ?? segments[0];
@@ -79,7 +78,7 @@ export function BloqueSpacesPanel({
 
         {space.kind && (
           <>
-            {canUpload && <PlanosUpload projectId={projectId} segmentId={selected.id} kind={space.kind} t={{ upload: t.upload, title: t.title, error: t.error }} />}
+            {canUpload && <PlanosUpload projectId={projectId} segmentId={selected.id} kind={space.kind} t={{ upload: t.uploadByKind[space.kind] ?? t.upload, title: t.title, error: t.error }} />}
             <DocList docs={docs} lang={lang} t={t} />
           </>
         )}

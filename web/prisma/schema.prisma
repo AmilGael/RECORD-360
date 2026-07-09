@@ -1,13 +1,20 @@
 generator client {
   provider = "prisma-client-js"
+  // "native" for local dev; rhel-openssl-3.0.x for Netlify Functions (AWS Lambda runtime).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Runtime connection. On Supabase + serverless this is the POOLED string
+  // (Supavisor, port 6543, with ?pgbouncer=true) to avoid exhausting connections.
+  url       = env("DATABASE_URL")
+  // Migrations need a DIRECT connection (Supabase port 5432). Used by `prisma migrate`.
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   MANAGER
   SUPERVISOR
@@ -33,6 +40,7 @@ enum AttachmentType {
 model Company {
   id        String    @id @default(cuid())
   name      String
+  sealKey   String?
   users     User[]
   projects  Project[]
   auditLogs AuditLog[]
@@ -42,30 +50,48 @@ model Company {
 model User {
   id                 String              @id @default(cuid())
   email              String              @unique
-  passwordHash       String
+  passwordHash       String?
+  emailVerifiedAt    DateTime?
   name               String
   role               Role
+  phone        String?
+  photoKey     String?
+  signatureKey String?
   companyId          String
   company            Company             @relation(fields: [companyId], references: [id])
   projectAssignments ProjectAssignment[]
   notifications      Notification[]
   signatures         Signature[]
+  verificationTokens VerificationToken[]
+  disabledAt         DateTime?
   createdAt          DateTime            @default(now())
+}
+
+model LoginAttempt {
+  key             String   @id
+  failures        Int      @default(0)
+  windowStartedAt DateTime
+  blockedUntil    DateTime?
+  lastFailureAt   DateTime?
+  updatedAt       DateTime @updatedAt
 }
 
 model Project {
   id             String          @id @default(cuid())
   companyId      String
   company        Company         @relation(fields: [companyId], references: [id])
-  name           String
-  description    String?
-  partidas       Partida[]
+  name             String
+  description      String?
+  coverImageKey    String?
+  registrationCode String  @unique
+  partidas         Partida[]
   segments       Segment[]
   locations      Location[]
   changeRequests ChangeRequest[]
   documents      Document[]
   assignments    ProjectAssignment[]
   tags           PartidaTag[]
+  informes       Informe[]
   archivedAt     DateTime?
   createdAt      DateTime        @default(now())
 }
@@ -218,6 +244,8 @@ model ChangeRequest {
   resolvedById String?
   resolvedAt   DateTime?
   rejectionReason String?
+  resolutionNote  String?
+  reminderDueAt   DateTime?
   seal         String?
   createdAt    DateTime     @default(now())
 
@@ -286,6 +314,25 @@ model Document {
   @@index([projectId, kind, createdAt])
 }
 
+// AI-generated informe (spec R2.2 "Report" table). Deterministic PDF reports are
+// stateless routes; informes persist because they are auditable deliverables.
+model Informe {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  segmentId     String?
+  partidaId     String?
+  requestedById String
+  brief         String
+  periodFrom    DateTime?
+  periodTo      DateTime?
+  contentMd     String
+  model         String
+  createdAt     DateTime @default(now())
+
+  @@index([projectId, createdAt])
+}
+
 model AuditLog {
   id         String   @id @default(cuid())
   companyId  String
@@ -323,7 +370,7 @@ model Signature {
   id         String   @id @default(cuid())
   companyId  String
   partidaId  String
-  partida    Partida  @relation(fields: [partidaId], references: [id])
+  partida    Partida  @relation(fields: [partidaId], references: [id], onDelete: Cascade)
   signerId   String
   signer     User     @relation(fields: [signerId], references: [id])
   signerName String
@@ -334,4 +381,46 @@ model Signature {
   signedAt   DateTime @default(now())
 
   @@index([partidaId])
+}
+
+enum TokenPurpose {
+  ACTIVATION
+  PASSWORD_RESET
+}
+
+model VerificationToken {
+  id         String       @id @default(cuid())
+  tokenHash  String       @unique
+  purpose    TokenPurpose
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  @@index([userId])
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AccessRequest {
+  id               String        @id @default(cuid())
+  businessName     String
+  contactName      String
+  email            String
+  phone            String
+  website          String?
+  message          String?
+  status           RequestStatus @default(PENDING)
+  reviewedById     String?
+  reviewedAt       DateTime?
+  createdCompanyId String?
+  createdUserId    String?
+  createdAt        DateTime      @default(now())
+
+  @@index([status, createdAt])
 }

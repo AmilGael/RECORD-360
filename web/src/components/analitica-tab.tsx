@@ -5,7 +5,11 @@ type BRow = { id: string; name: string; progress: number; partidas: PRow[] };
 type AnaliticaT = {
   general: string; byBloque: string; openChanges: string; overdue: string;
   partidasWord: string; noBloques: string;
+  phaseRed: string; phaseYellow: string; phaseGreen: string;
 };
+
+const phaseLabel = (level: string, t: { phaseRed: string; phaseYellow: string; phaseGreen: string }) =>
+  level === "green" ? t.phaseGreen : level === "yellow" ? t.phaseYellow : t.phaseRed;
 
 function Bar({ pct }: { pct: number }) {
   return (
@@ -15,10 +19,12 @@ function Bar({ pct }: { pct: number }) {
   );
 }
 
-function Row({ name, pct, sub }: { name: string; pct: number; sub?: string }) {
+function Row({ name, pct, sub, phaseT, small }: { name: string; pct: number; sub?: string; phaseT?: { phaseRed: string; phaseYellow: string; phaseGreen: string }; small?: boolean }) {
+  const level = healthLevel(pct);
   return (
     <div className="analitica-row">
-      <span className={`health-dot ${healthLevel(pct)}`} aria-hidden="true" />
+      <span className={`health-dot ${level}`} aria-hidden="true" />
+      {phaseT && <span className="mono text-steel" style={{ fontSize: small ? "0.62rem" : "0.7rem" }}>{phaseLabel(level, phaseT)}</span>}
       <span className="analitica-row-name">{name}{sub ? <span className="text-steel"> · {sub}</span> : null}</span>
       <Bar pct={pct} />
       <span className="analitica-pct mono">{pct}%</span>
@@ -37,6 +43,7 @@ export function AnaliticaTab({ general, bloques, ungrouped, t }: {
       <div className="analitica-cards">
         <div className="analitica-card">
           <span className={`health-dot ${healthLevel(general.progress)}`} aria-hidden="true" />
+          <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>{phaseLabel(healthLevel(general.progress), t)}</span>
           <strong>{general.progress}%</strong><span>{t.general}</span>
         </div>
         <div className="analitica-card"><strong>{general.partidas}</strong><span>{t.partidasWord}</span></div>
@@ -49,16 +56,16 @@ export function AnaliticaTab({ general, bloques, ungrouped, t }: {
       <div className="repo-list">
         {bloques.map((b) => (
           <div key={b.id} style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
-            <Row name={b.name} pct={b.progress} sub={`${b.partidas.length} ${t.partidasWord}`} />
+            <Row name={b.name} pct={b.progress} sub={`${b.partidas.length} ${t.partidasWord}`} phaseT={t} />
             <div style={{ marginTop: 8, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
-              {b.partidas.map((p) => <Row key={p.id} name={p.name} pct={p.progressPct} />)}
+              {b.partidas.map((p) => <Row key={p.id} name={p.name} pct={p.progressPct} phaseT={t} small />)}
             </div>
           </div>
         ))}
         {ungrouped.length > 0 && (
           <div style={{ padding: "12px 14px" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {ungrouped.map((p) => <Row key={p.id} name={p.name} pct={p.progressPct} />)}
+              {ungrouped.map((p) => <Row key={p.id} name={p.name} pct={p.progressPct} phaseT={t} small />)}
             </div>
           </div>
         )}

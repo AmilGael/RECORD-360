@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { purgeProject } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
+import { Trash } from "@/components/icons";
 
 type T = { purge: string; purgeConfirm: string; yes: string; no: string };
 
@@ -13,18 +14,14 @@ export function PurgeProjectButton({ projectId, t }: { projectId: string; t: T }
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="mono"
+        className="btn btn-danger-soft mono"
         style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: "var(--steel)",
-          fontSize: "0.7rem",
+          padding: "0.28rem 0.7rem",
+          fontSize: "0.68rem",
           letterSpacing: "0.08em",
-          transition: "color 0.18s var(--ease)",
         }}
       >
-        {t.purge}
+        <Trash size={11} style={{ verticalAlign: -1, marginRight: 4 }} />{t.purge}
       </button>
     );
   }

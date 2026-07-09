@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
 import bcrypt from "bcryptjs";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -15,6 +16,7 @@ const KNOWN_PASSWORD = "test-password-123";
 let companyId = "";
 let companyBId = "";
 let userId = "";
+let adminId = "";
 let userBId = "";
 let projectId = "";
 let partidaId = "";
@@ -29,8 +31,11 @@ beforeAll(async () => {
   userId = (await prisma.user.create({
     data: { email: `sig-u-${s}@x.do`, name: "Supervisora Test", role: "SUPERVISOR", companyId, passwordHash: hash },
   })).id;
+  adminId = (await prisma.user.create({
+    data: { email: `sig-admin-${s}@x.do`, name: "Admin Test", role: "ADMIN", companyId, passwordHash: hash },
+  })).id;
 
-  projectId = (await prisma.project.create({ data: { companyId, name: `Sig Project ${s}` } })).id;
+  projectId = (await prisma.project.create({ data: { companyId, name: `Sig Project ${s}`, registrationCode: generateRegistrationCode() } })).id;
   // Assign user to project (SUPERVISOR needs assignment)
   await prisma.projectAssignment.create({ data: { projectId, userId, role: "SUPERVISOR" } });
 
@@ -41,7 +46,7 @@ beforeAll(async () => {
   userBId = (await prisma.user.create({
     data: { email: `sig-ub-${s}@x.do`, name: "User B", role: "MANAGER", companyId: companyBId, passwordHash: hash },
   })).id;
-  const projectBId = (await prisma.project.create({ data: { companyId: companyBId, name: `Sig Project B ${s}` } })).id;
+  const projectBId = (await prisma.project.create({ data: { companyId: companyBId, name: `Sig Project B ${s}`, registrationCode: generateRegistrationCode() } })).id;
   partidaNoAccessId = (await prisma.partida.create({ data: { projectId: projectBId, name: "No Access Partida" } })).id;
 });
 
@@ -52,7 +57,7 @@ afterAll(async () => {
   await prisma.projectAssignment.deleteMany({ where: { projectId } });
   await prisma.partida.deleteMany({ where: { projectId } });
   await prisma.project.deleteMany({ where: { id: projectId } });
-  await prisma.user.deleteMany({ where: { id: userId } });
+  await prisma.user.deleteMany({ where: { id: { in: [userId, adminId] } } });
   await prisma.company.deleteMany({ where: { id: companyId } });
   // Company B cleanup
   await prisma.partida.deleteMany({ where: { id: partidaNoAccessId } });
@@ -124,6 +129,18 @@ describe("signPartida", () => {
     // cleanup
     await prisma.signature.deleteMany({ where: { partidaId: emptyPartida.id } });
     await prisma.partida.delete({ where: { id: emptyPartida.id } });
+  });
+
+  it("purging an empty signed partida deletes the signature via cascade", async () => {
+    const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const emptyPartida = await prisma.partida.create({ data: { projectId, name: `Signed Empty ${s}` } });
+
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    await signPartida(fd({ partidaId: emptyPartida.id, password: KNOWN_PASSWORD }));
+    expect(await prisma.signature.count({ where: { partidaId: emptyPartida.id } })).toBe(1);
+
+    await prisma.partida.delete({ where: { id: emptyPartida.id } });
+    expect(await prisma.signature.count({ where: { partidaId: emptyPartida.id } })).toBe(0);
   });
 
   it("wrong password → throws 'Contraseña incorrecta.', no row created", async () => {

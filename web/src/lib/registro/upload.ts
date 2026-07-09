@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 export type PreparedAttachment = { fileType: AttachmentType; url: string; sha256: string };
 
 const MAX_FILES = 10;
+const MAX_TOTAL_BYTES = 55 * 1024 * 1024;
 // Per-type caps MUST stay below the Next server-action bodySizeLimit (next.config.ts,
 // currently 60mb) so an oversize file is rejected here with a graceful message instead
 // of the opaque framework body-limit error. Larger media (esp. video) needs the
@@ -27,6 +28,10 @@ const SIZE_CAP: Record<AttachmentType, number> = {
 export async function prepareAttachments(files: File[], storage: Storage): Promise<PreparedAttachment[]> {
   if (files.length > MAX_FILES) {
     throw new Error(`Demasiados archivos (máx. ${MAX_FILES}).`);
+  }
+  const totalBytes = files.reduce((sum, file) => sum + (file?.size ?? 0), 0);
+  if (totalBytes > MAX_TOTAL_BYTES) {
+    throw new Error("El tamaño total de los archivos supera el límite permitido.");
   }
   const out: PreparedAttachment[] = [];
   for (const file of files) {

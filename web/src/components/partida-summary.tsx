@@ -25,7 +25,7 @@ export function PartidaSummary({
           {t.lastUpdate} · {authorName ?? "—"} · {formatTimestamp(latest.serverCreatedAt, lang)} · {latest.hash.slice(0, 8)}…{latest.hash.slice(-4)}
         </div>
       )}
-      <h2 className="h-md" style={{ fontSize: "1.4rem", marginBottom: 6 }}>{partida.name}</h2>
+      <h2 className="h-md" style={{ marginBottom: 6 }}>{partida.name}</h2>
       <div style={{ height: 6, borderRadius: 99, background: "var(--line)", overflow: "hidden", maxWidth: 280, marginBottom: 14 }}>
         <i style={{ display: "block", height: "100%", width: `${partida.progressPct}%`, background: "var(--accent)" }} />
       </div>

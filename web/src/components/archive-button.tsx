@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { archiveProject } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
+import { Archive } from "@/components/icons";
 
 type T = { archive: string; confirm: string; yes: string; no: string };
 
@@ -16,7 +17,7 @@ export function ArchiveButton({ projectId, t }: { projectId: string; t: T }) {
         className="mono"
         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--steel)", fontSize: "0.7rem", letterSpacing: "0.08em", transition: "color 0.18s var(--ease)" }}
       >
-        {t.archive}
+        <Archive size={11} style={{ verticalAlign: -1, marginRight: 4 }} />{t.archive}
       </button>
     );
   }

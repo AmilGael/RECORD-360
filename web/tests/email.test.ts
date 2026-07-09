@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ResendMailer } from "@/lib/email/resend";
 import { createMailer } from "@/lib/email";
 import { LogMailer } from "@/lib/email/log";
-import { passwordResetEmail, userInviteEmail } from "@/lib/email/templates";
+import { passwordResetLinkEmail } from "@/lib/email/templates";
 
 describe("ResendMailer.send", () => {
   const fetchMock = vi.fn();
@@ -14,7 +14,7 @@ describe("ResendMailer.send", () => {
 
   it("POSTs to the Resend API with auth + the message", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
-    const mailer = new ResendMailer("key_123", "Raphl <no-reply@raphl.app>");
+    const mailer = new ResendMailer("key_123", "Raphel <no-reply@raphel.app>");
     await mailer.send({ to: "u@x.do", subject: "Hi", html: "<p>x</p>", text: "x" });
 
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -23,7 +23,7 @@ describe("ResendMailer.send", () => {
     expect(init.method).toBe("POST");
     expect(init.headers.Authorization).toBe("Bearer key_123");
     const body = JSON.parse(init.body);
-    expect(body).toMatchObject({ from: "Raphl <no-reply@raphl.app>", to: ["u@x.do"], subject: "Hi", html: "<p>x</p>", text: "x" });
+    expect(body).toMatchObject({ from: "Raphel <no-reply@raphel.app>", to: ["u@x.do"], subject: "Hi", html: "<p>x</p>", text: "x" });
   });
 
   it("throws when the API responds non-2xx", async () => {
@@ -46,18 +46,14 @@ describe("createMailer selection", () => {
 });
 
 describe("templates", () => {
-  it("password reset email carries the temp password and a login link", () => {
-    const msg = passwordResetEmail("u@x.do", "Tmp-123", "https://app.raphl/login");
+  it("password reset link email carries the link and no credential material", () => {
+    const msg = passwordResetLinkEmail("u@x.do", "<b>Ana</b>", "https://raphel360.com/reset/RAWTOKEN");
     expect(msg.to).toBe("u@x.do");
-    expect(msg.text).toContain("Tmp-123");
-    expect(msg.html).toContain("Tmp-123");
-    expect(msg.html).toContain('href="https://app.raphl/login"');
-  });
-  it("invite email carries user + temp password and escapes HTML", () => {
-    const msg = userInviteEmail("u@x.do", "<b>Bob</b>", "Tmp-9", undefined);
-    expect(msg.text).toContain("u@x.do");
-    expect(msg.text).toContain("Tmp-9");
-    expect(msg.html).toContain("&lt;b&gt;Bob&lt;/b&gt;"); // name is escaped, not raw markup
-    expect(msg.html).not.toContain("<b>Bob</b>");
+    expect(msg.subject).toMatch(/contraseña/i);
+    expect(msg.text).toContain("https://raphel360.com/reset/RAWTOKEN");
+    expect(msg.html).toContain('href="https://raphel360.com/reset/RAWTOKEN"');
+    expect(msg.html).toContain("&lt;b&gt;Ana&lt;/b&gt;"); // name escaped
+    expect(msg.text).toMatch(/2 horas/); // states the short validity window
+    expect(msg.text).not.toMatch(/contraseña temporal/i); // never a credential
   });
 });

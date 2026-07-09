@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -18,7 +19,7 @@ beforeAll(async () => {
   companyId = company.id;
   adminId = (await prisma.user.create({ data: { email: `adm-${s}@x.do`, name: "Adm", role: "ADMIN", companyId, passwordHash: "x" } })).id;
   residentId = (await prisma.user.create({ data: { email: `res-${s}@x.do`, name: "Res", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
-  projectId = (await prisma.project.create({ data: { companyId, name: `Doc Project ${s}` } })).id;
+  projectId = (await prisma.project.create({ data: { companyId, name: `Doc Project ${s}`, registrationCode: generateRegistrationCode() } })).id;
   segmentId = (await prisma.segment.create({ data: { projectId, name: "Doc Bloque" } })).id;
 });
 

@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({ auth: authMock }));
@@ -13,7 +14,7 @@ beforeAll(async () => {
   userId = (await prisma.user.create({ data: { email: `s-${s}@x.do`, name: "S", role: "ADMIN", companyId, passwordHash: "x" } })).id;
   otherCo = (await prisma.company.create({ data: { name: `Other ${s}` } })).id;
   otherUser = (await prisma.user.create({ data: { email: `x-${s}@x.do`, name: "X", role: "ADMIN", companyId: otherCo, passwordHash: "x" } })).id;
-  projectId = (await prisma.project.create({ data: { companyId, name: `Sync P ${s}` } })).id;
+  projectId = (await prisma.project.create({ data: { companyId, name: `Sync P ${s}`, registrationCode: generateRegistrationCode() } })).id;
   partidaId = (await prisma.partida.create({ data: { projectId, name: "sync" } })).id;
 });
 afterAll(async () => {
@@ -51,6 +52,17 @@ describe("POST /api/offline/registros", () => {
     const rec = await prisma.registro.findFirst({ where: { idempotencyKey: "k3" } });
     expect(rec?.text).toBe("hola");
     expect(rec?.clientCapturedAt?.toISOString()).toBe("2026-06-01T14:03:00.000Z");
+  });
+  it("rejects past-dated reminderDueAt values on the offline API", async () => {
+    asUser();
+    const res = await POST(req({
+      partidaId,
+      idempotencyKey: "k-reminder",
+      text: "reminder",
+      reminderDueAt: "2026-06-01T14:03:00.000Z",
+    }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/Recordatorio/i);
   });
   it("is idempotent: same key twice → one row, returns existing id", async () => {
     asUser();

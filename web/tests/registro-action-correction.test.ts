@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -28,10 +29,10 @@ beforeAll(async () => {
   const company = await prisma.company.create({ data: { name: `Correction Co ${suffix}` } });
   companyId = company.id;
   const user = await prisma.user.create({
-    data: { email: `correction-${suffix}@x.do`, name: "Correction User", role: "RESIDENT", companyId, passwordHash: "x" },
+    data: { email: `correction-${suffix}@x.do`, name: "Correction User", role: "ADMIN", companyId, passwordHash: "x" },
   });
   userId = user.id;
-  const project = await prisma.project.create({ data: { companyId, name: `Correction Project ${suffix}` } });
+  const project = await prisma.project.create({ data: { companyId, name: `Correction Project ${suffix}`, registrationCode: generateRegistrationCode() } });
   projectId = project.id;
   const partida = await prisma.partida.create({ data: { projectId, name: "Correction Partida" } });
   partidaId = partida.id;
@@ -138,7 +139,8 @@ describe("logRegistro corrections", () => {
   });
 
   it("stores reminderDueAt as registro metadata", async () => {
-    const due = "2026-06-12T09:30";
+    // datetime-local format, one day ahead so the future-date guard accepts it
+    const due = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
     const fd = new FormData();
     fd.set("partidaId", partidaId);
     fd.set("text", "reminder note");

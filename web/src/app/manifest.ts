@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
 // PWA manifest (Next metadata route → served at /manifest.webmanifest).
-// Makes Raphl installable to a phone/desktop home screen for on-site use.
+// Makes Raphel installable to a phone/desktop home screen for on-site use.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Raphl — La caja negra de tu obra",
-    short_name: "Raphl",
+    name: "Raphel — La caja negra de tu obra",
+    short_name: "Raphel",
     description: "Cada nota, foto y decisión de tu obra, registrada para siempre.",
     start_url: "/app",
     scope: "/",

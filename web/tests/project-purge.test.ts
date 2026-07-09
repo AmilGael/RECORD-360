@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -22,6 +23,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.notification.deleteMany({ where: { companyId } });
+  await prisma.auditLog.deleteMany({ where: { companyId } });
   await prisma.user.deleteMany({ where: { id: { in: [adminId, managerId] } } });
   await prisma.company.deleteMany({ where: { id: { in: [companyId, otherCompanyId] } } });
   await prisma.$disconnect();
@@ -44,15 +47,23 @@ const asManager = () => authMock.mockResolvedValue({ user: { id: managerId, comp
 async function makeArchivedProject(suffix: string) {
   const s = `${Date.now()}-${Math.random().toString(16).slice(2)}-${suffix}`;
   return prisma.project.create({
-    data: { companyId, name: `Purge Test ${s}`, archivedAt: new Date() },
+    data: { companyId, name: `Purge Test ${s}`, archivedAt: new Date(), registrationCode: generateRegistrationCode() },
   });
 }
 
 describe("purgeProject — ADMIN-only permanent deletion", () => {
+  function swallowRedirect(p: Promise<void>) {
+    return p.catch((e: unknown) => {
+      const isRedirect = (e instanceof Error && e.message === "NEXT_REDIRECT") ||
+        ((e as { digest?: string }).digest?.startsWith?.("NEXT_REDIRECT") ?? false);
+      if (!isRedirect) throw e;
+    });
+  }
+
   it("ADMIN purges an archived empty project and it is gone", async () => {
     asAdmin();
     const p = await makeArchivedProject("empty");
-    await purgeProject(fd(p.id));
+    await swallowRedirect(purgeProject(fd(p.id)));
     expect(await prisma.project.count({ where: { id: p.id } })).toBe(0);
     expect(revalidatePathMock).toHaveBeenCalledWith("/app");
   });
@@ -63,7 +74,7 @@ describe("purgeProject — ADMIN-only permanent deletion", () => {
     // Add non-cascading children
     await prisma.segment.create({ data: { projectId: p.id, name: "Bloque A" } });
     await prisma.location.create({ data: { projectId: p.id, label: "Piso 1" } });
-    await purgeProject(fd(p.id));
+    await swallowRedirect(purgeProject(fd(p.id)));
     expect(await prisma.project.count({ where: { id: p.id } })).toBe(0);
     // Segments and locations are gone too
     expect(await prisma.segment.count({ where: { projectId: p.id } })).toBe(0);
@@ -84,7 +95,7 @@ describe("purgeProject — ADMIN-only permanent deletion", () => {
   it("refuses when the project is NOT archived — project still exists", async () => {
     asAdmin();
     const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const p = await prisma.project.create({ data: { companyId, name: `Active Project ${s}` } }); // no archivedAt
+    const p = await prisma.project.create({ data: { companyId, name: `Active Project ${s}`, registrationCode: generateRegistrationCode() } }); // no archivedAt
     await expect(purgeProject(fd(p.id))).rejects.toThrow(/archiva/i);
     expect(await prisma.project.count({ where: { id: p.id } })).toBe(1);
     // cleanup
@@ -104,7 +115,7 @@ describe("purgeProject — ADMIN-only permanent deletion", () => {
     asAdmin(); // actor is in `companyId`
     const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const other = await prisma.project.create({
-      data: { companyId: otherCompanyId, name: `Other Co Proj ${s}`, archivedAt: new Date() },
+      data: { companyId: otherCompanyId, name: `Other Co Proj ${s}`, archivedAt: new Date(), registrationCode: generateRegistrationCode() },
     });
     await expect(purgeProject(fd(other.id))).rejects.toThrow(/forbidden/i);
     expect(await prisma.project.count({ where: { id: other.id } })).toBe(1);

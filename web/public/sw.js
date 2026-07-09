@@ -1,4 +1,4 @@
-// Raphl service worker — app-shell offline support (phase 1).
+// Raphel service worker — app-shell offline support (phase 1).
 // Strategy:
 //   - precache the offline fallback page on install
 //   - same-origin static assets (/_next/static, icons): cache-first
@@ -6,7 +6,7 @@
 // It deliberately does NOT cache API responses or dynamic pages — registros are
 // immutable and tenant-scoped; serving stale data would be misleading. Offline
 // data capture (queue + sync) is a later phase.
-const CACHE = "raphl-shell-v1";
+const CACHE = "raphel-shell-v1";
 const OFFLINE_URL = "/offline";
 
 self.addEventListener("install", (event) => {

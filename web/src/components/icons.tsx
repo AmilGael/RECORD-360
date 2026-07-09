@@ -201,3 +201,54 @@ export function Users({ size = 14, className, style }: IconProps) {
     </svg>
   );
 }
+
+export function Trash({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+export function Archive({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <rect x="2" y="4" width="20" height="5" rx="1" />
+      <path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9" />
+      <path d="M10 13h4" />
+    </svg>
+  );
+}
+
+export function Upload({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 9 12 4 17 9" />
+      <line x1="12" y1="4" x2="12" y2="16" />
+    </svg>
+  );
+}
+
+export function ClipboardPlus({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
+      <path d="M12 10v6M9 13h6" />
+    </svg>
+  );
+}
+
+export function FileText({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z" />
+      <polyline points="14 2 14 7 19 7" />
+      <path d="M9 12h6M9 16h6" />
+    </svg>
+  );
+}

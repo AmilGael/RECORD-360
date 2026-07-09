@@ -1,17 +1,14 @@
 "use server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { projectAccessWhere } from "@/lib/authz/projects";
-import type { Role } from "@prisma/client";
+import { requireFreshSession } from "@/lib/auth/session";
 
 // Mark a registro's reminder as resolved. Any member with access to the registro's
 // project (admin/manager company-wide, resident/supervisor if assigned) may resolve.
 // The registro itself is immutable; reminderResolvedAt is metadata, not hash content.
 export async function resolveReminder(formData: FormData) {
-  const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
+  const user = await requireFreshSession();
 
   const registroId = String(formData.get("registroId"));
   const reg = await prisma.registro.findFirst({

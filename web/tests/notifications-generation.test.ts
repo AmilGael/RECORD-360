@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -16,7 +17,7 @@ beforeAll(async () => {
   adminId = (await prisma.user.create({ data: { email: `admin-${s}@x.do`, name: "Admin", role: "ADMIN", companyId, passwordHash: "x" } })).id;
   managerId = (await prisma.user.create({ data: { email: `mgr-${s}@x.do`, name: "Mgr", role: "MANAGER", companyId, passwordHash: "x" } })).id;
   residentId = (await prisma.user.create({ data: { email: `res-${s}@x.do`, name: "Res", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
-  projectId = (await prisma.project.create({ data: { companyId, name: `Notif Project ${s}` } })).id;
+  projectId = (await prisma.project.create({ data: { companyId, name: `Notif Project ${s}`, registrationCode: generateRegistrationCode() } })).id;
   await prisma.projectAssignment.create({ data: { projectId, userId: residentId, role: "RESIDENT" } });
   segmentId = (await prisma.segment.create({ data: { projectId, name: "Bloque Notif" } })).id;
 });
@@ -52,7 +53,7 @@ describe("createChangeRequest notifications", () => {
   it("notifies ADMIN and MANAGER (not the RESIDENT author) when a CR is created", async () => {
     authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
     await prisma.notification.deleteMany({ where: { companyId } });
-    await createChangeRequest(fd({ projectId, title: "Refuerzo extra", segmentIds: [segmentId] }));
+    await createChangeRequest(fd({ projectId, title: "Refuerzo extra", segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
 
     const cr = await prisma.changeRequest.findFirstOrThrow({ where: { projectId, title: "Refuerzo extra" } });
     const notifications = await prisma.notification.findMany({ where: { companyId } });
@@ -75,7 +76,7 @@ describe("createChangeRequest notifications", () => {
   it("does NOT notify the ADMIN author themselves", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
     await prisma.notification.deleteMany({ where: { companyId } });
-    await createChangeRequest(fd({ projectId, title: "Admin CR", segmentIds: [segmentId] }));
+    await createChangeRequest(fd({ projectId, title: "Admin CR", segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
 
     const notifications = await prisma.notification.findMany({ where: { companyId } });
     const recipientIds = notifications.map((n) => n.userId);
@@ -87,7 +88,7 @@ describe("createChangeRequest notifications", () => {
 describe("resolveChangeRequest notifications", () => {
   async function openCR() {
     authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
-    await createChangeRequest(fd({ projectId, title: `T-${Math.random()}`, segmentIds: [segmentId] }));
+    await createChangeRequest(fd({ projectId, title: `T-${Math.random()}`, segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
     return prisma.changeRequest.findFirstOrThrow({ orderBy: { createdAt: "desc" }, where: { projectId } });
   }
 
@@ -95,7 +96,7 @@ describe("resolveChangeRequest notifications", () => {
     const cr = await openCR();
     await prisma.notification.deleteMany({ where: { companyId } });
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-    await resolveChangeRequest(fd({ changeRequestId: cr.id, action: "REJECT", rejectionReason: "Fuera de alcance." }));
+    await resolveChangeRequest(fd({ changeRequestId: cr.id, action: "REJECT", resolutionNote: "Fuera de alcance." }));
 
     const notifications = await prisma.notification.findMany({ where: { companyId, userId: residentId } });
     expect(notifications).toHaveLength(1);
@@ -103,7 +104,7 @@ describe("resolveChangeRequest notifications", () => {
     expect(n.type).toBe("cambio.resolved");
     expect(n.title).toContain(cr.code);
     expect(n.title).toContain("rechazada");
-    expect(n.body).toBe(cr.title);
+    expect(n.body).toContain("Fuera de alcance.");
     expect(n.link).toBe(`/app/projects/${cr.projectId}/cambios/${cr.id}`);
   });
 
@@ -113,7 +114,7 @@ describe("resolveChangeRequest notifications", () => {
     const cr = await openCR();
     await prisma.notification.deleteMany({ where: { companyId } });
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-    await resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE" }));
+    await resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE", resolutionNote: "Aprobado" }));
 
     const notifications = await prisma.notification.findMany({ where: { companyId, userId: residentId } });
     expect(notifications).toHaveLength(1);
@@ -121,7 +122,7 @@ describe("resolveChangeRequest notifications", () => {
     expect(n.type).toBe("cambio.resolved");
     expect(n.title).toContain(cr.code);
     expect(n.title).toContain("integrada");
-    expect(n.body).toBe(cr.title);
+    expect(n.body).toContain("Aprobado");
     expect(n.link).toBe(`/app/projects/${cr.projectId}/cambios/${cr.id}`);
 
     // cleanup: delete registro entries so afterAll can delete the partida

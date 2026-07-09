@@ -31,7 +31,9 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
     : null;
 
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";
-  const canResolve = isManager && cr.status === "OPEN" && cr.authorId !== u.id;
+  // ADMIN may resolve their own request (small-team reality — single admin who also files requests).
+  // MANAGER cannot (4-eyes rule enforced on the server too).
+  const canResolve = isManager && cr.status === "OPEN" && (u.role === "ADMIN" || cr.authorId !== u.id);
   const dot = cr.status === "OPEN" ? "open" : cr.status === "INTEGRATED" ? "merged" : "rej";
 
   return (
@@ -55,6 +57,9 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
           {cr.gpsLat != null && <><Pin size={11} style={{ verticalAlign: -2, marginRight: 3 }} />{`${Number(cr.gpsLat).toFixed(4)} · `}</>}
           {formatTimestamp(cr.createdAt, lang as Lang)}
         </Field>
+        {cr.reminderDueAt && (
+          <Field label={C.fieldReminder}>{formatTimestamp(cr.reminderDueAt, lang as Lang)}</Field>
+        )}
         {cr.attachments.length > 0 && (
           <Field label={C.evidence}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 8 }}>
@@ -68,23 +73,27 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
         {cr.status !== "OPEN" && resolverName && (
           <Field label={C.resolvedBy}>{resolverName}</Field>
         )}
-        {cr.status === "REJECTED" && cr.rejectionReason && (
-          <Field label={C.rejectionReason}>{cr.rejectionReason}</Field>
+        {cr.status === "REJECTED" && (cr.resolutionNote ?? cr.rejectionReason) && (
+          <Field label={C.resolutionNote}>{cr.resolutionNote ?? cr.rejectionReason}</Field>
+        )}
+        {cr.status === "INTEGRATED" && cr.resolutionNote && (
+          <Field label={C.resolutionNote}>{cr.resolutionNote}</Field>
         )}
         {cr.status === "INTEGRATED" && cr.seal && (
           <Field label={C.seal}><span className="mono">{cr.seal.slice(0, 8)}…{cr.seal.slice(-4)}</span> · {cr.resolvedAt ? formatTimestamp(cr.resolvedAt, lang as Lang) : ""}</Field>
         )}
         {canResolve && (
           <div className="cr-actions">
-            <form action={resolveChangeRequest}>
+            <form action={resolveChangeRequest} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <input type="hidden" name="changeRequestId" value={cr.id} />
               <input type="hidden" name="action" value="INTEGRATE" />
+              <textarea name="resolutionNote" required rows={2} className="input" placeholder={C.resolutionNotePlaceholder} style={{ minWidth: 220, resize: "vertical" }} aria-label={C.resolutionNote} />
               <SubmitButton className="btn" style={{ background: "var(--state-merged)", color: "#fff" }}>{C.integrate}</SubmitButton>
             </form>
-            <form action={resolveChangeRequest}>
+            <form action={resolveChangeRequest} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <input type="hidden" name="changeRequestId" value={cr.id} />
               <input type="hidden" name="action" value="REJECT" />
-              <textarea name="rejectionReason" required rows={2} className="input" placeholder={C.rejectionReason} style={{ minWidth: 220, resize: "vertical" }} />
+              <textarea name="resolutionNote" required rows={2} className="input" placeholder={C.resolutionNotePlaceholder} style={{ minWidth: 220, resize: "vertical" }} aria-label={C.resolutionNote} />
               <SubmitButton className="btn btn-ghost">{C.reject}</SubmitButton>
             </form>
             <span className="mono text-steel" style={{ fontSize: "0.62rem", marginLeft: "auto", alignSelf: "center" }}>{C.managerOnly}</span>

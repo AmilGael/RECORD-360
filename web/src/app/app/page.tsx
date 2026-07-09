@@ -8,20 +8,84 @@ import { SubmitButton } from "@/components/submit-button";
 import { ArchiveButton } from "@/components/archive-button";
 import { projectProgress } from "@/lib/project/progress";
 import { formatTimestamp } from "@/lib/format/datetime";
-import { buildDashboardAnalytics } from "@/lib/dashboard/analytics";
 import type { Lang } from "@/i18n/dictionaries";
 import { DashboardSearch } from "@/components/dashboard-search";
 import { Folder, Plus } from "@/components/icons";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import type { Role } from "@prisma/client";
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ view?: string; sort?: string; dir?: string }> }) {
   const session = await auth();
   const u = session!.user as { id: string; companyId: string; role: Role };
   const isAdmin = hasCompanyWideAccess(u.role);
   const isOwner = u.role === "ADMIN"; // only ADMIN may archive/restore (delete) projects
   const { lang, t } = await getDict();
   const D = t.dash;
+  const { view, sort, dir } = await searchParams;
+
+  // Table view: sortable general table for activas / archivadas
+  const tableView = view === "activas" ? "activas" : view === "archivadas" && isAdmin ? "archivadas" : null;
+  if (tableView) {
+    let tableRows: { id: string; name: string; code: string; progress: number; resident: string; createdAt: Date }[] = [];
+    const rows = await prisma.project.findMany({
+      where: tableView === "activas"
+        ? { ...projectAccessWhere(u), archivedAt: null }
+        : { companyId: u.companyId, archivedAt: { not: null } },
+      include: {
+        partidas: { where: { deletedAt: null }, select: { progressPct: true } },
+        assignments: { where: { role: "RESIDENT" }, take: 1, include: { user: { select: { name: true } } } },
+      },
+    });
+    tableRows = rows.map((p) => ({
+      id: p.id, name: p.name, code: p.registrationCode,
+      progress: projectProgress(p.partidas),
+      resident: p.assignments[0]?.user.name ?? "—",
+      createdAt: p.createdAt,
+    }));
+    const key = (["name", "code", "progress", "resident", "date"].includes(String(sort)) ? String(sort) : "name") as "name" | "code" | "progress" | "resident" | "date";
+    const mul = dir === "desc" ? -1 : 1;
+    tableRows.sort((a, b) => {
+      if (key === "progress") return (a.progress - b.progress) * mul;
+      if (key === "date") return (a.createdAt.getTime() - b.createdAt.getTime()) * mul;
+      const av = key === "name" ? a.name : key === "code" ? a.code : a.resident;
+      const bv = key === "name" ? b.name : key === "code" ? b.code : b.resident;
+      return av.localeCompare(bv) * mul;
+    });
+    const th = (label: string, key: string) => {
+      const nextDir = sort === key && dir !== "desc" ? "desc" : "asc";
+      return (
+        <th style={{ textAlign: "left", padding: "8px 10px" }}>
+          <Link href={`/app?view=${tableView}&sort=${key}&dir=${nextDir}`} style={{ textDecoration: "none", color: "inherit" }}>
+            {label}{sort === key ? (dir === "desc" ? " ↓" : " ↑") : ""}
+          </Link>
+        </th>
+      );
+    };
+    return (
+      <div className="reveal">
+        <Link href="/app" className="kicker" style={{ textDecoration: "none" }}>&#8592; {D.backToDash}</Link>
+        <h1 className="h-lg" style={{ margin: "10px 0 16px" }}>{tableView === "activas" ? D.tableTitleActive : D.tableTitleArchived}</h1>
+        <div className="card" style={{ padding: 0, overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
+            <thead><tr className="mono" style={{ fontSize: "0.7rem", borderBottom: "1px solid var(--line-strong)" }}>
+              {th(D.colName, "name")}{th(D.colCode, "code")}{th(D.colProgress, "progress")}{th(D.colResident, "resident")}{th(D.colDate, "date")}
+            </tr></thead>
+            <tbody>
+              {tableRows.map((r) => (
+                <tr key={r.id} style={{ borderBottom: "1px solid var(--line, #8884)" }}>
+                  <td style={{ padding: "8px 10px" }}><Link href={`/app/projects/${r.id}`} style={{ color: "inherit" }}>{r.name}</Link></td>
+                  <td className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{r.code}</td>
+                  <td style={{ padding: "8px 10px" }}>{r.progress}%</td>
+                  <td style={{ padding: "8px 10px" }}>{r.resident}</td>
+                  <td className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{formatTimestamp(r.createdAt, lang as Lang).slice(0, 10)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   // Fetch active projects with their partidas AND the single most-recent registro per project
   const projects = await prisma.project.findMany({
@@ -54,8 +118,7 @@ export default async function Dashboard() {
     : [];
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
 
-  const now = new Date();
-  const projectRows = await Promise.all(projects.map(async (p) => {
+  const projectRows = projects.map((p) => {
     const pct = projectProgress(p.partidas);
     // Find the most recent registro across all partidas.
     let latest: { serverCreatedAt: Date; authorId: string; hash: string } | null = null;
@@ -65,29 +128,17 @@ export default async function Dashboard() {
         latest = r;
       }
     }
-    const [openChanges, overdueReminders] = await Promise.all([
-      prisma.changeRequest.count({ where: { projectId: p.id, status: "OPEN" } }),
-      prisma.registro.count({
-        where: {
-          partida: { projectId: p.id, deletedAt: null },
-          reminderDueAt: { lt: now },
-          reminderResolvedAt: null,
-        },
-      }),
-    ]);
     return {
       id: p.id,
       name: p.name,
       progress: pct,
       partidas: p.partidas.length,
-      openChanges,
-      overdueReminders,
       latestAuthor: latest ? authorMap.get(latest.authorId) ?? "—" : null,
       latestTime: latest ? formatTimestamp(latest.serverCreatedAt, lang as Lang) : null,
       latestHash: latest ? latest.hash : null,
+      coverImageKey: p.coverImageKey,
     };
-  }));
-  const dashboard = buildDashboardAnalytics(projectRows);
+  });
 
   const archived = isAdmin
     ? await prisma.project.findMany({
@@ -105,95 +156,28 @@ export default async function Dashboard() {
           <h1 className="h-lg" style={{ fontSize: "clamp(2rem, 4.5vw, 2.8rem)", margin: "6px 0 0" }}>{D.title}</h1>
         </div>
         <span className="counter">
-          {dashboard.totalProjects} {D.tabActive.toLowerCase()} · {archived.length} {D.tabArchived.toLowerCase()}
+          {projectRows.length} {D.tabActive.toLowerCase()} · {archived.length} {D.tabArchived.toLowerCase()}
         </span>
       </div>
 
-      <div className="dash-analytics">
-        <div className="dash-analytics-stack">
-          <div className="analitica-cards">
-            <div className="analitica-card">
-              <span className={`health-dot ${dashboard.portfolioHealth}`} aria-hidden="true" />
-              <strong>{dashboard.avgProgress}%</strong>
-              <span>{D.analyticsProgress}</span>
-            </div>
-            <div className="analitica-card">
-              <strong>{dashboard.totalPartidas}</strong>
-              <span>{D.analyticsPartidas}</span>
-            </div>
-            <div className="analitica-card">
-              <strong>{dashboard.openChanges}</strong>
-              <span>{D.analyticsOpenChanges}</span>
-            </div>
-            <div className="analitica-card">
-              <strong>{dashboard.overdueReminders}</strong>
-              <span>{D.analyticsOverdue}</span>
-            </div>
+      {/* Dual chart-buttons */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, margin: "18px 0" }}>
+        <Link href="/app?view=activas" className="card" style={{ padding: 18, textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div className="kicker">{D.tabActive}</div>
+            <strong style={{ fontSize: "2rem" }}>{projectRows.length}</strong>
           </div>
-
-          <div className="dash-analytics-panel">
-            <div className="kicker">{D.analyticsHealth}</div>
-            <div className="dash-health-list">
-              {([
-                ["green", D.analyticsGreen, dashboard.healthCounts.green],
-                ["yellow", D.analyticsYellow, dashboard.healthCounts.yellow],
-                ["red", D.analyticsRed, dashboard.healthCounts.red],
-              ] as const).map(([level, label, count]) => {
-                const total = dashboard.totalProjects || 1;
-                const pct = Math.round((count / total) * 100);
-                return (
-                  <div key={level} className="dash-health-row">
-                    <span className="dash-health-label">
-                      <span className={`health-dot ${level}`} aria-hidden="true" />
-                      {label}
-                    </span>
-                    <div className="dash-health-track" aria-hidden="true">
-                      <span className={`dash-health-fill ${level}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="dash-health-count mono">{count}</span>
-                  </div>
-                );
-              })}
+          <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>{D.openTable} &rarr;</span>
+        </Link>
+        {isAdmin ? (
+          <Link href="/app?view=archivadas" className="card" style={{ padding: 18, textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div className="kicker">{D.tabArchived}</div>
+              <strong style={{ fontSize: "2rem" }}>{archived.length}</strong>
             </div>
-          </div>
-        </div>
-
-        <div className="dash-analytics-panel dash-risk-panel">
-          <div className="kicker">{D.analyticsRisk}</div>
-          {dashboard.topRiskProjects.length === 0 ? (
-            <p className="text-steel" style={{ margin: "8px 0 0" }}>{D.analyticsNoRisk}</p>
-          ) : (
-            <div className="dash-risk-list">
-              {dashboard.topRiskProjects.map((p) => (
-                <Link key={p.id} href={`/app/projects/${p.id}?tab=analitica`} className="dash-risk-item">
-                  <div className="dash-risk-name">
-                    <span className={`health-dot ${p.health}`} aria-hidden="true" />
-                    <span>{p.name}</span>
-                    <span className="state-badge is-active">{p.progress}%</span>
-                  </div>
-                  <div className="dash-risk-track">
-                    <div className="progress-track">
-                      <div className="progress-fill" style={{ width: `${p.progress}%` }} />
-                    </div>
-                  </div>
-                  <div className="dash-risk-meta">
-                    <span>{p.partidas} {D.analyticsPartidas}</span>
-                    <span className="sep">·</span>
-                    <span>{p.openChanges} {D.analyticsOpenChanges}</span>
-                    <span className="sep">·</span>
-                    <span>{p.overdueReminders} {D.analyticsOverdue}</span>
-                    {p.latestTime && (
-                      <>
-                        <span className="sep">·</span>
-                        <span>{D.lastBy} {p.latestAuthor} · {p.latestTime}</span>
-                      </>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+            <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>{D.openTable} &rarr;</span>
+          </Link>
+        ) : <div />}
       </div>
 
       {/* Dual-column layout */}
@@ -211,7 +195,12 @@ export default async function Dashboard() {
               <div key={p.id} className="repo-card" data-name={p.name.toLowerCase()}>
                 <Link href={`/app/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <div className="repo-title">
-                    <span className="folder-icon"><Folder size={14} /></span>
+                    {p.coverImageKey ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/api/media/${p.coverImageKey}`} alt="" style={{ width: 28, height: 28, objectFit: "cover", borderRadius: "var(--radius-sm)", flexShrink: 0 }} />
+                    ) : (
+                      <span className="folder-icon"><Folder size={14} /></span>
+                    )}
                     {p.name}
                     <span className="state-badge is-active" style={{ marginLeft: 4 }}>
                       {t.project.statusActive}
@@ -307,6 +296,10 @@ export default async function Dashboard() {
               <div className="form-group">
                 <label className="form-label" htmlFor="dash-desc">{D.newSiteDesc}</label>
                 <input id="dash-desc" name="description" placeholder="Av. Winston Churchill, Ens. Naco" className="input" />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="dash-cover">{D.cover}</label>
+                <input id="dash-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" className="input" style={{ padding: 6 }} />
               </div>
               <SubmitButton className="btn btn-accent" style={{ width: "100%", marginTop: 4 }}>
                 {D.create} <span className="arrow">→</span>

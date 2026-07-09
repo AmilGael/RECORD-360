@@ -10,9 +10,9 @@ const mono = Space_Mono({ subsets: ["latin"], weight: ["400", "700"], variable: 
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 
 export const metadata: Metadata = {
-  title: "Raphl — La caja negra de tu obra",
+  title: "Raphel — La caja negra de tu obra",
   description: "Cada nota, foto y decisión de tu obra, registrada para siempre.",
-  appleWebApp: { capable: true, title: "Raphl", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Raphel", statusBarStyle: "black-translucent" },
   icons: { apple: "/apple-touch-icon.png" },
 };
 

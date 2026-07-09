@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
 import { resolveSegment } from "@/lib/project/segments";
+import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 let companyId = "", projectId = "";
 
 beforeAll(async () => {
   const c = await prisma.company.create({ data: { name: "Seg Co" } });
   companyId = c.id;
-  const p = await prisma.project.create({ data: { companyId, name: "Seg Proj" } });
+  const p = await prisma.project.create({ data: { companyId, name: "Seg Proj", registrationCode: generateRegistrationCode() } });
   projectId = p.id;
 });
 

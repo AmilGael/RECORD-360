@@ -1,15 +1,13 @@
 "use server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { requireFreshSession } from "@/lib/auth/session";
 
 const ASSIGNABLE_ROLES: Role[] = [Role.SUPERVISOR, Role.RESIDENT];
 
 async function requireManager() {
-  const session = await auth();
-  const user = session?.user as { id?: string; companyId?: string; role?: Role } | undefined;
-  if (!user?.id || !user.companyId || !user.role) throw new Error("Unauthorized");
+  const user = await requireFreshSession();
   if (user.role !== Role.ADMIN && user.role !== Role.MANAGER) throw new Error("Forbidden");
   return { id: user.id, companyId: user.companyId, role: user.role };
 }
@@ -28,9 +26,12 @@ export async function assignProjectUser(formData: FormData) {
 
   const [project, assignee] = await Promise.all([
     prisma.project.findFirst({ where: { id: projectId, companyId: user.companyId }, select: { id: true } }),
-    prisma.user.findFirst({ where: { id: userId, companyId: user.companyId, role }, select: { id: true } }),
+    prisma.user.findFirst({ where: { id: userId, companyId: user.companyId }, select: { id: true, role: true, name: true } }),
   ]);
   if (!project || !assignee) throw new Error("Forbidden");
+  if (assignee.role !== role) {
+    throw new Error(`El rol global de ${assignee.name} es ${assignee.role}, no ${role}.`);
+  }
 
   await prisma.projectAssignment.upsert({
     where: { projectId_userId: { projectId, userId } },
