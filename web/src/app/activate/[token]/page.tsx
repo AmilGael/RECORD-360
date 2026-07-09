@@ -1,6 +1,7 @@
 "use client";
 import { use, useActionState } from "react";
 import { activateAccount, type ActivateState } from "@/app/actions/activation";
+import { PasswordFields } from "@/components/password-fields";
 
 const initial: ActivateState = { status: "idle" };
 
@@ -19,8 +20,7 @@ export default function ActivatePage({ params }: { params: Promise<{ token: stri
           </p>
         )}
         <input type="hidden" name="token" value={token} />
-        <input name="password" type="password" placeholder="Nueva contraseña" required minLength={12} className="input" style={{ marginBottom: 10 }} autoComplete="new-password" />
-        <input name="confirm" type="password" placeholder="Confirmar contraseña" required minLength={12} className="input" style={{ marginBottom: 18 }} autoComplete="new-password" />
+        <PasswordFields />
         <button type="submit" className="btn btn-ink" style={{ width: "100%" }} disabled={pending}>
           {pending ? "…" : "Activar cuenta →"}
         </button>
