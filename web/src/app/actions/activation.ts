@@ -29,6 +29,14 @@ export async function activateAccount(_prev: ActivateState, formData: FormData):
   const valid = await verifyActivationToken(token);
   if (!valid) return { status: "error", message: "El enlace es inválido o expiró." };
 
+  // Disable is the system's revocation primitive: a token minted before the account
+  // was disabled must not stay redeemable. Refusing here keeps activation in parity
+  // with resetPassword and prevents a disabled account from being silently activated
+  // (which would persist an attacker-set password if it were ever re-enabled). Same
+  // generic message as an invalid token — indistinguishable from the outside.
+  const account = await prisma.user.findUnique({ where: { id: valid.userId } });
+  if (!account || account.disabledAt) return { status: "error", message: "El enlace es inválido o expiró." };
+
   const passwordHash = await bcrypt.hash(password, 10);
   await prisma.$transaction(async (tx) => {
     // Atomically claim THIS token (guards on consumedAt: null). Under Postgres read-committed,

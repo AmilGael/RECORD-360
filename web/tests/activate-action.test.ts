@@ -63,4 +63,15 @@ describe("activateAccount", () => {
   it("rejects an invalid token", async () => {
     expect((await activateAccount({ status: "idle" }, fd({ token: "garbage", password: "longpassword12", confirm: "longpassword12" }))).status).toBe("error");
   });
+
+  it("refuses a disabled account without activating (revocation primitive)", async () => {
+    const u = await pendingUser("disabled");
+    await prisma.user.update({ where: { id: u.id }, data: { disabledAt: new Date() } });
+    const raw = await createActivationToken(u.id);
+    const res = await activateAccount({ status: "idle" }, fd({ token: raw, password: "longpassword12", confirm: "longpassword12" }));
+    expect(res.status).toBe("error");
+    const after = await prisma.user.findUnique({ where: { id: u.id } });
+    expect(after?.emailVerifiedAt).toBeNull();
+    expect(after?.passwordHash).toBeNull();
+  });
 });
