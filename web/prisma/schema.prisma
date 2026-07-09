@@ -385,6 +385,7 @@ model Signature {
 
 enum TokenPurpose {
   ACTIVATION
+  PASSWORD_RESET
 }
 
 model VerificationToken {

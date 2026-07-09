@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "TokenPurpose" ADD VALUE 'PASSWORD_RESET';
