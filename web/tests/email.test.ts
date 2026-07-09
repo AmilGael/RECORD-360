@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ResendMailer } from "@/lib/email/resend";
 import { createMailer } from "@/lib/email";
 import { LogMailer } from "@/lib/email/log";
-import { passwordResetEmail, userInviteEmail } from "@/lib/email/templates";
+import { passwordResetEmail, userInviteEmail, passwordResetLinkEmail } from "@/lib/email/templates";
 
 describe("ResendMailer.send", () => {
   const fetchMock = vi.fn();
@@ -59,5 +59,15 @@ describe("templates", () => {
     expect(msg.text).toContain("Tmp-9");
     expect(msg.html).toContain("&lt;b&gt;Bob&lt;/b&gt;"); // name is escaped, not raw markup
     expect(msg.html).not.toContain("<b>Bob</b>");
+  });
+  it("password reset link email carries the link and no credential material", () => {
+    const msg = passwordResetLinkEmail("u@x.do", "<b>Ana</b>", "https://raphel360.com/reset/RAWTOKEN");
+    expect(msg.to).toBe("u@x.do");
+    expect(msg.subject).toMatch(/contraseña/i);
+    expect(msg.text).toContain("https://raphel360.com/reset/RAWTOKEN");
+    expect(msg.html).toContain('href="https://raphel360.com/reset/RAWTOKEN"');
+    expect(msg.html).toContain("&lt;b&gt;Ana&lt;/b&gt;"); // name escaped
+    expect(msg.text).toMatch(/2 horas/); // states the short validity window
+    expect(msg.text).not.toMatch(/contraseña temporal/i); // never a credential
   });
 });

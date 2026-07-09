@@ -109,3 +109,21 @@ export function newAccessRequestEmail(to: string, req: AccessRequestSummary, rev
     html: `<p>Nueva solicitud de acceso en <b>${APP_NAME}</b>.</p><ul>${htmlRows}</ul>${htmlLink}`,
   };
 }
+
+/** Sent when a user (or their admin) requests a password reset: a single-use link, never a credential. */
+export function passwordResetLinkEmail(to: string, name: string, resetUrl: string): EmailMessage {
+  return {
+    to,
+    subject: `${APP_NAME}: restablece tu contraseña`,
+    text:
+      `Hola ${name},\n\n` +
+      `Restablece tu contraseña de ${APP_NAME} con este enlace (válido por 2 horas):\n\n` +
+      `${resetUrl}\n\n` +
+      `Si no solicitaste este cambio, ignora este correo — tu contraseña actual sigue vigente.`,
+    html:
+      `<p>Hola ${esc(name)},</p>` +
+      `<p>Restablece tu contraseña de <b>${APP_NAME}</b> con este enlace (válido por 2 horas):</p>` +
+      `<p><a href="${esc(resetUrl)}">Restablecer contraseña</a></p>` +
+      `<p>Si no solicitaste este cambio, ignora este correo — tu contraseña actual sigue vigente.</p>`,
+  };
+}
