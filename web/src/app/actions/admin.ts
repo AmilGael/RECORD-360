@@ -1,32 +1,24 @@
 "use server";
 import { prisma } from "@/lib/db";
-import bcrypt from "bcryptjs";
-import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { Role } from "@prisma/client";
+import { Role, TokenPurpose } from "@prisma/client";
 import { parseSegment } from "@/lib/registro/validate";
 import { resolveSegment } from "@/lib/project/segments";
 import { requireProjectStructureAccess } from "@/lib/authz/projects";
 import { writeAudit } from "@/lib/audit/log";
 import { mailer, sendBestEffort } from "@/lib/email";
-import { accountActivationEmail, passwordResetEmail } from "@/lib/email/templates";
-import { createActivationToken, activationUrl } from "@/lib/auth/tokens";
+import { accountActivationEmail, passwordResetLinkEmail } from "@/lib/email/templates";
+import { createActivationToken, activationUrl, createToken, resetUrl } from "@/lib/auth/tokens";
 import { requireFreshSession } from "@/lib/auth/session";
 import { createNotifications } from "@/lib/notifications/create";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
 import { storage } from "@/lib/storage";
 import { uploadBrandedImage } from "@/lib/storage/image-upload";
 
-/** Absolute login URL for emails, when APP_URL is configured. */
-function loginUrl(): string | undefined {
-  const base = process.env.APP_URL;
-  return base ? `${base.replace(/\/$/, "")}/login` : undefined;
-}
-
-/** Cookie name shared with the admin page to flash a one-time temp password. */
-const TEMP_PW_COOKIE = "r360_temp_pw";
+/** Cookie name shared with the admin page to flash the reset-link-sent confirmation. */
+const RESET_SENT_COOKIE = "r360_reset_sent";
 
 const ADMIN_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
 
@@ -259,45 +251,35 @@ export async function resendInvite(formData: FormData) {
 }
 
 /**
- * Reset a company member's password to a fresh CSPRNG temporary password.
+ * Send a company member a single-use password-reset link (2h TTL).
  * ADMIN-only. Tenant-scoped: cannot reset users from another company.
- * The new temp password is flashed once via the TEMP_PW_COOKIE cookie and
- * revealed by the existing temp-password banner on the admin page.
+ * Unactivated members are refused — they must use their activation link
+ * ("Reenviar invitación") instead. No credential is generated or emailed.
  */
 export async function resetUserPassword(formData: FormData) {
-  // Password reset is ADMIN-only — same strictness as createUser.
   const { id: actorId, companyId, role } = await requireSession();
   if (role !== Role.ADMIN) throw new Error("Forbidden");
 
   const userId = String(formData.get("userId"));
 
-  // Tenant scope: the target user must belong to the same company as the actor.
   const target = await prisma.user.findFirst({ where: { id: userId, companyId } });
-  if (!target) throw new Error("Forbidden");
-
-  // CSPRNG temp password — identical mechanism to createUser.
-  const tempPassword = randomBytes(12).toString("base64url");
-  const passwordHash = await bcrypt.hash(tempPassword, 10);
+  if (!target || !target.emailVerifiedAt) throw new Error("Forbidden");
 
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: { passwordHash } });
     await writeAudit(tx, {
       companyId,
       actorId,
       action: "user.password_reset",
       targetType: "User",
       targetId: userId,
-      summary: `Admin reset password for user ${target.email}`,
+      summary: `Admin sent password-reset link to ${target.email}`,
     });
   });
 
-  // Email the user their temp password (best-effort; the admin also sees it via
-  // the cookie flash below as a fallback).
-  await sendBestEffort(passwordResetEmail(target.email, tempPassword, loginUrl()));
+  const raw = await createToken(target.id, TokenPurpose.PASSWORD_RESET);
+  await sendBestEffort(passwordResetLinkEmail(target.email, target.name, resetUrl(raw)));
 
-  // Flash the temp password via a short-lived httpOnly cookie — same pattern
-  // as the addUser wrapper in the admin page (maxAge 30 s, path /app/admin).
-  (await cookies()).set(TEMP_PW_COOKIE, tempPassword, {
+  (await cookies()).set(RESET_SENT_COOKIE, "1", {
     httpOnly: true,
     sameSite: "lax",
     path: "/app/admin",

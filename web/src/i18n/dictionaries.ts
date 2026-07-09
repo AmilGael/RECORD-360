@@ -273,8 +273,6 @@ export const dictionaries = {
     admin: {
       title: "Control de Accesos y Roles",
       kicker: "EQUIPO",
-      tempPre: "Usuario creado. Contraseña temporal:",
-      tempPost: "— compártela con la persona.",
       name: "Nombre completo",
       email: "Correo electrónico",
       create: "Invitar colaborador",
@@ -284,6 +282,7 @@ export const dictionaries = {
       members: "colaboradores",
       resetPw: "Restablecer contraseña",
       resetConfirm: "¿Restablecer?",
+      resetSent: "Enlace de restablecimiento enviado. El usuario recibirá un correo para definir una nueva contraseña.",
       yes: "Sí",
       no: "No",
       roles: {
@@ -629,8 +628,6 @@ export const dictionaries = {
     admin: {
       title: "Access Control & Roles",
       kicker: "TEAM",
-      tempPre: "User created. Temporary password:",
-      tempPost: "— share it with the person.",
       name: "Full name",
       email: "Email address",
       create: "Invite collaborator",
@@ -640,6 +637,7 @@ export const dictionaries = {
       members: "collaborators",
       resetPw: "Reset password",
       resetConfirm: "Reset?",
+      resetSent: "Reset link sent. The user will receive an email to set a new password.",
       yes: "Yes",
       no: "No",
       roles: {

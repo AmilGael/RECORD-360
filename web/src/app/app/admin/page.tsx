@@ -13,7 +13,7 @@ import { formatTimestamp } from "@/lib/format/datetime";
 import { Key, Plus, Upload } from "@/components/icons";
 import Link from "next/link";
 
-const TEMP_PW_COOKIE = "r360_temp_pw";
+const RESET_SENT_COOKIE = "r360_reset_sent";
 const INVITE_SENT_COOKIE = "r360_invite_sent";
 
 /** Role hierarchy for ordering and display */
@@ -72,9 +72,9 @@ export default async function AdminPage() {
   }
   const company = await prisma.company.findUniqueOrThrow({ where: { id: user.companyId }, select: { sealKey: true } });
 
-  // Flash the freshly-created temp password from a short-lived httpOnly cookie
+  // Flash the reset-link-sent confirmation from a short-lived httpOnly cookie
   // (kept out of the URL). It auto-expires; cookies can't be cleared at render.
-  const temp = (await cookies()).get(TEMP_PW_COOKIE)?.value;
+  const resetSent = (await cookies()).get(RESET_SENT_COOKIE)?.value === "1";
   const inviteSent = (await cookies()).get(INVITE_SENT_COOKIE)?.value === "1";
 
   async function addUser(formData: FormData) {
@@ -104,23 +104,10 @@ export default async function AdminPage() {
         <span className="counter">{users.length} {A.members}</span>
       </div>
 
-      {/* Flash temp password */}
-      {temp && (
-        <div
-          className="card"
-          style={{
-            padding: "14px 18px",
-            marginBottom: 24,
-            borderColor: "var(--accent)",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
+      {resetSent && (
+        <div className="card" style={{ padding: "14px 18px", marginBottom: 24, borderColor: "var(--line-strong)", display: "flex", alignItems: "center", gap: 12 }}>
           <Key size={18} style={{ color: "var(--accent)", flexShrink: 0 }} />
-          <p className="mono" style={{ fontSize: "0.78rem", margin: 0 }}>
-            {A.tempPre} <strong style={{ color: "var(--accent)" }}>{temp}</strong> {A.tempPost}
-          </p>
+          <p className="mono" style={{ fontSize: "0.78rem", margin: 0 }}>{A.resetSent}</p>
         </div>
       )}
 
