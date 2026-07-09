@@ -1068,7 +1068,7 @@ One-time production setup. Order matters: email DNS can verify before the app mo
 1. Site settings → Domain management → add `raphel360.com` as the primary domain.
 2. Add `www.raphel360.com` as an alias (redirects to primary).
 3. Point DNS at Netlify (apex A/ALIAS + www CNAME per Netlify's instructions).
-4. Wait for the TLS certificate to provision. HSTS/CSP already ship in `web/netlify.toml`.
+4. Wait for the TLS certificate to provision. HSTS/CSP already ship in `netlify.toml`.
 
 ## 4. Verify end-to-end (production)
 1. Redeploy so the new env vars take effect.
