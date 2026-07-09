@@ -68,6 +68,12 @@ export async function resetPassword(
   const valid = await verifyToken(token, TokenPurpose.PASSWORD_RESET);
   if (!valid) return { status: "error", message: "El enlace es inválido o expiró." };
 
+  // Disable is the system's revocation primitive: a token minted while the account
+  // was active must not stay redeemable after the account is disabled. Same generic
+  // message as an invalid token — indistinguishable from the outside.
+  const user = await prisma.user.findUnique({ where: { id: valid.userId } });
+  if (!user || user.disabledAt) return { status: "error", message: "El enlace es inválido o expiró." };
+
   const passwordHash = await bcrypt.hash(password, 10);
   await prisma.$transaction(async (tx) => {
     // Atomically claim THIS token (same race guard as activateAccount).

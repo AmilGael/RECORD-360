@@ -74,4 +74,30 @@ describe("resetPassword", () => {
   it("rejects a garbage token", async () => {
     expect((await call("garbage", "brand-new-password-1")).status).toBe("error");
   });
+
+  it("refuses a token minted before the account was disabled — generic invalid-link message, hash unchanged", async () => {
+    const u = await activatedUser("disabled");
+    const raw = await createToken(u.id, TokenPurpose.PASSWORD_RESET);
+    await prisma.user.update({ where: { id: u.id }, data: { disabledAt: new Date() } });
+    const result = await call(raw, "brand-new-password-1");
+    expect(result.status).toBe("error");
+    expect(result.message).toBe("El enlace es inválido o expiró.");
+    const after = await prisma.user.findUniqueOrThrow({ where: { id: u.id } });
+    expect(await bcrypt.compare("old-password-123", after.passwordHash!)).toBe(true);
+  });
+
+  it("rate-limits reset completion attempts per IP (isolated on a dedicated IP)", async () => {
+    headerGet.mockReturnValue("5.5.5.5");
+    try {
+      for (let i = 0; i < 10; i++) {
+        const result = await call("garbage-token-rate-limit", "brand-new-password-1");
+        expect(result.status).toBe("error");
+      }
+      const eleventh = await call("garbage-token-rate-limit", "brand-new-password-1");
+      expect(eleventh.status).toBe("error");
+      expect(eleventh.message).toMatch(/Demasiados intentos/);
+    } finally {
+      headerGet.mockReturnValue("6.6.6.6");
+    }
+  });
 });
