@@ -18,6 +18,8 @@ export const authConfig = {
         pathname.startsWith("/login") ||
         pathname.startsWith("/request-access") ||
         pathname.startsWith("/activate") ||
+        pathname.startsWith("/forgot-password") ||
+        pathname.startsWith("/reset") ||
         pathname.startsWith("/verify/");
       if (isPublic) return true;
       return !!auth?.user;

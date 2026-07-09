@@ -50,6 +50,9 @@ export const dictionaries = {
       error: "Credenciales inválidas. Inténtalo de nuevo.",
       back: "Volver al inicio",
       activated: "Cuenta activada. Inicia sesión.",
+      forgot: "¿Olvidaste tu contraseña?",
+      noAccount: "¿No tienes cuenta? Solicitar acceso",
+      resetDone: "Contraseña actualizada. Inicia sesión.",
     },
     dash: {
       kicker: "OBRAS",
@@ -406,6 +409,9 @@ export const dictionaries = {
       error: "Invalid credentials. Please try again.",
       back: "Back to home",
       activated: "Account activated. Please sign in.",
+      forgot: "Forgot your password?",
+      noAccount: "No account? Request access",
+      resetDone: "Password updated. Please sign in.",
     },
     dash: {
       kicker: "SITES",
