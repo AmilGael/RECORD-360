@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
+import { SECURITY_HEADERS } from "./src/lib/security-headers";
 
 const nextConfig: NextConfig = {
+  // Security headers live here (not netlify.toml [[headers]]): the Netlify Next.js
+  // runtime serves responses through Next and ignores netlify.toml headers, so
+  // next.config's headers() is the only place that reliably reaches every route.
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
   // Dev-only opt-in: let the Next dev server accept requests proxied through a
   // Cloudflare quick tunnel during external testing. Off by default (production
   // is unaffected — allowedDevOrigins only applies to `next dev`). Enable with

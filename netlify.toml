@@ -34,15 +34,7 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Global security headers. X-Frame-Options=DENY blocks clickjacking of the auth
-# forms; HSTS forces HTTPS; CSP is the baseline (tighten script/style sources
-# after verifying against a deploy preview).
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(self), microphone=(), geolocation=(self), interest-cohort=()"
-    Content-Security-Policy = "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+# Security headers are NOT set here. The Next.js runtime adapter serves responses
+# through Next and ignores netlify.toml [[headers]] for those routes (i.e. all of
+# them). They are defined in web/src/lib/security-headers.ts and applied via
+# next.config.ts headers(), which the adapter honors. Do not re-add them here.
