@@ -306,12 +306,16 @@ export default async function ProjectPage({
     : [];
   const docAuthorMap = new Map(uploaders.map((u) => [u.id, u.name]));
 
+  // R3 WS7 (Agent 4): +archetype select/mapping only — flagged per the R3
+  // dispatch brief as a minimal cross-file touch in Agent 3's file (the
+  // archetype label needs to reach InformesTab's history list, and this
+  // query/mapping is where every other informe row field is already built).
   const informeRows = activeTab === "informes"
     ? await prisma.informe.findMany({
         where: { projectId: id, project: projectAccessWhere(sessionUser) },
         orderBy: { createdAt: "desc" },
         take: 30,
-        select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true },
+        select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true, archetype: true },
       })
     : [];
   const informeRequesterIds = [...new Set(informeRows.map((i) => i.requestedById))];
@@ -482,8 +486,13 @@ export default async function ProjectPage({
             createdAt: formatTimestamp(i.createdAt, lang),
             requesterName: informeRequesterMap.get(i.requestedById) ?? "—",
             scopeLabel: i.partidaId ? t.informes.scopePartida : i.segmentId ? t.informes.scopeSegment : t.informes.scopeProject,
+            archetypeLabel: i.archetype === "OWNER" ? t.archetypes.owner
+              : i.archetype === "SENIOR_MANAGEMENT" ? t.archetypes.senior
+              : i.archetype === "PERSONAL_FEEDBACK" ? t.archetypes.personal
+              : t.archetypes.legacy,
           }))}
           t={t.informes}
+          archetypes={t.archetypes}
         />
       ) : inBloqueView ? (
         <>

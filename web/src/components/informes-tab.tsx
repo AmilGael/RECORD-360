@@ -5,8 +5,9 @@ import { createInforme, type InformeResult } from "@/app/actions/informes";
 import { SubmitButton } from "@/components/submit-button";
 import { FileText } from "@/components/icons";
 
-type InformeRow = { id: string; brief: string; createdAt: string; requesterName: string; scopeLabel: string };
+type InformeRow = { id: string; brief: string; createdAt: string; requesterName: string; scopeLabel: string; archetypeLabel: string };
 type Option = { id: string; name: string };
+type ArchetypeDict = { label: string; owner: string; senior: string; personal: string; legacy: string; required: string };
 
 type T = {
   title: string; hint: string; brief: string; briefPlaceholder: string;
@@ -16,14 +17,20 @@ type T = {
   reportSection: string; reportHint: string; downloadReport: string;
 };
 
-export function InformesTab({ projectId, segments, partidas, informes, t }: {
+const ARCHETYPE_OPTIONS = ["OWNER", "SENIOR_MANAGEMENT", "PERSONAL_FEEDBACK"] as const;
+
+export function InformesTab({ projectId, segments, partidas, informes, t, archetypes }: {
   projectId: string;
   segments: Option[];
   partidas: Option[];
   informes: InformeRow[];
   t: T;
+  archetypes: ArchetypeDict;
 }) {
   const [state, formAction, pending] = useActionState<InformeResult | null, FormData>(createInforme, null);
+  const archetypeLabels: Record<(typeof ARCHETYPE_OPTIONS)[number], string> = {
+    OWNER: archetypes.owner, SENIOR_MANAGEMENT: archetypes.senior, PERSONAL_FEEDBACK: archetypes.personal,
+  };
 
   return (
     <div style={{ marginTop: 16, display: "grid", gap: 20 }}>
@@ -45,6 +52,19 @@ export function InformesTab({ projectId, segments, partidas, informes, t }: {
           {t.brief}
           <textarea name="brief" required maxLength={2000} rows={3} placeholder={t.briefPlaceholder} className="input" style={{ display: "block", width: "100%", marginTop: 4, resize: "vertical" }} />
         </label>
+        {/* WS7: audience archetype — required, no preselect. Materially changes
+            the AI prompt's structure/emphasis (see lib/informes/prompt.ts). */}
+        <div className="form-group" style={{ marginBottom: 12 }}>
+          <label className="form-label">{archetypes.label}</label>
+          <div className="invite-grid" style={{ marginTop: 6 }}>
+            {ARCHETYPE_OPTIONS.map((a) => (
+              <label key={a} className="role-option">
+                <input type="radio" name="archetype" value={a} required />
+                <div className="role-label">{archetypeLabels[a]}</div>
+              </label>
+            ))}
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end", marginBottom: 12 }}>
           <label className="form-label">
             {t.scope}
@@ -80,7 +100,7 @@ export function InformesTab({ projectId, segments, partidas, informes, t }: {
           <div key={i.id} className="cr-row" style={{ justifyContent: "space-between" }}>
             <span className="cr-main">
               <span className="cr-title">{i.brief.length > 90 ? `${i.brief.slice(0, 90)}…` : i.brief}</span>
-              <span className="cr-meta">{i.scopeLabel} · {t.requestedBy} {i.requesterName} · {i.createdAt}</span>
+              <span className="cr-meta">{i.scopeLabel} · {i.archetypeLabel} · {t.requestedBy} {i.requesterName} · {i.createdAt}</span>
             </span>
             <a href={`/api/informes/${i.id}/pdf`} className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", whiteSpace: "nowrap" }}>
               {t.downloadPdf}

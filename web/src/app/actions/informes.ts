@@ -2,10 +2,13 @@
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { assembleReportData, type ReportScope } from "@/lib/report/data";
-import { INFORME_SYSTEM, buildInformeUserMessage } from "@/lib/informes/prompt";
+import { buildInformeSystem, buildInformeUserMessage } from "@/lib/informes/prompt";
 import { generateInformeContent, INFORME_MODEL } from "@/lib/informes/client";
 import { requireFreshSession } from "@/lib/auth/session";
+import { InformeArchetype } from "@prisma/client";
 import Anthropic from "@anthropic-ai/sdk";
+
+const VALID_ARCHETYPES: InformeArchetype[] = [InformeArchetype.OWNER, InformeArchetype.SENIOR_MANAGEMENT, InformeArchetype.PERSONAL_FEEDBACK];
 
 export type InformeResult =
   | { ok: true; informeId: string }
@@ -39,6 +42,14 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     if (!brief) return { ok: false, error: "Describe de que va el informe." };
     if (brief.length > 2000) return { ok: false, error: "La solicitud es demasiado larga (max. 2000 caracteres)." };
 
+    // WS7: audience archetype is required (no default/preselect) — it drives
+    // both the AI prompt's section structure and the PDF's audience label.
+    const archetypeRaw = String(formData.get("archetype") ?? "");
+    if (!VALID_ARCHETYPES.includes(archetypeRaw as InformeArchetype)) {
+      return { ok: false, error: "Selecciona la audiencia del informe." };
+    }
+    const archetype = archetypeRaw as InformeArchetype;
+
     const scopeRef = String(formData.get("scopeRef") ?? "");
     const [scopeType, scopeId] = scopeRef ? scopeRef.split(":", 2) : [String(formData.get("scopeType")), String(formData.get("scopeId"))];
     if (!["project", "segment", "partida"].includes(scopeType) || !scopeId) {
@@ -63,7 +74,7 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     const data = await assembleReportData({ id: user.id, companyId: user.companyId, role: user.role }, scope, from, to);
     if (!data) return { ok: false, error: "No autorizado." };
 
-    const contentMd = await generateInformeContent(INFORME_SYSTEM, buildInformeUserMessage(data, brief));
+    const contentMd = await generateInformeContent(buildInformeSystem(archetype), buildInformeUserMessage(data, brief));
 
     const informe = await prisma.informe.create({
       data: {
@@ -71,6 +82,7 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
         segmentId: scope.type === "segment" ? scope.id : null,
         partidaId: scope.type === "partida" ? scope.id : null,
         requestedById: requester.id,
+        archetype,
         brief,
         periodFrom: from,
         periodTo: to,

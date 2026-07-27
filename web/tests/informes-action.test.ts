@@ -41,36 +41,58 @@ afterAll(async () => {
 });
 
 describe("createInforme", () => {
-  it("persists a generated informe and returns its id", async () => {
+  it("persists a generated informe (with its archetype) and returns its id", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
     generateMock.mockResolvedValue("# Resumen Ejecutivo\nTodo bien.");
-    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "Informe mensual para el cliente" }));
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "Informe mensual para el cliente", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: true });
     const informe = await prisma.informe.findFirstOrThrow({ where: { projectId } });
     expect(informe.contentMd).toContain("Resumen Ejecutivo");
     expect(informe.model).toBe("claude-sonnet-4-6");
     expect(informe.requestedById).toBe(managerId);
+    expect(informe.archetype).toBe("OWNER");
   });
   it("fails with a firma-specific error when the requester has no signature", async () => {
     authMock.mockResolvedValue({ user: { id: noFirmaId, companyId, role: "ADMIN" } });
-    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x" }));
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false, missingFirma: true });
   });
   it("requires a brief", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "  " }));
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "  ", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false });
     expect((res as { error?: string }).error).toMatch(/describe/i);
   });
+  it("requires an archetype (no default/preselect) — missing", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x" }));
+    expect(res).toMatchObject({ ok: false });
+    expect((res as { error?: string }).error).toMatch(/audiencia/i);
+  });
+  it("rejects an invalid/unknown archetype value", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x", archetype: "NOT_A_REAL_ARCHETYPE" }));
+    expect(res).toMatchObject({ ok: false });
+    expect((res as { error?: string }).error).toMatch(/audiencia/i);
+  });
+  it.each(["OWNER", "SENIOR_MANAGEMENT", "PERSONAL_FEEDBACK"])("accepts and persists archetype %s", async (archetype) => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockResolvedValue(`# Resumen Ejecutivo\n${archetype}.`);
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: `Informe ${archetype}`, archetype }));
+    expect(res).toMatchObject({ ok: true });
+    const informeId = (res as { informeId: string }).informeId;
+    const informe = await prisma.informe.findUniqueOrThrow({ where: { id: informeId } });
+    expect(informe.archetype).toBe(archetype);
+  });
   it("cross-tenant project is rejected", async () => {
     authMock.mockResolvedValue({ user: { id: outsiderId, companyId: outCompanyId, role: "MANAGER" } });
-    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x" }));
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false });
   });
   it("surfaces generator failures as a friendly error", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
     generateMock.mockRejectedValue(new Error("api down"));
-    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "y" }));
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "y", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false });
   });
   it("returns a missing-key error immediately when ANTHROPIC_API_KEY is absent", async () => {
@@ -78,7 +100,7 @@ describe("createInforme", () => {
     try {
       delete process.env.ANTHROPIC_API_KEY;
       authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-      const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "z" }));
+      const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "z", archetype: "OWNER" }));
       expect(res).toMatchObject({ ok: false });
       expect((res as { error?: string }).error).toMatch(/clave de API/i);
     } finally {
