@@ -66,6 +66,37 @@ describe("updateUserProfile", () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
     await expect(updateUserProfile(fd({ userId: outsiderId, phone: "x" }))).rejects.toThrow(/Forbidden/);
   });
+
+  it("writes a 'signature.added' audit the first time a firma is uploaded, then 'signature.replaced' next time", async () => {
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    const fresh = (await prisma.user.create({ data: { email: `fresh-${Date.now()}@x.do`, name: "Fresh", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
+    await updateUserProfile(fd({ userId: fresh, signature: png("first.png") }));
+    const added = await prisma.auditLog.findFirst({ where: { companyId, targetId: fresh, action: "signature.added" } });
+    expect(added).toBeTruthy();
+
+    await updateUserProfile(fd({ userId: fresh, signature: png("second.png") }));
+    const replaced = await prisma.auditLog.findFirst({ where: { companyId, targetId: fresh, action: "signature.replaced" } });
+    expect(replaced).toBeTruthy();
+  });
+
+  it("does NOT clear an existing signature when an unrelated field (phone) is updated without a new file", async () => {
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    const target = (await prisma.user.create({ data: { email: `keep-${Date.now()}@x.do`, name: "Keep Sig", role: "RESIDENT", companyId, passwordHash: "x", signatureKey: "existing-sig.png" } })).id;
+    await updateUserProfile(fd({ userId: target, phone: "809-000-0000" }));
+    const u = await prisma.user.findUniqueOrThrow({ where: { id: target } });
+    expect(u.signatureKey).toBe("existing-sig.png");
+    expect(u.phone).toBe("809-000-0000");
+  });
+
+  it("allows an ADMIN to set a signature for a not-yet-activated (unverified) user", async () => {
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    const unactivated = (await prisma.user.create({ data: { email: `unact-${Date.now()}@x.do`, name: "Unactivated", role: "RESIDENT", companyId, passwordHash: "x" } })).id;
+    const before = await prisma.user.findUniqueOrThrow({ where: { id: unactivated } });
+    expect(before.emailVerifiedAt).toBeNull();
+    await updateUserProfile(fd({ userId: unactivated, signature: png("firma-unact.png") }));
+    const after = await prisma.user.findUniqueOrThrow({ where: { id: unactivated } });
+    expect(after.signatureKey).toBeTruthy();
+  });
 });
 
 describe("updateCompanySeal", () => {

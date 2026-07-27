@@ -454,12 +454,19 @@ body {
   padding: 10px 0; border-bottom: 1px solid var(--line); margin-bottom: 2px;
 }
 
+/* R3 WS2A: the row is a stable stack — .member-row (identity) always full
+   width, .member-actions (edit/reset/archive) its own full-width row below.
+   Nothing here relies on one flex item's height affecting another's width,
+   which is what caused the old single-row layout to overlap/squeeze at
+   narrow widths. */
 .member-card {
-  display: flex; align-items: center; gap: 14px; padding: 14px 0;
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 0;
   border-bottom: 1px solid var(--line); transition: padding-left 0.18s var(--ease);
 }
 .member-card:last-child { border-bottom: none; }
 .member-card:hover { padding-left: 6px; }
+
+.member-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
 .avatar {
   width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -471,9 +478,24 @@ body {
 .avatar.role-supervisor { background: #b08a2e; }
 .avatar.role-resident { background: var(--steel); }
 
-.member-info { flex: 1; min-width: 0; }
-.member-name { font-weight: 700; font-size: 0.95rem; }
-.member-email { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); }
+.member-info { flex: 1 1 160px; min-width: 0; }
+.member-name { font-weight: 700; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-email {
+  font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Actions row: edit-profile, reset/resend, archive/restore. Left-padded to
+   roughly align under the identity column (avatar width 38px + 14px gap). */
+.member-actions {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-left: 52px;
+}
+/* The expandable edit-profile form must open BELOW the row, full-width — not
+   squeezed inline next to the reset/archive buttons. Giving the open
+   <details> a 100% flex-basis forces it onto its own line inside the
+   wrapping .member-actions row (a well-supported flexbox technique), so its
+   form renders full-width beneath whatever came before it. */
+.member-actions details[open] { flex-basis: 100%; }
 
 .role-badge {
   font-family: var(--font-mono), monospace; font-size: 0.58rem; letter-spacing: 0.08em;

@@ -7,6 +7,7 @@ import { IndexedDbQueue } from "@/lib/offline/queue";
 import { syncQueue } from "@/lib/offline/sync";
 import type { QueuedRegistro } from "@/lib/offline/types";
 import type { Lang } from "@/i18n/dictionaries";
+import { classifyDictationError, mergeTranscript } from "@/lib/dictation";
 
 // Minimal structural type for the Web Speech API recogniser — avoids `any`.
 type SpeechRecognitionLike = {
@@ -17,7 +18,7 @@ type SpeechRecognitionLike = {
   stop: () => void;
   onresult: ((e: { results: { length: number; [i: number]: { 0: { transcript: string } } } }) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
 };
 type WindowWithSpeech = {
   SpeechRecognition?: new () => SpeechRecognitionLike;
@@ -38,6 +39,12 @@ type ComposerT = {
   reminder?: string;
   dictate?: string;
   listening?: string;
+  dictateUnsupported?: string;
+  dictateErrorPermission?: string;
+  dictateErrorNoSpeech?: string;
+  dictateErrorNetwork?: string;
+  dictateErrorAborted?: string;
+  dictateErrorOther?: string;
   saved?: string;
   categories: Record<string, string>;
 };
@@ -74,11 +81,21 @@ export function LogComposer({
 
   const [speechSupported, setSpeechSupported] = useState(false);
   const [listening, setListening] = useState(false);
+  const [dictationError, setDictationError] = useState<string | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
     const w = window as unknown as WindowWithSpeech;
     setSpeechSupported(Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition));
+  }, []);
+
+  // Stop any in-flight recognition and release the instance on unmount (route
+  // change, tab close) so the mic isn't left listening after the composer is gone.
+  useEffect(() => {
+    return () => {
+      recRef.current?.stop();
+      recRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -148,8 +165,20 @@ export function LogComposer({
     }
   }
 
+  function dictationErrorMessage(kind: ReturnType<typeof classifyDictationError>): string {
+    switch (kind) {
+      case "permission": return t.dictateErrorPermission ?? "Microphone permission denied.";
+      case "no-speech": return t.dictateErrorNoSpeech ?? "No speech detected.";
+      case "network": return t.dictateErrorNetwork ?? "Network error during dictation.";
+      case "aborted": return t.dictateErrorAborted ?? "Dictation cancelled.";
+      default: return t.dictateErrorOther ?? "Couldn't dictate.";
+    }
+  }
+
   function toggleDictation() {
-    if (listening && recRef.current) {
+    // Guard against concurrent instances: if one is already running (or a
+    // start is in flight), stop it rather than layering a second recognizer.
+    if (recRef.current) {
       recRef.current.stop();
       recRef.current = null;
       setListening(false);
@@ -157,25 +186,38 @@ export function LogComposer({
     }
     const w = window as unknown as WindowWithSpeech;
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!Ctor) return;
+    if (!Ctor) return; // feature-detected already; button is disabled in this case
+    setDictationError(null);
     const rec = new Ctor();
+    // es-DO is the locale contract for Spanish dictation; browsers without an
+    // exact es-DO voice model fall back to their closest es-* recognizer —
+    // that fallback is entirely browser-side, nothing to do here.
     rec.lang = lang === "es" ? "es-DO" : "en-US";
     rec.interimResults = false;
     rec.continuous = false;
     rec.onresult = (ev) => {
       const transcripts: string[] = [];
       for (let i = 0; i < ev.results.length; i++) transcripts.push(ev.results[i][0].transcript);
-      const appended = transcripts.join(" ");
       if (textRef.current) {
-        const existing = textRef.current.value;
-        textRef.current.value = existing ? `${existing} ${appended}` : appended;
+        textRef.current.value = mergeTranscript(textRef.current.value, transcripts.join(" "));
       }
     };
     const finish = () => { recRef.current = null; setListening(false); };
     rec.onend = finish;
-    rec.onerror = finish;
+    rec.onerror = (ev) => {
+      setDictationError(dictationErrorMessage(classifyDictationError(ev.error)));
+      finish();
+    };
+    try {
+      rec.start();
+    } catch {
+      // start() can throw synchronously (e.g. a previous session hasn't fully
+      // torn down yet). Never report "listening" for a session that never began.
+      recRef.current = null;
+      setDictationError(dictationErrorMessage("other"));
+      return;
+    }
     recRef.current = rec;
-    rec.start();
     setListening(true);
   }
 
@@ -204,6 +246,11 @@ export function LogComposer({
           {t.saved ?? "Guardado."}
         </p>
       )}
+      {dictationError && (
+        <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+          {dictationError}
+        </p>
+      )}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <select name="category" className="input" defaultValue="" style={{ width: "auto" }} aria-label={t.category}>
           <option value="">{t.noCategory}</option>
@@ -219,11 +266,20 @@ export function LogComposer({
           {t.reminder ?? "Reminder"}
         <input type="datetime-local" name="reminderDueAt" min={new Date(Date.now() + 60_000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)} className="input" style={{ width: 190 }} />
         </label>
-        {speechSupported && (
-          <button type="button" onClick={toggleDictation} className="btn btn-ghost" aria-label={listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <Mic size={14} />
-            {listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")}
-          </button>
+        <button
+          type="button"
+          onClick={toggleDictation}
+          disabled={!speechSupported}
+          title={!speechSupported ? (t.dictateUnsupported ?? "Dictation not supported") : undefined}
+          className="btn btn-ghost"
+          aria-label={!speechSupported ? (t.dictateUnsupported ?? "Dictation not supported") : listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")}
+          style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
+        >
+          <Mic size={14} />
+          {listening ? (t.listening ?? "Listening…") : (t.dictate ?? "Dictate")}
+        </button>
+        {!speechSupported && (
+          <span className="mono text-steel" style={{ fontSize: "0.66rem" }}>{t.dictateUnsupported ?? "Dictation not supported"}</span>
         )}
         <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/webm" style={{ fontSize: "0.8rem", maxWidth: 220 }} />
         <span className="mono text-steel" style={{ fontSize: "0.72rem" }}>{coords ? t.gpsOk : t.gps}</span>

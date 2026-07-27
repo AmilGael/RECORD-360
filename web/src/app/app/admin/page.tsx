@@ -8,6 +8,7 @@ import { updateCompanySeal } from "@/app/actions/profile";
 import { SubmitButton } from "@/components/submit-button";
 import { ResetPasswordButton } from "@/components/reset-password-button";
 import { MemberProfileForm } from "@/components/member-profile-form";
+import { ArchiveRestoreButton } from "@/components/archive-restore-button";
 import type { Lang } from "@/i18n/dictionaries";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { Key, Plus, Upload } from "@/components/icons";
@@ -50,15 +51,19 @@ function initials(name: string): string {
 
 export default async function AdminPage() {
   const session = await auth();
-  const user = session!.user as { companyId: string; role: string };
+  const user = session!.user as { id: string; companyId: string; role: string };
   // Only ADMIN/MANAGER may view the team screen.
   if (user.role !== "ADMIN" && user.role !== "MANAGER") redirect("/app");
   const { lang, t } = await getDict();
   const A = t.admin;
-  const users = await prisma.user.findMany({
+  const allUsers = await prisma.user.findMany({
     where: { companyId: user.companyId },
     orderBy: { createdAt: "asc" },
   });
+  // Archived members (WS2A) get their own collapsed group — never mixed into
+  // the active roster, which is what the role-grouped list below shows.
+  const users = allUsers.filter((u) => !u.disabledAt);
+  const archivedUsers = allUsers.filter((u) => u.disabledAt);
 
   const assignmentRows = await prisma.projectAssignment.findMany({
     where: { user: { companyId: user.companyId } },
@@ -126,54 +131,113 @@ export default async function AdminPage() {
           </div>
           {members.map((u) => (
             <div key={u.id} className="member-card">
-              {u.photoKey ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={`/api/media/${u.photoKey}`} alt="" className={`avatar ${avatarClass(u.role)}`} style={{ objectFit: "cover" }} />
-              ) : (
-                <div className={`avatar ${avatarClass(u.role)}`}>{initials(u.name)}</div>
-              )}
-              <div className="member-info">
-                <div className="member-name">{u.name}</div>
-                <div className="member-email">{u.email}{u.phone ? ` · ${u.phone}` : ""}</div>
-                {u.signatureKey && (
-                  <div className="mono text-steel" style={{ fontSize: "0.62rem" }}>{A.signed}</div>
+              <div className="member-row">
+                {u.photoKey ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`/api/media/${u.photoKey}`} alt="" className={`avatar ${avatarClass(u.role)}`} style={{ objectFit: "cover" }} />
+                ) : (
+                  <div className={`avatar ${avatarClass(u.role)}`}>{initials(u.name)}</div>
                 )}
-                {(u.role === "SUPERVISOR" || u.role === "RESIDENT") && (
-                  <details style={{ marginTop: 2 }}>
-                    <summary className="mono text-steel" style={{ fontSize: "0.66rem", cursor: "pointer" }}>
-                      {(assignmentsByUser.get(u.id) ?? []).length} {A.assignedObras}
-                    </summary>
-                    <div style={{ display: "grid", gap: 2, marginTop: 4 }}>
-                      {(assignmentsByUser.get(u.id) ?? []).map((p) => (
-                        <Link key={p.id} href={`/app/projects/${p.id}`} className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-deep)", textDecoration: "none" }}>
-                          {p.name}{p.archivedAt ? A.archivedSuffix : ""}
-                        </Link>
-                      ))}
-                    </div>
-                  </details>
+                <div className="member-info">
+                  <div className="member-name" title={u.name}>{u.name}</div>
+                  <div className="member-email" title={`${u.email}${u.phone ? ` · ${u.phone}` : ""}`}>{u.email}{u.phone ? ` · ${u.phone}` : ""}</div>
+                  {u.signatureKey && (
+                    <div className="mono text-steel" style={{ fontSize: "0.62rem" }}>{A.signed}</div>
+                  )}
+                  {(u.role === "SUPERVISOR" || u.role === "RESIDENT") && (
+                    <details style={{ marginTop: 2 }}>
+                      <summary className="mono text-steel" style={{ fontSize: "0.66rem", cursor: "pointer" }}>
+                        {(assignmentsByUser.get(u.id) ?? []).length} {A.assignedObras}
+                      </summary>
+                      <div style={{ display: "grid", gap: 2, marginTop: 4 }}>
+                        {(assignmentsByUser.get(u.id) ?? []).map((p) => (
+                          <Link key={p.id} href={`/app/projects/${p.id}`} className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-deep)", textDecoration: "none" }}>
+                            {p.name}{p.archivedAt ? A.archivedSuffix : ""}
+                          </Link>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </div>
+                <span className={`role-badge ${roleClass(u.role)}`}>{A.roles[u.role as RoleKey]}</span>
+                <span className="member-date">
+                  {A.added} {formatTimestamp(u.createdAt, lang as Lang)}
+                </span>
+              </div>
+              <div className="member-actions">
+                <MemberProfileForm
+                  userId={u.id}
+                  phone={u.phone}
+                  photoUrl={u.photoKey ? `/api/media/${u.photoKey}` : null}
+                  signatureUrl={u.signatureKey ? `/api/media/${u.signatureKey}` : null}
+                  t={{
+                    editProfile: A.editProfile, phone: A.phone, photo: A.photo, signature: A.signature, saveProfile: A.saveProfile,
+                    photoHint: A.photoHint, signatureHint: A.signatureHint, invalidFormat: A.invalidFormat, fileTooLarge: A.fileTooLarge,
+                    currentSignature: A.currentSignature, newSignaturePreview: A.newSignaturePreview, currentPhoto: A.currentPhoto, newPhotoPreview: A.newPhotoPreview,
+                  }}
+                />
+                {user.role === "ADMIN" && u.emailVerifiedAt && (
+                  <ResetPasswordButton
+                    userId={u.id}
+                    t={{ resetPw: A.resetPw, resetConfirm: A.resetConfirm, yes: A.yes, no: A.no }}
+                  />
+                )}
+                {user.role === "ADMIN" && !u.emailVerifiedAt && (
+                  <form action={resendInvite}>
+                    <input type="hidden" name="userId" value={u.id} />
+                    <SubmitButton className="btn btn-ghost" style={{ fontSize: "0.7rem" }}>Reenviar invitación</SubmitButton>
+                  </form>
+                )}
+                {user.role === "ADMIN" && u.id !== user.id && (
+                  <ArchiveRestoreButton
+                    userId={u.id}
+                    mode="archive"
+                    t={{ archiveMember: A.archiveMember, archiveConfirm: A.archiveConfirm, restoreMember: A.restoreMember, restoreConfirm: A.restoreConfirm, yes: A.yes, no: A.no }}
+                  />
                 )}
               </div>
-              <span className={`role-badge ${roleClass(u.role)}`}>{A.roles[u.role as RoleKey]}</span>
-              <span className="member-date">
-                {A.added} {formatTimestamp(u.createdAt, lang as Lang)}
-              </span>
-              <MemberProfileForm userId={u.id} phone={u.phone} t={{ editProfile: A.editProfile, phone: A.phone, photo: A.photo, signature: A.signature, saveProfile: A.saveProfile }} />
-              {user.role === "ADMIN" && u.emailVerifiedAt && (
-                <ResetPasswordButton
-                  userId={u.id}
-                  t={{ resetPw: A.resetPw, resetConfirm: A.resetConfirm, yes: A.yes, no: A.no }}
-                />
-              )}
-              {user.role === "ADMIN" && !u.emailVerifiedAt && (
-                <form action={resendInvite}>
-                  <input type="hidden" name="userId" value={u.id} />
-                  <SubmitButton className="btn btn-ghost" style={{ fontSize: "0.7rem" }}>Reenviar invitación</SubmitButton>
-                </form>
-              )}
             </div>
           ))}
         </div>
       ))}
+
+      {/* Archived members (WS2A) — collapsed by default, restore-only actions */}
+      {archivedUsers.length > 0 && (
+        <details className="team-section archived-section">
+          <summary className="team-section-head" style={{ cursor: "pointer" }}>
+            {A.archivedTitle} — {archivedUsers.length}
+          </summary>
+          {archivedUsers.map((u) => (
+            <div key={u.id} className="member-card">
+              <div className="member-row">
+                {u.photoKey ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`/api/media/${u.photoKey}`} alt="" className={`avatar ${avatarClass(u.role)}`} style={{ objectFit: "cover", opacity: 0.6 }} />
+                ) : (
+                  <div className={`avatar ${avatarClass(u.role)}`} style={{ opacity: 0.6 }}>{initials(u.name)}</div>
+                )}
+                <div className="member-info">
+                  <div className="member-name" title={u.name}>{u.name}</div>
+                  <div className="member-email" title={u.email}>{u.email}</div>
+                </div>
+                <span className={`role-badge ${roleClass(u.role)}`}>{A.roles[u.role as RoleKey]}</span>
+                <span className="member-date">
+                  {A.archivedOn} {u.disabledAt ? formatTimestamp(u.disabledAt, lang as Lang) : ""}
+                </span>
+              </div>
+              {user.role === "ADMIN" && (
+                <div className="member-actions">
+                  <ArchiveRestoreButton
+                    userId={u.id}
+                    mode="restore"
+                    t={{ archiveMember: A.archiveMember, archiveConfirm: A.archiveConfirm, restoreMember: A.restoreMember, restoreConfirm: A.restoreConfirm, yes: A.yes, no: A.no }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </details>
+      )}
 
       {/* Company seal section */}
       {user.role === "ADMIN" && (
