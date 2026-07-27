@@ -13,6 +13,7 @@ import { accountActivationEmail, passwordResetLinkEmail } from "@/lib/email/temp
 import { createActivationToken, activationUrl, createToken, resetUrl } from "@/lib/auth/tokens";
 import { requireFreshSession } from "@/lib/auth/session";
 import { createNotifications } from "@/lib/notifications/create";
+import { notifyEvent } from "@/lib/notifications/events";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
 import { storage } from "@/lib/storage";
 import { uploadBrandedImage } from "@/lib/storage/image-upload";
@@ -58,7 +59,22 @@ export async function createPartida(formData: FormData) {
   const projectId = String(formData.get("projectId"));
   await requireProjectStructureAccess(user, projectId);
   const segmentId = await resolveSegment(projectId, parseSegment(formData.get("segment")));
-  await prisma.partida.create({ data: { projectId, name: String(formData.get("name")), segmentId } });
+  // Lifecycle (WS4C): a closed block rejects new partidas — server-enforced,
+  // independent of whatever the UI shows.
+  if (segmentId) {
+    const segment = await prisma.segment.findUnique({ where: { id: segmentId }, select: { closedAt: true } });
+    if (segment?.closedAt) throw new Error("El bloque está cerrado: reábrelo para crear partidas.");
+  }
+  const name = String(formData.get("name"));
+  const partida = await prisma.partida.create({ data: { projectId, name, segmentId } });
+  await notifyEvent({
+    key: "partida.created",
+    companyId: user.companyId,
+    actorId: user.id,
+    projectId,
+    title: `Nueva partida: ${name}`,
+    link: `/app/partidas/${partida.id}`,
+  });
   revalidatePath(`/app/projects/${projectId}`);
   revalidatePath("/app");
 }
@@ -67,7 +83,25 @@ export async function createSegment(formData: FormData) {
   const user = await requireSession();
   const projectId = String(formData.get("projectId"));
   await requireProjectStructureAccess(user, projectId);
-  await resolveSegment(projectId, parseSegment(formData.get("name")));
+  const label = parseSegment(formData.get("name"));
+  // resolveSegment reuses a matching block case-insensitively rather than
+  // duplicating it — only notify block.created when this call actually made a
+  // new one, not when it reused an existing block.
+  const existing = label
+    ? await prisma.segment.findFirst({ where: { projectId, name: { equals: label, mode: "insensitive" } }, select: { id: true } })
+    : null;
+  const segmentId = await resolveSegment(projectId, label);
+  if (segmentId && !existing) {
+    const created = await prisma.segment.findUnique({ where: { id: segmentId }, select: { name: true } });
+    await notifyEvent({
+      key: "block.created",
+      companyId: user.companyId,
+      actorId: user.id,
+      projectId,
+      title: `Nuevo bloque: ${created?.name ?? label}`,
+      link: `/app/projects/${projectId}`,
+    });
+  }
   revalidatePath(`/app/projects/${projectId}`);
   revalidatePath("/app");
 }
@@ -287,4 +321,96 @@ export async function resetUserPassword(formData: FormData) {
   });
 
   redirect("/app/admin");
+}
+
+/**
+ * Archive a company member (R3 WS2/User archival). Reuses `disabledAt` — the
+ * fresh-session gate already revokes their access (requireFreshSession throws
+ * for disabledAt users). ADMIN-only, company-scoped: a non-existent user,
+ * a user in another company, and a SUPERADMIN target (which non-SUPERADMINs
+ * may never touch) all fail the same generic way so none leak which case
+ * applies. Self-archive is blocked. Historical registros/signatures/audit rows
+ * are untouched — only the ProjectAssignment rows (membership, not history)
+ * are removed, after their {projectId, role} is captured for the audit trail.
+ * Idempotent: archiving an already-archived user is a stable no-op.
+ */
+export async function archiveUser(formData: FormData) {
+  const actor = await requireFreshSession();
+  if (actor.role !== Role.ADMIN) throw new Error("Forbidden");
+
+  const userId = String(formData.get("userId"));
+  if (userId === actor.id) throw new Error("No puedes archivar tu propia cuenta.");
+
+  const target = await prisma.user.findFirst({ where: { id: userId, companyId: actor.companyId } });
+  if (!target || target.role === Role.SUPERADMIN) throw new Error("Forbidden");
+
+  if (target.disabledAt) { revalidatePath("/app/admin"); return; } // idempotent no-op
+
+  // Assignments are read and deleted inside the same transaction as the audit
+  // write, so the captured {projectId, role} list is an exact snapshot of what
+  // was removed (no race with a concurrent assignment change).
+  const assignments = await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: target.id }, data: { disabledAt: new Date() } });
+    const removed = await tx.projectAssignment.findMany({
+      where: { userId: target.id },
+      select: { projectId: true, role: true, project: { select: { name: true } } },
+    });
+    await tx.projectAssignment.deleteMany({ where: { userId: target.id } });
+    await writeAudit(tx, {
+      companyId: actor.companyId,
+      actorId: actor.id,
+      action: "user.archived",
+      targetType: "User",
+      targetId: target.id,
+      summary: `Usuario archivado: ${target.name}`,
+      metadata: { targetUserId: target.id, assignments: removed.map((a) => ({ projectId: a.projectId, role: a.role })) },
+    });
+    return removed;
+  });
+
+  // One notification per removed project assignment (WS2B): different projects
+  // may notify the same recipient — that is correct, each references a
+  // different project's stakeholders.
+  for (const a of assignments) {
+    await notifyEvent({
+      key: "user.archived",
+      companyId: actor.companyId,
+      actorId: actor.id,
+      projectId: a.projectId,
+      title: `Usuario archivado: ${target.name}`,
+      body: `${target.name} (${a.role}) fue removido de ${a.project.name} por ${actor.name}.`,
+      link: `/app/projects/${a.projectId}`,
+    });
+  }
+
+  revalidatePath("/app/admin");
+}
+
+/**
+ * Restore an archived member: clears `disabledAt` only. Assignments removed by
+ * archiveUser are NEVER restored — the admin must re-assign explicitly.
+ */
+export async function restoreUser(formData: FormData) {
+  const actor = await requireFreshSession();
+  if (actor.role !== Role.ADMIN) throw new Error("Forbidden");
+
+  const userId = String(formData.get("userId"));
+  const target = await prisma.user.findFirst({ where: { id: userId, companyId: actor.companyId } });
+  if (!target || target.role === Role.SUPERADMIN) throw new Error("Forbidden");
+
+  if (!target.disabledAt) { revalidatePath("/app/admin"); return; } // idempotent no-op
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: target.id }, data: { disabledAt: null } });
+    await writeAudit(tx, {
+      companyId: actor.companyId,
+      actorId: actor.id,
+      action: "user.restored",
+      targetType: "User",
+      targetId: target.id,
+      summary: `Usuario restaurado: ${target.name}`,
+    });
+  });
+
+  revalidatePath("/app/admin");
 }
