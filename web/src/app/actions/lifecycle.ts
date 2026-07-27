@@ -115,7 +115,11 @@ export async function reopenPartida(formData: FormData) {
       UPDATE "Partida"
       SET "completedAt" = NULL, "completedById" = NULL,
           "progressPct" = LEAST(COALESCE("priorProgressPct", 99), 99)
-      WHERE "id" = ${partida.id} AND "completedAt" IS NOT NULL AND "deletedAt" IS NULL`;
+      WHERE "id" = ${partida.id} AND "completedAt" IS NOT NULL AND "deletedAt" IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM "Segment" s
+          WHERE s."id" = "Partida"."segmentId" AND s."closedAt" IS NOT NULL
+        )`;
     if (count === 0) return null;
     const after = await tx.partida.findUniqueOrThrow({ where: { id: partida.id }, select: { progressPct: true } });
     await writeAudit(tx, {
