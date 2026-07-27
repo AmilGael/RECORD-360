@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "web/src/app/globals.css"
+        ],
+        "createdAt": "2026-07-27T07:54:49.565Z",
+        "reason": "User-confirmed incumbent hover nudge (padding-left) and rare progress width transition; single-row elements, imperceptible cost"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "web/src/app/globals.css"
+        ],
+        "createdAt": "2026-07-27T07:54:49.652Z",
+        "reason": "Blueprint grid is the product's core metaphor (construction/Planos); detector's own blueprint-surface exception"
+      }
+    ]
+  }
+}

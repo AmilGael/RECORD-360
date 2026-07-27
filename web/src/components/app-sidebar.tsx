@@ -45,8 +45,7 @@ export function AppSidebar({
     <aside className="app-sidebar">
       <div className="sidebar-brand">
         <div className="kicker">Raphel</div>
-        <strong>BLACK BOX</strong>
-        <span className="text-steel">{labels.brandTagline}</span>
+        <strong>{labels.brandTagline}</strong>
       </div>
 
       <section className="sidebar-section">

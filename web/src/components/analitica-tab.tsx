@@ -13,8 +13,8 @@ const phaseLabel = (level: string, t: { phaseRed: string; phaseYellow: string; p
 
 function Bar({ pct }: { pct: number }) {
   return (
-    <div style={{ height: 6, borderRadius: 99, background: "var(--line)", overflow: "hidden", flex: 1, minWidth: 80 }}>
-      <i style={{ display: "block", height: "100%", width: `${pct}%`, background: "var(--accent)" }} />
+    <div className="progress-track" style={{ flex: 1, minWidth: 80 }}>
+      <div className={`progress-fill${pct >= 100 ? " is-done" : ""}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
