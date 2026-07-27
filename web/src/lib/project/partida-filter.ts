@@ -29,15 +29,18 @@ function normalize(value: string | null | undefined) {
   return String(value ?? "").trim().toLowerCase();
 }
 
-export function filterPartidaGroups<TPartida extends PartidaLike, TSegment extends SegmentGroup<TPartida>>(
+// TSegment and TUngrouped are independent so that each argument is its own inference
+// site: tying both to one parameter let an empty `ungrouped` literal collapse it to
+// `never` and poison the segment constraint.
+export function filterPartidaGroups<TSegment extends SegmentGroup<PartidaLike>, TUngrouped extends PartidaLike>(
   segments: TSegment[],
-  ungrouped: TPartida[],
+  ungrouped: TUngrouped[],
   filters: PartidaFilterInput,
 ) {
   const query = normalize(filters.query);
   const segmentId = String(filters.segmentId ?? "");
   const tags = (filters.tags ?? []).filter(Boolean);
-  const matches = (p: TPartida) => {
+  const matches = (p: PartidaLike) => {
     if (query && !p.name.toLowerCase().includes(query)) return false;
     if (tags.length && !tags.some((tg) => (p.tagNames ?? []).includes(tg))) return false;
     if (filters.progressMin != null && !(typeof p.progressPct === "number" && p.progressPct >= filters.progressMin)) return false;
@@ -47,7 +50,7 @@ export function filterPartidaGroups<TPartida extends PartidaLike, TSegment exten
     if (filters.createdTo && !(p.createdAt && p.createdAt <= filters.createdTo)) return false;
     return true;
   };
-  const filterPartidas = (rows: TPartida[]) => rows.filter(matches);
+  const filterPartidas = <T extends PartidaLike>(rows: T[]) => rows.filter(matches);
 
   const includeUngrouped = !segmentId || segmentId === UNGROUPED_FILTER;
   const includeSegments = !segmentId || segmentId !== UNGROUPED_FILTER;
