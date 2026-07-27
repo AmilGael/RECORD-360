@@ -52,18 +52,22 @@ export async function concludePartida(formData: FormData) {
   const partida = await loadOwnedPartida(user, partidaId);
   if (partida.project.archivedAt) throw new Error("La obra está archivada.");
 
-  if (partida.completedAt) return; // idempotent: already concluded
+  if (partida.completedAt) return; // idempotent fast path: already concluded
 
-  await prisma.$transaction(async (tx) => {
-    await tx.partida.update({
-      where: { id: partida.id },
-      data: {
-        priorProgressPct: partida.progressPct,
-        progressPct: 100,
-        completedAt: new Date(),
-        completedById: user.id,
-      },
-    });
+  // Atomic guarded update: the WHERE clause is re-evaluated against the latest
+  // committed row under the row lock, so of two concurrent concludes exactly
+  // one matches (count 1); the loser matches 0 rows and skips audit +
+  // notification entirely — idempotency does not depend on the pre-tx read.
+  // Raw SQL because priorProgressPct must copy the pre-update progressPct in
+  // the same statement (updateMany cannot reference the current column value).
+  const didChange = await prisma.$transaction(async (tx) => {
+    const count = await tx.$executeRaw`
+      UPDATE "Partida"
+      SET "priorProgressPct" = "progressPct", "progressPct" = 100,
+          "completedAt" = NOW(), "completedById" = ${user.id}
+      WHERE "id" = ${partida.id} AND "completedAt" IS NULL AND "deletedAt" IS NULL`;
+    if (count === 0) return false;
+    const after = await tx.partida.findUniqueOrThrow({ where: { id: partida.id }, select: { priorProgressPct: true } });
     await writeAudit(tx, {
       companyId: user.companyId,
       actorId: user.id,
@@ -71,9 +75,11 @@ export async function concludePartida(formData: FormData) {
       targetType: "Partida",
       targetId: partida.id,
       summary: `Partida concluida: ${partida.name}`,
-      metadata: { projectId: partida.projectId, priorProgressPct: partida.progressPct },
+      metadata: { projectId: partida.projectId, priorProgressPct: after.priorProgressPct },
     });
+    return true;
   });
+  if (!didChange) return; // lost the race: the other invocation already concluded
 
   await notifyEvent({
     key: "partida.completed",
@@ -91,23 +97,27 @@ export async function reopenPartida(formData: FormData) {
   const user = await requireFreshSession();
   const partidaId = String(formData.get("partidaId"));
   const partida = await loadOwnedPartida(user, partidaId);
+  if (partida.project.archivedAt) throw new Error("La obra está archivada.");
 
-  if (!partida.completedAt) return; // idempotent: already open
+  if (!partida.completedAt) return; // idempotent fast path: already open
 
   if (partida.segment?.closedAt) {
     throw new Error("El bloque está cerrado: reábrelo antes de reabrir la partida.");
   }
 
-  // Restore the progress the partida had before it was concluded, capped at 99
-  // (100 is only reachable via Conclude again). priorProgressPct is left in
-  // place on the row for the audit trail — the next Conclude overwrites it.
-  const restoredPct = Math.min(partida.priorProgressPct ?? 99, 99);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.partida.update({
-      where: { id: partida.id },
-      data: { completedAt: null, completedById: null, progressPct: restoredPct },
-    });
+  // Atomic guarded update (see concludePartida): only the invocation whose
+  // UPDATE actually flips completedAt writes audit + notification. Restores
+  // the progress the partida had before it was concluded, capped at 99 (100 is
+  // only reachable via Conclude again); priorProgressPct is left in place on
+  // the row for the audit trail — the next Conclude overwrites it.
+  const restoredPct = await prisma.$transaction(async (tx) => {
+    const count = await tx.$executeRaw`
+      UPDATE "Partida"
+      SET "completedAt" = NULL, "completedById" = NULL,
+          "progressPct" = LEAST(COALESCE("priorProgressPct", 99), 99)
+      WHERE "id" = ${partida.id} AND "completedAt" IS NOT NULL AND "deletedAt" IS NULL`;
+    if (count === 0) return null;
+    const after = await tx.partida.findUniqueOrThrow({ where: { id: partida.id }, select: { progressPct: true } });
     await writeAudit(tx, {
       companyId: user.companyId,
       actorId: user.id,
@@ -115,9 +125,11 @@ export async function reopenPartida(formData: FormData) {
       targetType: "Partida",
       targetId: partida.id,
       summary: `Partida reabierta: ${partida.name}`,
-      metadata: { projectId: partida.projectId, restoredPct },
+      metadata: { projectId: partida.projectId, restoredPct: after.progressPct },
     });
+    return after.progressPct;
   });
+  if (restoredPct === null) return; // lost the race: already reopened
 
   await notifyEvent({
     key: "partida.reopened",
@@ -134,9 +146,12 @@ export async function reopenPartida(formData: FormData) {
 async function loadOwnedSegment(user: FreshSessionUser, segmentId: string) {
   const segment = await prisma.segment.findFirst({
     where: { id: segmentId, project: projectAccessWhere(user) },
-    select: { id: true, projectId: true, name: true, closedAt: true },
+    select: { id: true, projectId: true, name: true, closedAt: true, project: { select: { archivedAt: true } } },
   });
   if (!segment) throw new Error("Forbidden");
+  // Symmetric lifecycle gating (WS8): every lifecycle transition — not just
+  // conclude — is rejected while the obra is archived.
+  if (segment.project.archivedAt) throw new Error("La obra está archivada.");
   await requireProjectStructureAccess(user, segment.projectId);
   return segment;
 }
@@ -169,9 +184,9 @@ export async function closeSegment(formData: FormData) {
   const segmentId = String(formData.get("segmentId"));
   const segment = await loadOwnedSegment(user, segmentId);
 
-  if (segment.closedAt) return; // idempotent: already closed
+  if (segment.closedAt) return; // idempotent fast path: already closed
 
-  await serializable(async (tx) => {
+  const didChange = await serializable(async (tx) => {
     // Empty block MAY close (documented decision, §4).
     const openCount = await tx.partida.count({
       where: { segmentId: segment.id, deletedAt: null, completedAt: null },
@@ -179,7 +194,14 @@ export async function closeSegment(formData: FormData) {
     if (openCount > 0) {
       throw new Error("No se puede cerrar el bloque: hay partidas sin concluir.");
     }
-    await tx.segment.update({ where: { id: segment.id }, data: { closedAt: new Date(), closedById: user.id } });
+    // Guarded update: after a P2034 retry (or a plain concurrent close) the
+    // winner may already have closed the segment — count 0 means this
+    // invocation changed nothing and must not write audit or notify.
+    const res = await tx.segment.updateMany({
+      where: { id: segment.id, closedAt: null },
+      data: { closedAt: new Date(), closedById: user.id },
+    });
+    if (res.count === 0) return false;
     await writeAudit(tx, {
       companyId: user.companyId,
       actorId: user.id,
@@ -189,7 +211,9 @@ export async function closeSegment(formData: FormData) {
       summary: `Bloque cerrado: ${segment.name}`,
       metadata: { projectId: segment.projectId },
     });
+    return true;
   });
+  if (!didChange) return; // lost the race: already closed
 
   await notifyEvent({
     key: "block.closed",
@@ -208,10 +232,16 @@ export async function reopenSegment(formData: FormData) {
   const segmentId = String(formData.get("segmentId"));
   const segment = await loadOwnedSegment(user, segmentId);
 
-  if (!segment.closedAt) return; // idempotent: already open
+  if (!segment.closedAt) return; // idempotent fast path: already open
 
-  await prisma.$transaction(async (tx) => {
-    await tx.segment.update({ where: { id: segment.id }, data: { closedAt: null, closedById: null } });
+  const didChange = await prisma.$transaction(async (tx) => {
+    // Guarded update (see concludePartida): only the invocation that actually
+    // flips closedAt writes audit + notification.
+    const res = await tx.segment.updateMany({
+      where: { id: segment.id, closedAt: { not: null } },
+      data: { closedAt: null, closedById: null },
+    });
+    if (res.count === 0) return false;
     await writeAudit(tx, {
       companyId: user.companyId,
       actorId: user.id,
@@ -221,7 +251,9 @@ export async function reopenSegment(formData: FormData) {
       summary: `Bloque reabierto: ${segment.name}`,
       metadata: { projectId: segment.projectId },
     });
+    return true;
   });
+  if (!didChange) return; // lost the race: already reopened
 
   await notifyEvent({
     key: "block.reopened",

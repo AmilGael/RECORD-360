@@ -81,6 +81,23 @@ describe("concludePartida", () => {
     await prisma.partida.deleteMany({ where: { projectId: archivedProjectId } });
     await prisma.project.delete({ where: { id: archivedProjectId } });
   });
+
+  it("two concurrent concludes produce exactly one audit row and one notification batch", async () => {
+    const p = await prisma.partida.create({ data: { projectId, name: "Conclusion concurrente", progressPct: 30 } });
+    asAdmin();
+    // Both invocations pass the pre-tx fast path; the guarded UPDATE inside the
+    // transaction lets exactly one through (count 1) — the loser is a no-op.
+    await Promise.all([concludePartida(fd({ partidaId: p.id })), concludePartida(fd({ partidaId: p.id }))]);
+
+    const after = await prisma.partida.findUniqueOrThrow({ where: { id: p.id } });
+    expect(after.progressPct).toBe(100);
+    expect(after.priorProgressPct).toBe(30); // the winner's copy, not overwritten by the loser
+
+    const audits = await prisma.auditLog.count({ where: { targetId: p.id, action: "partida.completed" } });
+    expect(audits).toBe(1);
+    const notifs = await prisma.notification.count({ where: { companyId, eventKey: "partida.completed", userId: managerId, link: `/app/partidas/${p.id}` } });
+    expect(notifs).toBe(1);
+  });
 });
 
 describe("reopenPartida", () => {
@@ -176,6 +193,17 @@ describe("closeSegment / reopenSegment", () => {
     await closeSegment(fd({ segmentId: segment.id }));
     const after = await prisma.segment.findUniqueOrThrow({ where: { id: segment.id } });
     expect(after.closedAt).not.toBeNull();
+  });
+
+  it("rejects closing a block in an archived project (symmetric lifecycle gating)", async () => {
+    const archivedProjectId = (await prisma.project.create({ data: { companyId, name: "Archived seg P", registrationCode: generateRegistrationCode(), archivedAt: new Date() } })).id;
+    const segment = await prisma.segment.create({ data: { projectId: archivedProjectId, name: "Bloque en obra archivada" } });
+    asAdmin();
+    await expect(closeSegment(fd({ segmentId: segment.id }))).rejects.toThrow(/archivada/i);
+    const after = await prisma.segment.findUniqueOrThrow({ where: { id: segment.id } });
+    expect(after.closedAt).toBeNull();
+    await prisma.segment.delete({ where: { id: segment.id } });
+    await prisma.project.delete({ where: { id: archivedProjectId } });
   });
 
   it("reopenSegment clears closedAt and is idempotent", async () => {

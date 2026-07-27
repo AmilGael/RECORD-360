@@ -58,7 +58,7 @@ export async function createPartida(formData: FormData) {
   const user = await requireSession();
   const projectId = String(formData.get("projectId"));
   await requireProjectStructureAccess(user, projectId);
-  const segmentId = await resolveSegment(projectId, parseSegment(formData.get("segment")));
+  const { id: segmentId } = await resolveSegment(projectId, parseSegment(formData.get("segment")));
   // Lifecycle (WS4C): a closed block rejects new partidas — server-enforced,
   // independent of whatever the UI shows.
   if (segmentId) {
@@ -85,20 +85,17 @@ export async function createSegment(formData: FormData) {
   await requireProjectStructureAccess(user, projectId);
   const label = parseSegment(formData.get("name"));
   // resolveSegment reuses a matching block case-insensitively rather than
-  // duplicating it — only notify block.created when this call actually made a
-  // new one, not when it reused an existing block.
-  const existing = label
-    ? await prisma.segment.findFirst({ where: { projectId, name: { equals: label, mode: "insensitive" } }, select: { id: true } })
-    : null;
-  const segmentId = await resolveSegment(projectId, label);
-  if (segmentId && !existing) {
-    const created = await prisma.segment.findUnique({ where: { id: segmentId }, select: { name: true } });
+  // duplicating it, and reports `created` from the create path itself — of two
+  // concurrent creators exactly one sees created: true, so block.created fires
+  // once per actually-created block (never for a reuse, never twice).
+  const { id: segmentId, created } = await resolveSegment(projectId, label);
+  if (segmentId && created) {
     await notifyEvent({
       key: "block.created",
       companyId: user.companyId,
       actorId: user.id,
       projectId,
-      title: `Nuevo bloque: ${created?.name ?? label}`,
+      title: `Nuevo bloque: ${label}`,
       link: `/app/projects/${projectId}`,
     });
   }
@@ -344,13 +341,20 @@ export async function archiveUser(formData: FormData) {
   const target = await prisma.user.findFirst({ where: { id: userId, companyId: actor.companyId } });
   if (!target || target.role === Role.SUPERADMIN) throw new Error("Forbidden");
 
-  if (target.disabledAt) { revalidatePath("/app/admin"); return; } // idempotent no-op
+  if (target.disabledAt) { revalidatePath("/app/admin"); return; } // idempotent fast path
 
+  // Atomic guarded flip: the updateMany WHERE re-checks disabledAt under the
+  // row lock, so of two concurrent archives exactly one proceeds (count 1) —
+  // the loser bails before touching assignments, audit, or notifications.
   // Assignments are read and deleted inside the same transaction as the audit
   // write, so the captured {projectId, role} list is an exact snapshot of what
   // was removed (no race with a concurrent assignment change).
   const assignments = await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: target.id }, data: { disabledAt: new Date() } });
+    const res = await tx.user.updateMany({
+      where: { id: target.id, companyId: actor.companyId, disabledAt: null },
+      data: { disabledAt: new Date() },
+    });
+    if (res.count === 0) return null;
     const removed = await tx.projectAssignment.findMany({
       where: { userId: target.id },
       select: { projectId: true, role: true, project: { select: { name: true } } },
@@ -367,6 +371,7 @@ export async function archiveUser(formData: FormData) {
     });
     return removed;
   });
+  if (assignments === null) { revalidatePath("/app/admin"); return; } // lost the race: already archived
 
   // One notification per removed project assignment (WS2B): different projects
   // may notify the same recipient — that is correct, each references a
@@ -398,10 +403,16 @@ export async function restoreUser(formData: FormData) {
   const target = await prisma.user.findFirst({ where: { id: userId, companyId: actor.companyId } });
   if (!target || target.role === Role.SUPERADMIN) throw new Error("Forbidden");
 
-  if (!target.disabledAt) { revalidatePath("/app/admin"); return; } // idempotent no-op
+  if (!target.disabledAt) { revalidatePath("/app/admin"); return; } // idempotent fast path
 
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: target.id }, data: { disabledAt: null } });
+    // Atomic guarded flip (see archiveUser): only the invocation that actually
+    // clears disabledAt writes the audit row.
+    const res = await tx.user.updateMany({
+      where: { id: target.id, companyId: actor.companyId, disabledAt: { not: null } },
+      data: { disabledAt: null },
+    });
+    if (res.count === 0) return;
     await writeAudit(tx, {
       companyId: actor.companyId,
       actorId: actor.id,

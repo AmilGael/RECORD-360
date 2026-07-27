@@ -80,6 +80,21 @@ describe("archiveUser", () => {
     expect(notifs).toBe(2); // still just the first call's notifications
   });
 
+  it("two concurrent archives produce exactly one audit row and one notification batch", async () => {
+    const target = await makeTarget("race");
+    asAdmin();
+    // Both pass the pre-tx disabledAt check; the guarded updateMany inside the
+    // transaction lets exactly one through — the loser bails before audit/notify.
+    await Promise.all([archiveUser(fd(target.id)), archiveUser(fd(target.id))]);
+
+    const after = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
+    expect(after.disabledAt).not.toBeNull();
+    const audits = await prisma.auditLog.count({ where: { targetId: target.id, action: "user.archived" } });
+    expect(audits).toBe(1);
+    const notifs = await prisma.notification.count({ where: { companyId, eventKey: "user.archived", title: `Usuario archivado: ${target.name}` } });
+    expect(notifs).toBe(2); // one per removed assignment, from the single winner
+  });
+
   it("blocks self-archive", async () => {
     asAdmin();
     await expect(archiveUser(fd(adminId))).rejects.toThrow();
