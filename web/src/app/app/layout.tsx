@@ -7,6 +7,7 @@ import { requireFreshSession } from "@/lib/auth/session";
 import { OfflineProvider } from "@/components/offline-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AppSidebar } from "@/components/app-sidebar";
+import { countPendingItems } from "@/lib/notifications/pending";
 import { cookies } from "next/headers";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -19,10 +20,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { lang, t } = await getDict();
   const theme = (await cookies()).get("r360_theme")?.value === "dark" ? "dark" : "light";
 
-  const [unread, activeProjects, archivedProjects] = await Promise.all([
+  const [unread, activeProjects, archivedProjects, pendingCount] = await Promise.all([
     prisma.notification.count({ where: { userId, readAt: null } }),
     prisma.project.count({ where: { companyId, archivedAt: null } }),
     prisma.project.count({ where: { companyId, archivedAt: { not: null } } }),
+    // R3 WS1: sidebar badge for the operational pending queue (/app/pending) —
+    // same scope rules (projectAccessWhere) as the queue itself.
+    countPendingItems({ id: userId, companyId, role }),
   ]);
 
   async function signOutAction() {
@@ -43,12 +47,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppSidebar
           isAdmin={isAdmin}
           unread={unread}
+          pendingCount={pendingCount}
           activeProjects={activeProjects}
           archivedProjects={archivedProjects}
           currentLang={lang}
           theme={theme}
           labels={{
-            nav: { sites: t.nav.sites, notifications: t.nav.notifications, team: t.nav.team },
+            nav: { sites: t.nav.sites, notifications: t.nav.notifications, team: t.nav.team, pending: t.pendingWork.navLabel },
             navigation: t.sidebar.navigation,
             status: t.sidebar.status,
             preferences: t.sidebar.preferences,

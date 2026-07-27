@@ -10,23 +10,26 @@ vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 import { resolveReminder } from "@/app/actions/reminders";
 
-let companyId = "", otherCompanyId = "", managerId = "", otherManagerId = "", projectId = "", partidaId = "";
+let companyId = "", otherCompanyId = "", managerId = "", adminId = "", otherManagerId = "", projectId = "", partidaId = "";
 
 beforeAll(async () => {
   const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   companyId = (await prisma.company.create({ data: { name: `Rem Co ${s}` } })).id;
   otherCompanyId = (await prisma.company.create({ data: { name: `Rem Other ${s}` } })).id;
   managerId = (await prisma.user.create({ data: { email: `m-${s}@x.do`, name: "M", role: "MANAGER", companyId, passwordHash: "x" } })).id;
+  adminId = (await prisma.user.create({ data: { email: `a-${s}@x.do`, name: "A", role: "ADMIN", companyId, passwordHash: "x" } })).id;
   otherManagerId = (await prisma.user.create({ data: { email: `om-${s}@x.do`, name: "OM", role: "MANAGER", companyId: otherCompanyId, passwordHash: "x" } })).id;
   projectId = (await prisma.project.create({ data: { companyId, name: `Rem Project ${s}`, registrationCode: generateRegistrationCode() } })).id;
   partidaId = (await prisma.partida.create({ data: { projectId, name: "P" } })).id;
 });
 
 afterAll(async () => {
+  await prisma.notification.deleteMany({ where: { companyId } });
+  await prisma.auditLog.deleteMany({ where: { companyId } });
   await prisma.registro.deleteMany({ where: { partidaId } });
   await prisma.partida.deleteMany({ where: { id: partidaId } });
   await prisma.project.deleteMany({ where: { id: projectId } });
-  await prisma.user.deleteMany({ where: { id: { in: [managerId, otherManagerId] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [managerId, adminId, otherManagerId] } } });
   await prisma.company.deleteMany({ where: { id: { in: [companyId, otherCompanyId] } } });
   await prisma.$disconnect();
 });
@@ -59,5 +62,49 @@ describe("resolveReminder", () => {
     const r = await appendRegistro({ partidaId, authorId: managerId, category: null, text: "no rem", progressPct: null, gpsLat: null, gpsLng: null, locationId: null, attachments: [] });
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
     await expect(resolveReminder(fd(r.id))).rejects.toThrow();
+  });
+
+  it("writes a reminder.resolved audit entry", async () => {
+    const id = await makeReminder();
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    await resolveReminder(fd(id));
+
+    const audit = await prisma.auditLog.findFirst({ where: { targetId: id, action: "reminder.resolved" } });
+    expect(audit).not.toBeNull();
+    expect(audit?.actorId).toBe(adminId);
+  });
+
+  it("notifies the registro author (not the resolver) when resolved by someone else", async () => {
+    const id = await makeReminder(); // authored by managerId
+    const authorBefore = await prisma.notification.count({ where: { companyId, userId: managerId, eventKey: "reminder.resolved" } });
+    const resolverBefore = await prisma.notification.count({ where: { companyId, userId: adminId, eventKey: "reminder.resolved" } });
+
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    await resolveReminder(fd(id));
+
+    const authorNotifs = await prisma.notification.findMany({ where: { companyId, userId: managerId, eventKey: "reminder.resolved" }, orderBy: { createdAt: "desc" } });
+    expect(authorNotifs.length).toBe(authorBefore + 1);
+    expect(authorNotifs[0].severity).toBe("SUCCESS");
+
+    const resolverAfter = await prisma.notification.count({ where: { companyId, userId: adminId, eventKey: "reminder.resolved" } });
+    expect(resolverAfter).toBe(resolverBefore); // the actor is never notified of their own action
+  });
+
+  it("is idempotent: resolving twice does not duplicate audit or notification", async () => {
+    const id = await makeReminder();
+    const auditsBefore = await prisma.auditLog.count({ where: { targetId: id, action: "reminder.resolved" } });
+    const notifsBefore = await prisma.notification.count({ where: { companyId, userId: managerId, eventKey: "reminder.resolved" } });
+
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    await resolveReminder(fd(id));
+    await resolveReminder(fd(id));
+
+    const auditsAfter = await prisma.auditLog.count({ where: { targetId: id, action: "reminder.resolved" } });
+    expect(auditsAfter).toBe(auditsBefore + 1);
+    const notifsAfter = await prisma.notification.count({ where: { companyId, userId: managerId, eventKey: "reminder.resolved" } });
+    expect(notifsAfter).toBe(notifsBefore + 1);
+
+    const after = await prisma.registro.findUniqueOrThrow({ where: { id } });
+    expect(after.reminderResolvedAt).not.toBeNull();
   });
 });

@@ -2,19 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Folder, Users } from "@/components/icons";
+import { AlertCircle, Bell, Folder, Users } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
 type AppSidebarProps = {
   isAdmin: boolean;
   unread: number;
+  pendingCount: number;
   activeProjects: number;
   archivedProjects: number;
   currentLang: "es" | "en";
   theme: "light" | "dark";
   labels: {
-    nav: { sites: string; notifications: string; team: string };
+    nav: { sites: string; notifications: string; team: string; pending: string };
     navigation: string;
     status: string;
     preferences: string;
@@ -31,6 +32,7 @@ type AppSidebarProps = {
 export function AppSidebar({
   isAdmin,
   unread,
+  pendingCount,
   activeProjects,
   archivedProjects,
   currentLang,
@@ -57,6 +59,10 @@ export function AppSidebar({
           <Link href="/app/notifications" className={`sidebar-link${isOn("/app/notifications") ? " is-on" : ""}`}>
             <Bell size={14} /> {labels.nav.notifications}
             {unread > 0 && <span className="sidebar-pill">{unread}</span>}
+          </Link>
+          <Link href="/app/pending" className={`sidebar-link${isOn("/app/pending") ? " is-on" : ""}`}>
+            <AlertCircle size={14} /> {labels.nav.pending}
+            {pendingCount > 0 && <span className="sidebar-pill">{pendingCount}</span>}
           </Link>
           {isAdmin && (
             <Link href="/app/admin" className={`sidebar-link${isOn("/app/admin") ? " is-on" : ""}`}>
