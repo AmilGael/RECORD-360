@@ -115,12 +115,12 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
           {item.kind === "reminder" ? (
             <form action={resolveReminder}>
               <input type="hidden" name="registroId" value={item.id.slice("rem:".length)} />
-              <SubmitButton className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem", whiteSpace: "nowrap" }}>
+              <SubmitButton className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem" }}>
                 {P.resolve}
               </SubmitButton>
             </form>
           ) : (
-            <Link href={item.deepLink} className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem", whiteSpace: "nowrap" }}>
+            <Link href={item.deepLink} className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem" }}>
               {P.viewRequest}
             </Link>
           )}

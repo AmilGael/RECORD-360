@@ -110,7 +110,7 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
               <span className="cr-title">{i.brief.length > 90 ? `${i.brief.slice(0, 90)}…` : i.brief}</span>
               <span className="cr-meta">{i.scopeLabel} · {i.archetypeLabel} · {t.requestedBy} {i.requesterName} · {i.createdAt}</span>
             </span>
-            <a href={`/api/informes/${i.id}/pdf`} className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", whiteSpace: "nowrap" }}>
+            <a href={`/api/informes/${i.id}/pdf`} className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
               {t.downloadPdf}
             </a>
           </div>

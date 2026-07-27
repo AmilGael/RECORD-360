@@ -161,21 +161,21 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </div>
 
       {/* Dual chart-buttons */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, margin: "18px 0" }}>
-        <Link href="/app?view=activas" className="card" style={{ padding: 18, textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="dash-metric-grid">
+        <Link href="/app?view=activas" className="card dash-metric-card">
           <div>
             <div className="kicker">{D.tabActive}</div>
             <strong style={{ fontSize: "2rem" }}>{projectRows.length}</strong>
           </div>
-          <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>{D.openTable} &rarr;</span>
+          <span className="mono text-steel">{D.openTable} &rarr;</span>
         </Link>
         {isAdmin ? (
-          <Link href="/app?view=archivadas" className="card" style={{ padding: 18, textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Link href="/app?view=archivadas" className="card dash-metric-card">
             <div>
               <div className="kicker">{D.tabArchived}</div>
               <strong style={{ fontSize: "2rem" }}>{archived.length}</strong>
             </div>
-            <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>{D.openTable} &rarr;</span>
+            <span className="mono text-steel">{D.openTable} &rarr;</span>
           </Link>
         ) : <div />}
       </div>
@@ -257,7 +257,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                     <div>
                       <div className="repo-title">
                         <span className="folder-icon" style={{ opacity: 0.4 }}><Folder size={14} /></span>
-                        <span style={{ color: "var(--steel)" }}>{p.name}</span>
+                        <span style={{ color: "var(--ink-soft)" }}>{p.name}</span>
                         <span className="state-badge is-archived">{t.project.statusArchived}</span>
                       </div>
                     </div>
@@ -284,11 +284,21 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
         {/* Right column: create panel */}
         {isAdmin && (
-          <div className="panel-create">
-            <div className="panel-create-head">
-              <Plus size={14} /> {D.panelTitle}
-            </div>
+          <details className="panel-create" open={projectRows.length === 0}>
+            <summary className="panel-create-summary">
+              <span className="panel-create-icon" aria-hidden="true"><Plus size={17} /></span>
+              <span className="panel-create-copy">
+                <strong>{D.panelTitle}</strong>
+                <span>{D.panelHint}</span>
+              </span>
+              <span className="panel-create-toggle">
+                <span className="when-closed">{D.panelExpand}</span>
+                <span className="when-open">{D.panelCollapse}</span>
+                <span className="panel-create-chevron" aria-hidden="true">⌄</span>
+              </span>
+            </summary>
             <form action={createProject} className="panel-create-body">
+              <p className="panel-create-required">{D.requiredHint}</p>
               <div className="form-group">
                 <label className="form-label" htmlFor="dash-name">{D.newSite} *</label>
                 <input id="dash-name" name="name" placeholder="Torre Piantini 05" required className="input" />
@@ -309,7 +319,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 {D.create} <span className="arrow">→</span>
               </SubmitButton>
             </form>
-          </div>
+          </details>
         )}
       </div>
     </div>

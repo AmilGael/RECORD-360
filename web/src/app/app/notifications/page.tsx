@@ -174,7 +174,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
               {isUnread && (
                 <form action={markNotificationRead}>
                   <input type="hidden" name="id" value={n.id} />
-                  <button type="submit" className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem", whiteSpace: "nowrap" }}>
+                  <button type="submit" className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem" }}>
                     {t.notifications.markRead}
                   </button>
                 </form>

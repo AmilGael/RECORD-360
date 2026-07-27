@@ -21,7 +21,7 @@ export function SeverityMarker({
     severity === "SUCCESS" ? "var(--state-active)" : severity === "IMPORTANT" ? "#b08a2e" : "var(--state-blocked)";
   const label = severity === "SUCCESS" ? t.success : severity === "IMPORTANT" ? t.important : t.critical;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
       <span
         aria-hidden="true"
         style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }}

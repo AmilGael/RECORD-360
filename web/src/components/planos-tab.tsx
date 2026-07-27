@@ -28,7 +28,7 @@ export function PlanosTab({
               <span className="cr-title">{d.title || d.url.split("/").pop()}</span>
               <span className="cr-meta">{t.uploadedBy} {authorMap.get(d.uploadedById) ?? "—"} · {formatTimestamp(d.createdAt, lang)}</span>
             </span>
-            <a href={d.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", whiteSpace: "nowrap" }}>
+            <a href={d.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
               {t.view}
             </a>
           </div>
