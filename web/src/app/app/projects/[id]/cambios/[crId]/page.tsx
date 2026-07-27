@@ -94,13 +94,13 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
             <form action={resolveChangeRequest} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <input type="hidden" name="changeRequestId" value={cr.id} />
               <input type="hidden" name="action" value="INTEGRATE" />
-              <textarea name="resolutionNote" required rows={2} className="input" placeholder={C.resolutionNotePlaceholder} style={{ minWidth: 220, resize: "vertical" }} aria-label={C.resolutionNote} />
+              <textarea name="resolutionNote" required rows={2} className="input" placeholder={C.resolutionNotePlaceholder} style={{ width: "min(100%, 360px)", resize: "vertical" }} aria-label={C.resolutionNote} />
               <SubmitButton className="btn" style={{ background: "var(--state-merged)", color: "#fff" }}>{C.integrate}</SubmitButton>
             </form>
             <form action={resolveChangeRequest} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <input type="hidden" name="changeRequestId" value={cr.id} />
               <input type="hidden" name="action" value="REJECT" />
-              <textarea name="resolutionNote" required rows={2} className="input" placeholder={C.resolutionNotePlaceholder} style={{ minWidth: 220, resize: "vertical" }} aria-label={C.resolutionNote} />
+              <textarea name="resolutionNote" required rows={2} className="input" placeholder={C.resolutionNotePlaceholder} style={{ width: "min(100%, 360px)", resize: "vertical" }} aria-label={C.resolutionNote} />
               <SubmitButton className="btn btn-ghost">{C.reject}</SubmitButton>
             </form>
             <span className="mono text-steel" style={{ fontSize: "0.62rem", marginLeft: "auto", alignSelf: "center" }}>{C.managerOnly}</span>

@@ -16,7 +16,10 @@ export function PartidaProgressForm({
     <form action={updatePartidaProgress} className="progress-edit">
       <input type="hidden" name="partidaId" value={partidaId} />
       <label className="form-label" htmlFor={`progress-${partidaId}`}>{t.progress}</label>
-      <input id={`progress-${partidaId}`} type="number" name="progressPct" min={0} max={100} defaultValue={progressPct} className="input" />
+      {/* max 99: reaching 100 requires Concluir (WS4C) — mirrors the server cap
+          in updatePartidaProgress so the client can't offer a value the server
+          will reject. */}
+      <input id={`progress-${partidaId}`} type="number" name="progressPct" min={0} max={99} step={1} defaultValue={Math.min(progressPct, 99)} className="input" />
       <SubmitButton className="btn btn-ghost">{t.save}</SubmitButton>
     </form>
   );
