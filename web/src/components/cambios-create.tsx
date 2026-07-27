@@ -1,14 +1,21 @@
 "use client";
-import { useRef, useState } from "react";
-import { createChangeRequest } from "@/app/actions/cambios";
-import { SubmitButton } from "@/components/submit-button";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { createChangeRequest, type CreateChangeRequestState } from "@/app/actions/cambios";
 import { ClipboardPlus } from "@/components/icons";
+
+type GpsState = "acquiring" | "acquired" | "denied" | "unavailable" | "timeout" | "invalid";
 
 type T = {
   new: string; fieldTitle: string; fieldDescription: string; fieldPartidas: string;
   fieldReminder: string; fieldReminderPlaceholder: string;
-  evidence: string; gps: string; gpsOk: string;
+  evidence: string;
+  kindLabel: string; kindChange: string; kindAlert: string;
+  severityLabel: string; severityImportant: string; severityCritical: string;
+  gpsAcquiring: string; gpsAcquired: string; gpsDenied: string; gpsUnavailable: string;
+  gpsTimeout: string; gpsInvalid: string; gpsRetry: string;
 };
+
+const INITIAL: CreateChangeRequestState = { status: "idle" };
 
 export function CambiosCreate({ projectId, segments, t }: {
   projectId: string;
@@ -17,17 +24,88 @@ export function CambiosCreate({ projectId, segments, t }: {
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsState, setGpsState] = useState<GpsState>("acquiring");
+  const [state, formAction, pending] = useActionState(createChangeRequest, INITIAL);
+
+  // GPS state machine (WS5 §6): acquiring -> acquired | denied | unavailable |
+  // timeout | invalid. Starts automatically on mount; Retry re-triggers.
+  // Submission stays disabled until "acquired" with in-range coordinates —
+  // the server re-validates independently (lib/cambios/validate.ts), this is
+  // just the UX gate.
+  const acquireGps = () => {
+    setGpsState("acquiring");
+    if (!("geolocation" in navigator)) { setGpsState("unavailable"); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+          setGpsState("invalid");
+          return;
+        }
+        setCoords({ lat: latitude, lng: longitude });
+        setGpsState("acquired");
+      },
+      (err) => {
+        setGpsState(err.code === err.PERMISSION_DENIED ? "denied" : err.code === err.TIMEOUT ? "timeout" : "unavailable");
+      },
+      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 0 },
+    );
+  };
+
+  useEffect(() => { acquireGps(); }, []);
+
+  useEffect(() => {
+    if (state.status === "success") {
+      formRef.current?.reset();
+      setCoords(null);
+      acquireGps();
+    }
+  }, [state]);
+
+  const gpsMessage: Record<GpsState, string> = {
+    acquiring: t.gpsAcquiring, acquired: t.gpsAcquired, denied: t.gpsDenied,
+    unavailable: t.gpsUnavailable, timeout: t.gpsTimeout, invalid: t.gpsInvalid,
+  };
+  const canRetryGps = gpsState !== "acquiring" && gpsState !== "acquired";
+  const canSubmit = gpsState === "acquired" && coords !== null && !pending;
 
   return (
     <form
       ref={formRef}
-      action={async (fd) => { await createChangeRequest(fd); formRef.current?.reset(); setCoords(null); }}
+      action={formAction}
       className="card"
       style={{ padding: 16, marginBottom: 20 }}
     >
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="gpsLat" value={coords?.lat ?? ""} />
       <input type="hidden" name="gpsLng" value={coords?.lng ?? ""} />
+
+      {state.status === "error" && (
+        <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+          {state.message}
+        </p>
+      )}
+
+      <div className="form-label" style={{ marginBottom: 4 }}>{t.kindLabel}</div>
+      <div role="radiogroup" aria-label={t.kindLabel} style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: "0.84rem" }}>
+        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="radio" name="kind" value="CHANGE" required /> {t.kindChange}
+        </label>
+        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="radio" name="kind" value="ALERT" required /> {t.kindAlert}
+        </label>
+      </div>
+
+      <div className="form-label" style={{ marginBottom: 4 }}>{t.severityLabel}</div>
+      <div role="radiogroup" aria-label={t.severityLabel} style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: "0.84rem" }}>
+        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="radio" name="severity" value="IMPORTANT" required /> {t.severityImportant}
+        </label>
+        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="radio" name="severity" value="CRITICAL" required /> {t.severityCritical}
+        </label>
+      </div>
+
       <input name="title" required placeholder={t.fieldTitle} className="input" style={{ marginBottom: 10 }} />
       <textarea name="description" rows={2} placeholder={t.fieldDescription} className="input" style={{ marginBottom: 10, resize: "vertical" }} />
       <div className="form-label" style={{ marginBottom: 4 }}>{t.fieldPartidas}</div>
@@ -46,11 +124,15 @@ export function CambiosCreate({ projectId, segments, t }: {
       />
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         <input type="file" name="evidence" multiple accept="image/jpeg,image/png,image/webp,image/gif" style={{ fontSize: "0.8rem", maxWidth: 200 }} />
-        <button type="button" className="btn btn-ghost" style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem" }}
-          onClick={() => navigator.geolocation?.getCurrentPosition((pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }))}>
-          {coords ? t.gpsOk : t.gps}
+        <span className="mono text-steel" style={{ fontSize: "0.72rem" }}>{gpsMessage[gpsState]}</span>
+        {canRetryGps && (
+          <button type="button" className="btn btn-ghost" style={{ padding: "0.4rem 0.75rem", fontSize: "0.76rem" }} onClick={acquireGps}>
+            {t.gpsRetry}
+          </button>
+        )}
+        <button type="submit" className="btn btn-accent" style={{ marginLeft: "auto" }} disabled={!canSubmit} aria-busy={pending}>
+          <ClipboardPlus size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{t.new}
         </button>
-        <SubmitButton className="btn btn-accent" style={{ marginLeft: "auto" }}><ClipboardPlus size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{t.new}</SubmitButton>
       </div>
     </form>
   );

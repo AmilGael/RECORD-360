@@ -1,69 +1,85 @@
 "use server";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { Role } from "@prisma/client";
-import { parseChangeTitle, parseReminderDueAt, parseResolutionNote } from "@/lib/cambios/validate";
+import { NotificationSeverity, Role } from "@prisma/client";
+import { parseChangeTitle, parseReminderDueAt, parseResolutionNote, parseRequestGps, parseRequestKind, parseRequestSeverity } from "@/lib/cambios/validate";
 import { computeChangeSeal } from "@/lib/cambios/seal";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { appendRegistroTx } from "@/lib/registro/append";
 import { retryOnConflict } from "@/lib/registro/retry";
 import { projectAccessWhere } from "@/lib/authz/projects";
-import { createNotifications } from "@/lib/notifications/create";
+import { notifyEvent, resolveRecipients } from "@/lib/notifications/events";
 import { requireFreshSession } from "@/lib/auth/session";
 
-export async function createChangeRequest(formData: FormData) {
-  const user = await requireFreshSession();
+const KIND_LABEL = { CHANGE: "Solicitud de cambio", ALERT: "Alerta" } as const;
+const SEVERITY_TO_NOTIFICATION: Record<"IMPORTANT" | "CRITICAL", NotificationSeverity> = {
+  IMPORTANT: NotificationSeverity.IMPORTANT,
+  CRITICAL: NotificationSeverity.CRITICAL,
+};
 
-  const projectId = String(formData.get("projectId"));
-  const project = await prisma.project.findFirst({ where: { id: projectId, ...projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) } });
-  if (!project) throw new Error("Forbidden");
+export type CreateChangeRequestState = { status: "idle" | "success" | "error"; message?: string };
 
-  const title = parseChangeTitle(formData.get("title"));
-  const description = (String(formData.get("description") ?? "").trim()) || null;
-  const reminderDueAt = parseReminderDueAt(formData.get("reminderDueAt"));
+// Phase A finding (WS5): this used to be a plain `(formData) => Promise<void>`
+// server action wired to `<form action={...}>` and threw plain Errors on
+// validation failure. Next.js masks a thrown server-action error in
+// production (only an opaque digest reaches the client) — so every
+// validation message written in lib/cambios/validate.ts was invisible to
+// real users, who just saw the form silently fail. Converting to the
+// useActionState `(prevState, formData) => state` shape (same convention as
+// requestAccess in app/actions/access.ts) and catching everything internally
+// means the message always reaches the client via rendered state, in dev AND
+// prod.
+export async function createChangeRequest(_prev: CreateChangeRequestState, formData: FormData): Promise<CreateChangeRequestState> {
+  try {
+    const user = await requireFreshSession();
 
-  const segmentIds = [...new Set(formData.getAll("segmentIds").map(String).filter(Boolean))];
-  if (segmentIds.length === 0) throw new Error("Selecciona al menos un bloque afectado.");
-  const validSegments = await prisma.segment.findMany({ where: { id: { in: segmentIds }, projectId }, select: { id: true } });
-  if (validSegments.length !== segmentIds.length) throw new Error("Bloque inválido.");
+    const projectId = String(formData.get("projectId"));
+    const project = await prisma.project.findFirst({ where: { id: projectId, ...projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) } });
+    if (!project) throw new Error("Forbidden");
 
-  const latRaw = formData.get("gpsLat"); const lngRaw = formData.get("gpsLng");
-  const gpsLat = latRaw ? Number(latRaw) : null;
-  const gpsLng = lngRaw ? Number(lngRaw) : null;
+    const kind = parseRequestKind(formData.get("kind"));
+    const severity = parseRequestSeverity(formData.get("severity"));
+    const title = parseChangeTitle(formData.get("title"));
+    const description = (String(formData.get("description") ?? "").trim()) || null;
+    const reminderDueAt = parseReminderDueAt(formData.get("reminderDueAt"));
+    const { lat: gpsLat, lng: gpsLng } = parseRequestGps(formData.get("gpsLat"), formData.get("gpsLng"));
 
-  const photos = formData.getAll("evidence").filter((f): f is File => f instanceof File);
-  const prepared = await prepareAttachments(photos, storage);
+    const segmentIds = [...new Set(formData.getAll("segmentIds").map(String).filter(Boolean))];
+    if (segmentIds.length === 0) throw new Error("Selecciona al menos un bloque afectado.");
+    const validSegments = await prisma.segment.findMany({ where: { id: { in: segmentIds }, projectId }, select: { id: true } });
+    if (validSegments.length !== segmentIds.length) throw new Error("Bloque inválido.");
 
-  const created = await retryOnConflict(() => prisma.$transaction(async (tx) => {
-    const count = await tx.changeRequest.count({ where: { projectId } });
-    return tx.changeRequest.create({
-      data: {
-        projectId, code: `SC-${count + 1}`, title, description, reminderDueAt, costImpact: null, daysImpact: null,
-        authorId: user.id!, gpsLat, gpsLng,
-        segments: { create: segmentIds.map((id) => ({ segmentId: id })) },
-        attachments: { create: prepared.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })) },
-      },
-    });
-  }));
-  const recipients = await prisma.user.findMany({
-    where: {
+    const photos = formData.getAll("evidence").filter((f): f is File => f instanceof File);
+    const prepared = await prepareAttachments(photos, storage);
+
+    const created = await retryOnConflict(() => prisma.$transaction(async (tx) => {
+      const count = await tx.changeRequest.count({ where: { projectId } });
+      return tx.changeRequest.create({
+        data: {
+          projectId, code: `SC-${count + 1}`, kind, severity, title, description, reminderDueAt, costImpact: null, daysImpact: null,
+          authorId: user.id!, gpsLat, gpsLng,
+          segments: { create: segmentIds.map((id) => ({ segmentId: id })) },
+          attachments: { create: prepared.map((a) => ({ url: a.url, sha256: a.sha256, fileType: a.fileType })) },
+        },
+      });
+    }));
+
+    await notifyEvent({
+      key: kind === "ALERT" ? "alert.created" : "request.created",
       companyId: user.companyId,
-      role: { in: [Role.ADMIN, Role.MANAGER] },
-      id: { not: user.id },
-      disabledAt: null,
-    },
-    select: { id: true, companyId: true },
-  });
-  await createNotifications(recipients.map((r) => ({
-    companyId: r.companyId,
-    userId: r.id,
-    type: "cambio.created",
-    title: `Nueva solicitud de cambio ${created.code}`,
-    body: title,
-    link: `/app/projects/${projectId}/cambios/${created.id}`,
-  })));
-  revalidatePath(`/app/projects/${projectId}`);
+      actorId: user.id,
+      projectId,
+      severity: SEVERITY_TO_NOTIFICATION[severity],
+      title: `${KIND_LABEL[kind]} ${created.code}: ${title}`,
+      link: `/app/projects/${projectId}/cambios/${created.id}`,
+    });
+
+    revalidatePath(`/app/projects/${projectId}`);
+    return { status: "success" };
+  } catch (err) {
+    return { status: "error", message: err instanceof Error ? err.message : "No se pudo crear la solicitud." };
+  }
 }
 
 export async function resolveChangeRequest(formData: FormData) {
@@ -129,14 +145,27 @@ export async function resolveChangeRequest(formData: FormData) {
   } else {
     throw new Error("Acción inválida.");
   }
-  await createNotifications([{
+
+  // WS5: the author must ALWAYS hear about the resolution of their own
+  // request, even if a later reassignment dropped them from the project's
+  // default stakeholder policy — so they're unioned in explicitly rather
+  // than relying solely on resolveRecipients' project-assignment branch.
+  const eventKey = action === "INTEGRATE" ? "request.resolved" : "request.rejected";
+  const title = `${KIND_LABEL[cr.kind]} ${cr.code} ${action === "INTEGRATE" ? "integrada" : "rechazada"}`;
+  const stakeholders = await resolveRecipients({
+    key: eventKey, companyId: user.companyId, actorId: user.id, projectId: cr.projectId, title,
+  });
+  const recipientIds = [...new Set([cr.authorId, ...stakeholders])];
+  await notifyEvent({
+    key: eventKey,
     companyId: user.companyId,
-    userId: cr.authorId,
-    type: "cambio.resolved",
-    title: `Solicitud ${cr.code} ${action === "INTEGRATE" ? "integrada" : "rechazada"}`,
+    actorId: user.id,
+    projectId: cr.projectId,
+    title,
     body: `${cr.title} — ${resolutionNote}`,
     link: `/app/projects/${cr.projectId}/cambios/${cr.id}`,
-  }]);
+    recipientIds,
+  });
   revalidatePath(`/app/projects/${cr.projectId}`);
   revalidatePath(`/app/projects/${cr.projectId}/cambios/${cr.id}`);
 }

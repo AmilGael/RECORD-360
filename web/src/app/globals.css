@@ -521,6 +521,17 @@ body {
 .pdot.merged { background: var(--state-merged); }
 .pdot.rej { background: var(--state-blocked); }
 
+/* WS5: request severity — text label is always present in the chip itself,
+   color is never the only carrier. Reuses the same tokens as .role-badge
+   (is-supervisor's yellow, --state-blocked's red) rather than new colors. */
+.severity-chip {
+  font-family: var(--font-mono), monospace; font-size: 0.6rem; letter-spacing: 0.06em;
+  text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  white-space: nowrap; display: inline-block; vertical-align: middle;
+}
+.severity-chip.is-important { color: #8a6c1a; background: rgba(176,138,46,0.12); border: 1px solid rgba(176,138,46,0.35); }
+.severity-chip.is-critical { color: var(--state-blocked); background: var(--state-blocked-bg); border: 1px solid rgba(168,67,47,0.35); }
+
 .cr-row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--ink); transition: background 0.18s var(--ease); }
 .cr-row:last-child { border-bottom: none; }
 .cr-row:hover { background: var(--paper-2); }
