@@ -36,17 +36,30 @@ async function requireAdmin() {
   return ctx;
 }
 
+// WS4A: ownerName is the obra's client/owner — free text (least-complex
+// model), NOT an address and NOT a user relation. Description is unchanged
+// (a general description, not an address either). Both optional; legacy
+// projects simply have ownerName == null.
+function parseOwnerName(raw: FormDataEntryValue | null): string | null {
+  const v = String(raw ?? "").trim().replace(/\s+/g, " ");
+  if (!v) return null;
+  if (v.length > 120) throw new Error("El nombre del propietario es demasiado largo (máx. 120 caracteres).");
+  return v;
+}
+
 export async function createProject(formData: FormData) {
   const { companyId } = await requireAdmin();
   const cover = formData.get("cover");
   const coverImageKey = cover instanceof File && cover.size > 0
     ? await uploadBrandedImage(cover, storage)
     : null;
+  const ownerName = parseOwnerName(formData.get("ownerName"));
   await prisma.project.create({
     data: {
       companyId,
       name: String(formData.get("name")),
       description: String(formData.get("description") ?? "") || null,
+      ownerName,
       registrationCode: generateRegistrationCode(),
       coverImageKey,
     },
