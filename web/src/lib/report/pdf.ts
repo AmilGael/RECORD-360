@@ -12,6 +12,15 @@ const PRIMARY = "#111111";
 const MUTED = "#555555";
 const RULE = "#cccccc";
 
+// R3 WS11: fixed bottom-right footer stamp for the company seal (visual brand
+// image, Company.sealKey — NOT the cryptographic record seal/"Sello" string
+// stamped per-signature elsewhere). Sized/positioned to stay clear of the QR
+// (top-right), the page-number line (bottom-center, y = height-40), and the
+// informe firma block (bottom-LEFT, in-flow at x ~ 50).
+const SEAL_SIZE = 70;
+const SEAL_MARGIN_RIGHT = 50;
+const SEAL_BOTTOM_OFFSET = 130; // top edge this far above the page bottom
+
 export function sanitizePdfText(s: string): string {
   return s
     .normalize("NFKD")
@@ -40,21 +49,56 @@ function rule(doc: InstanceType<typeof PDFDocument>, color = RULE, width = 0.5) 
   doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).strokeColor(color).lineWidth(width).stroke();
 }
 
+/**
+ * Stamp the company seal image at a fixed bottom-right position on EVERY page
+ * of the document (R3 WS11 — "seal on every page of every export"). A no-op
+ * when there is no seal (missing-seal policy: the export still proceeds; the
+ * caller/route surfaces that separately, e.g. a response header).
+ *
+ * `autoFirstPage` creates page 0 before any caller code runs, so the first
+ * page can't be caught by a "pageAdded" listener registered after the fact —
+ * it is stamped once explicitly here, then the listener covers every
+ * subsequent page. Each call embeds sealPng as a fresh image XObject (pdfkit
+ * only caches images passed as a string path, not a Buffer), so this does not
+ * collapse into a single shared object across pages.
+ */
+export function stampSealOnEveryPage(doc: InstanceType<typeof PDFDocument>, sealPng: Buffer | null): void {
+  if (!sealPng) return;
+  const draw = () => {
+    const x = doc.page.width - SEAL_MARGIN_RIGHT - SEAL_SIZE;
+    const y = doc.page.height - SEAL_BOTTOM_OFFSET;
+    doc.image(sealPng, x, y, { fit: [SEAL_SIZE, SEAL_SIZE] });
+  };
+  draw();
+  doc.on("pageAdded", draw);
+}
+
 export type InformeRender = {
   contentMd: string;
   requesterName: string;
   firmaPng: Buffer | null;
-  sealPng: Buffer | null;
+  /** WS7: audience archetype label shown under the header (e.g. "Audiencia: Propietario"). */
+  archetypeLabel?: string | null;
 };
 
 export async function buildReportPdf(opts: {
   data: ReportData;
   generatedBy: string;
   informe?: InformeRender;
+  /** WS11: company seal (Company.sealKey), stamped on every page. null/undefined = no seal on file. */
+  sealPng?: Buffer | null;
 }): Promise<Buffer> {
-  const { data, generatedBy, informe } = opts;
-  const doc = new PDFDocument({ margin: 50, size: "A4", autoFirstPage: true });
+  const { data, generatedBy, informe, sealPng = null } = opts;
+  // bufferPages: true — WITHOUT it, pdfkit flushes each page to the output
+  // stream as soon as the next page starts, and the page-number loop below
+  // (which switchToPage()s back to every page after the whole document is
+  // written) throws "out of bounds" on any report spanning more pages than
+  // pdfkit's internal window. Pre-existing latent bug (Phase A finding) —
+  // it never surfaced because no prior test produced a multi-page report.
+  const doc = new PDFDocument({ margin: 50, size: "A4", autoFirstPage: true, bufferPages: true });
   const done = collect(doc);
+
+  stampSealOnEveryPage(doc, sealPng);
 
   // ── Header: company, obra, scope, range, code + QR ─────────────────────────
   const qr = await QRCode.toBuffer(
@@ -73,6 +117,9 @@ export async function buildReportPdf(opts: {
     doc.text(`Periodo: ${data.from ? fmt(data.from).slice(0, 10) : "inicio"} - ${data.to ? fmt(data.to).slice(0, 10) : "hoy"}`);
   }
   doc.text(`Generado: ${fmt(new Date())}  ·  por ${sanitizePdfText(generatedBy)}`);
+  if (informe?.archetypeLabel) {
+    doc.text(`Audiencia: ${sanitizePdfText(informe.archetypeLabel)}`);
+  }
   doc.moveDown(0.6);
   rule(doc, "#333333", 1.5);
   doc.moveDown(0.8);
@@ -92,7 +139,10 @@ export async function buildReportPdf(opts: {
         doc.font(FONT_NORMAL).fontSize(10).fillColor(PRIMARY).text(line, { lineGap: 1 });
       }
     }
-    // ── Footer block: requester + firma + seal ────────────────────────────────
+    // ── Footer block: requester + firma (bottom-left, in-flow). The company
+    // seal is NOT repeated here — it is already stamped fixed bottom-right on
+    // every page (stampSealOnEveryPage above), so it isn't duplicated on the
+    // last page.
     if (doc.y > doc.page.height - 180) doc.addPage();
     doc.moveDown(1.2);
     rule(doc);
@@ -101,10 +151,6 @@ export async function buildReportPdf(opts: {
     if (informe.firmaPng) {
       doc.moveDown(0.3);
       doc.image(informe.firmaPng, { fit: [160, 60] });
-    }
-    if (informe.sealPng) {
-      doc.moveDown(0.4);
-      doc.image(informe.sealPng, { fit: [90, 90] });
     }
   } else {
     // ── Deterministic body: partidas summary, registros, cambios ─────────────

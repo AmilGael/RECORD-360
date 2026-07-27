@@ -3,9 +3,15 @@
 import { prisma } from "@/lib/db";
 import { projectAccessWhere } from "@/lib/authz/projects";
 import { buildReportPdf } from "@/lib/report/pdf";
-import { sanitizeFilename } from "@/lib/report/params";
+import { sanitizeFilename, SEAL_WARNING_HEADER, SEAL_WARNING_MESSAGE } from "@/lib/report/params";
 import { storage } from "@/lib/storage";
 import { requireFreshSession } from "@/lib/auth/session";
+
+const ARCHETYPE_LABEL_ES: Record<string, string> = {
+  OWNER: "Propietario",
+  SENIOR_MANAGEMENT: "Alta gerencia",
+  PERSONAL_FEEDBACK: "Retroalimentacion personal",
+};
 
 async function keyToBuffer(key: string | null): Promise<Buffer | null> {
   if (!key) return null;
@@ -58,11 +64,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         cambios: [],
       },
       generatedBy: requester?.name ?? "—",
+      sealPng,
       informe: {
         contentMd: informe.contentMd,
         requesterName: requester?.name ?? "—",
         firmaPng,
-        sealPng,
+        archetypeLabel: informe.archetype ? ARCHETYPE_LABEL_ES[informe.archetype] ?? null : null,
       },
     });
 
@@ -73,6 +80,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "X-Content-Type-Options": "nosniff",
+        // WS11 missing-seal policy: export proceeds regardless; this header
+        // is the minimal honest surface for a plain-<a> PDF download (see
+        // lib/report/params.ts).
+        ...(sealPng ? {} : { [SEAL_WARNING_HEADER]: SEAL_WARNING_MESSAGE }),
       },
     });
   } catch (e) {

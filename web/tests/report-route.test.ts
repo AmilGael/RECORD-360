@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
+import { SEAL_WARNING_HEADER } from "@/lib/report/params";
 
 const authMock = vi.hoisted(() => vi.fn());
 
@@ -104,5 +105,16 @@ describe("GET /api/partidas/[id]/report", () => {
     });
 
     expect(res.status).toBe(401);
+  });
+
+  it("sets the missing-seal warning header when company A has no seal on file (R3 WS11)", async () => {
+    authMock.mockResolvedValue({ user: { id: managerAId, companyId: companyAId, role: "MANAGER" } });
+
+    const res = await GET(new Request("http://test.local/api/partidas/" + partidaAId + "/report"), {
+      params: Promise.resolve({ id: partidaAId }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get(SEAL_WARNING_HEADER)).toBeTruthy();
   });
 });

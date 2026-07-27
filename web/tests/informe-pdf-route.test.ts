@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Readable } from "node:stream";
 import { prisma } from "@/lib/db";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
+import { SEAL_WARNING_HEADER } from "@/lib/report/params";
 
 const authMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({ auth: authMock }));
@@ -16,7 +17,8 @@ vi.mock("@/lib/storage", () => ({
 
 import { GET } from "@/app/api/informes/[id]/pdf/route";
 
-let companyId = "", outCompanyId = "", managerId = "", outsiderId = "", projectId = "", informeId = "";
+let companyId = "", outCompanyId = "", noSealCompanyId = "", managerId = "", outsiderId = "", noSealManagerId = "", projectId = "", informeId = "";
+let noSealProjectId = "", noSealInformeId = "", archetypeInformeId = "";
 
 beforeAll(async () => {
   const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -32,13 +34,33 @@ beforeAll(async () => {
       model: "claude-sonnet-4-6",
     },
   })).id;
+  archetypeInformeId = (await prisma.informe.create({
+    data: {
+      projectId, requestedById: managerId, brief: "Para el propietario", archetype: "OWNER",
+      contentMd: "# Resumen Ejecutivo\nTodo en orden.",
+      model: "claude-sonnet-4-6",
+    },
+  })).id;
+
+  // R3 WS11: a company with NO seal on file — the mirror case for the
+  // missing-seal warning header.
+  noSealCompanyId = (await prisma.company.create({ data: { name: `IP NoSeal ${s}` } })).id;
+  noSealManagerId = (await prisma.user.create({ data: { email: `nosealmgr-${s}@x.do`, name: "Mgr NoSeal", role: "MANAGER", companyId: noSealCompanyId, passwordHash: "x", signatureKey: "firma-noseal.png" } })).id;
+  noSealProjectId = (await prisma.project.create({ data: { companyId: noSealCompanyId, name: `IP NoSeal Obra ${s}`, registrationCode: generateRegistrationCode() } })).id;
+  noSealInformeId = (await prisma.informe.create({
+    data: {
+      projectId: noSealProjectId, requestedById: noSealManagerId, brief: "Sin sello",
+      contentMd: "# Resumen Ejecutivo\nSin sello de compania.",
+      model: "claude-sonnet-4-6",
+    },
+  })).id;
 });
 
 afterAll(async () => {
-  await prisma.informe.deleteMany({ where: { projectId } });
-  await prisma.project.deleteMany({ where: { companyId } });
-  await prisma.user.deleteMany({ where: { companyId: { in: [companyId, outCompanyId] } } });
-  await prisma.company.deleteMany({ where: { id: { in: [companyId, outCompanyId] } } });
+  await prisma.informe.deleteMany({ where: { projectId: { in: [projectId, noSealProjectId] } } });
+  await prisma.project.deleteMany({ where: { companyId: { in: [companyId, noSealCompanyId] } } });
+  await prisma.user.deleteMany({ where: { companyId: { in: [companyId, outCompanyId, noSealCompanyId] } } });
+  await prisma.company.deleteMany({ where: { id: { in: [companyId, outCompanyId, noSealCompanyId] } } });
 });
 
 function call(id: string) {
@@ -57,5 +79,23 @@ describe("informe PDF route", () => {
   it("cross-tenant access is 404", async () => {
     authMock.mockResolvedValue({ user: { id: outsiderId, companyId: outCompanyId, role: "MANAGER" } });
     expect((await call(informeId)).status).toBe(404);
+  });
+  it("omits the missing-seal warning header when the company has a seal on file", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    const res = await call(informeId);
+    expect(res.headers.get(SEAL_WARNING_HEADER)).toBeNull();
+  });
+  it("sets the missing-seal warning header when the company has no seal on file (R3 WS11)", async () => {
+    authMock.mockResolvedValue({ user: { id: noSealManagerId, companyId: noSealCompanyId, role: "MANAGER" } });
+    const res = await call(noSealInformeId);
+    expect(res.status).toBe(200);
+    expect(res.headers.get(SEAL_WARNING_HEADER)).toBeTruthy();
+  });
+  it("renders without error when the informe has an archetype (audience label under the header, WS7)", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    const res = await call(archetypeInformeId);
+    expect(res.status).toBe(200);
+    const buf = Buffer.from(await res.arrayBuffer());
+    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
   });
 });

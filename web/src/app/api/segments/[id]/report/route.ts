@@ -2,7 +2,8 @@
 import { assembleReportData } from "@/lib/report/data";
 import { buildReportPdf } from "@/lib/report/pdf";
 import { requireFreshSession } from "@/lib/auth/session";
-import { parseRangeParam, sanitizeFilename } from "@/lib/report/params";
+import { parseRangeParam, sanitizeFilename, SEAL_WARNING_HEADER, SEAL_WARNING_MESSAGE } from "@/lib/report/params";
+import { loadCompanySealPng } from "@/lib/report/seal";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -20,7 +21,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     );
     if (!data) return new Response("Not found", { status: 404 });
 
-    const pdf = await buildReportPdf({ data, generatedBy: user.name });
+    // R3 WS11: company seal on every page, scoped to the caller's own tenant.
+    const sealPng = await loadCompanySealPng(user.companyId);
+
+    const pdf = await buildReportPdf({ data, generatedBy: user.name, sealPng });
     const filename = `${sanitizeFilename(data.scopeLabel)}-reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
     return new Response(new Uint8Array(pdf), {
       status: 200,
@@ -28,6 +32,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "X-Content-Type-Options": "nosniff",
+        ...(sealPng ? {} : { [SEAL_WARNING_HEADER]: SEAL_WARNING_MESSAGE }),
       },
     });
   } catch (e) {

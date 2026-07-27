@@ -6,7 +6,9 @@ import { projectAccessWhere } from "@/lib/authz/projects";
 import { verifyChain } from "@/lib/registro/hash";
 import { toStored } from "@/lib/registro/map";
 import { requireFreshSession } from "@/lib/auth/session";
-import { parseRangeParam, sanitizeFilename } from "@/lib/report/params";
+import { parseRangeParam, sanitizeFilename, SEAL_WARNING_HEADER, SEAL_WARNING_MESSAGE } from "@/lib/report/params";
+import { loadCompanySealPng } from "@/lib/report/seal";
+import { stampSealOnEveryPage } from "@/lib/report/pdf";
 import QRCode from "qrcode";
 // pdfkit is listed in serverExternalPackages and must be required at runtime.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -107,9 +109,16 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const progressPct = partida.progressPct ?? 0;
     const generatedAt = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
-    // Build PDF
-    const doc = new PDFDocument({ margin: 50, size: "A4", autoFirstPage: true });
+    // R3 WS11: company seal on every page, scoped to the caller's own tenant.
+    const sealPng = await loadCompanySealPng(user.companyId);
+
+    // Build PDF. bufferPages: true — without it, pdfkit flushes each page as
+    // soon as the next starts and the page-number loop below (which
+    // switchToPage()s back to every page) throws "out of bounds" past a
+    // couple of pages (pre-existing latent bug, fixed here — see lib/report/pdf.ts).
+    const doc = new PDFDocument({ margin: 50, size: "A4", autoFirstPage: true, bufferPages: true });
     const bufferPromise = collectPdfBuffer(doc);
+    stampSealOnEveryPage(doc, sealPng);
 
   // ── Header ──────────────────────────────────────────────────────────────────
   const FONT_BOLD = "Helvetica-Bold";
@@ -241,6 +250,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "X-Content-Type-Options": "nosniff",
+        ...(sealPng ? {} : { [SEAL_WARNING_HEADER]: SEAL_WARNING_MESSAGE }),
       },
     });
   } catch (error) {

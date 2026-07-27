@@ -26,3 +26,13 @@ export function sanitizeFilename(s: string): string {
     .replace(/-{2,}/g, "-")
     .slice(0, 80);
 }
+
+/**
+ * R3 WS11 missing-seal policy (decision, not legally blocking): a PDF export
+ * still proceeds without a company seal — a plain header lets a caller/admin
+ * notice, since the download itself is a plain <a href> (no client-side fetch
+ * to inspect a JSON body). Every report route sets this header when the
+ * company has no seal on file / it could not be loaded.
+ */
+export const SEAL_WARNING_HEADER = "X-Seal-Warning";
+export const SEAL_WARNING_MESSAGE = "Sello de la compania no configurado o no disponible; el documento se genero sin sello.";
