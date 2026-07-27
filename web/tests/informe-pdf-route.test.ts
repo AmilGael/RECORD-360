@@ -85,10 +85,10 @@ describe("informe PDF route", () => {
     const res = await call(informeId);
     expect(res.headers.get(SEAL_WARNING_HEADER)).toBeNull();
   });
-  it("sets the missing-seal warning header when the company has no seal on file (R3 WS11)", async () => {
+  it("blocks export when the company has no seal on file", async () => {
     authMock.mockResolvedValue({ user: { id: noSealManagerId, companyId: noSealCompanyId, role: "MANAGER" } });
     const res = await call(noSealInformeId);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(409);
     expect(res.headers.get(SEAL_WARNING_HEADER)).toBeTruthy();
   });
   it("renders without error when the informe has an archetype (audience label under the header, WS7)", async () => {

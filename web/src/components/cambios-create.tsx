@@ -17,9 +17,10 @@ type T = {
 
 const INITIAL: CreateChangeRequestState = { status: "idle" };
 
-export function CambiosCreate({ projectId, segments, t }: {
+export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
   projectId: string;
   segments: { id: string; name: string }[];
+  fixedSegment?: { id: string; name: string };
   t: T;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -109,9 +110,18 @@ export function CambiosCreate({ projectId, segments, t }: {
       <input name="title" required placeholder={t.fieldTitle} className="input" style={{ marginBottom: 10 }} />
       <textarea name="description" rows={2} placeholder={t.fieldDescription} className="input" style={{ marginBottom: 10, resize: "vertical" }} />
       <div className="form-label" style={{ marginBottom: 4 }}>{t.fieldPartidas}</div>
-      <select name="segmentIds" multiple required className="input" style={{ marginBottom: 10, minHeight: 90 }}>
-        {segments.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-      </select>
+      {fixedSegment ? (
+        <>
+          <input type="hidden" name="segmentIds" value={fixedSegment.id} />
+          <div className="input" aria-label={t.fieldPartidas} style={{ marginBottom: 10, background: "var(--paper-3)" }}>
+            {fixedSegment.name}
+          </div>
+        </>
+      ) : (
+        <select name="segmentIds" multiple required className="input" style={{ marginBottom: 10, minHeight: 90 }}>
+          {segments.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      )}
       <div className="form-label" style={{ marginBottom: 4 }}>{t.fieldReminder}</div>
       <input
         type="datetime-local"

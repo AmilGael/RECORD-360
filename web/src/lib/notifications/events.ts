@@ -56,15 +56,21 @@ export type DomainEvent = {
   severity?: NotificationSeverity | null;
   // Explicit recipients override the default policy (e.g. notify the request author).
   recipientIds?: string[];
+  // Creation confirmations (partida.created, block.created) must also be
+  // visible to the person who performed the action. Every other domain event
+  // keeps the anti-noise default of excluding the actor.
+  includeActor?: boolean;
 };
 
 // Default recipient policy: company ADMIN + MANAGER, plus users assigned to the
-// project for project-scoped events. Excludes the actor and disabled users.
+// project for project-scoped events. Excludes the actor unless includeActor is
+// explicitly requested, and always excludes disabled users.
 // Never crosses companyId. Deduplicated.
 export async function resolveRecipients(ev: DomainEvent): Promise<string[]> {
+  const actorFilter = ev.includeActor ? {} : { NOT: { id: ev.actorId } };
   if (ev.recipientIds) {
     const users = await prisma.user.findMany({
-      where: { id: { in: ev.recipientIds }, companyId: ev.companyId, disabledAt: null, NOT: { id: ev.actorId } },
+      where: { id: { in: ev.recipientIds }, companyId: ev.companyId, disabledAt: null, ...actorFilter },
       select: { id: true },
     });
     return users.map((u) => u.id);
@@ -73,7 +79,7 @@ export async function resolveRecipients(ev: DomainEvent): Promise<string[]> {
     where: {
       companyId: ev.companyId,
       disabledAt: null,
-      NOT: { id: ev.actorId },
+      ...actorFilter,
       OR: [
         { role: { in: [Role.ADMIN, Role.MANAGER] } },
         ...(ev.projectId ? [{ projectAssignments: { some: { projectId: ev.projectId } } }] : []),

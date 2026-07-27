@@ -2,7 +2,7 @@
 import { assembleReportData } from "@/lib/report/data";
 import { buildReportPdf } from "@/lib/report/pdf";
 import { requireFreshSession } from "@/lib/auth/session";
-import { parseRangeParam, sanitizeFilename, SEAL_WARNING_HEADER, SEAL_WARNING_MESSAGE } from "@/lib/report/params";
+import { missingSealResponse, parseRangeParam, sanitizeFilename } from "@/lib/report/params";
 import { loadCompanySealPng } from "@/lib/report/seal";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -25,6 +25,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     // (user.companyId) — never the target project's, though they coincide
     // here since assembleReportData already access-checked the project.
     const sealPng = await loadCompanySealPng(user.companyId);
+    if (!sealPng) return missingSealResponse();
 
     const pdf = await buildReportPdf({ data, generatedBy: user.name, sealPng });
     const filename = `${sanitizeFilename(data.project.name)}-reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -34,7 +35,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "X-Content-Type-Options": "nosniff",
-        ...(sealPng ? {} : { [SEAL_WARNING_HEADER]: SEAL_WARNING_MESSAGE }),
       },
     });
   } catch (e) {

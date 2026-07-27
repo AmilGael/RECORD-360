@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { Readable } from "node:stream";
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
@@ -8,6 +9,13 @@ const authMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/auth", () => ({
   auth: authMock,
+}));
+const PNG_1PX = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
+vi.mock("@/lib/storage", () => ({
+  storage: { put: vi.fn(), get: vi.fn(async () => Readable.from([PNG_1PX])) },
 }));
 
 import { GET } from "@/app/api/partidas/[id]/report/route";
@@ -21,7 +29,7 @@ let partidaAId = "";
 
 beforeAll(async () => {
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const companyA = await prisma.company.create({ data: { name: `Report Co A ${suffix}` } });
+  const companyA = await prisma.company.create({ data: { name: `Report Co A ${suffix}`, sealKey: "report-seal.png" } });
   const companyB = await prisma.company.create({ data: { name: `Report Co B ${suffix}` } });
   companyAId = companyA.id;
   companyBId = companyB.id;
@@ -107,14 +115,16 @@ describe("GET /api/partidas/[id]/report", () => {
     expect(res.status).toBe(401);
   });
 
-  it("sets the missing-seal warning header when company A has no seal on file (R3 WS11)", async () => {
+  it("blocks export when company A has no seal on file", async () => {
+    await prisma.company.update({ where: { id: companyAId }, data: { sealKey: null } });
     authMock.mockResolvedValue({ user: { id: managerAId, companyId: companyAId, role: "MANAGER" } });
 
     const res = await GET(new Request("http://test.local/api/partidas/" + partidaAId + "/report"), {
       params: Promise.resolve({ id: partidaAId }),
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(409);
     expect(res.headers.get(SEAL_WARNING_HEADER)).toBeTruthy();
+    expect(res.headers.get("content-type")).toContain("text/plain");
   });
 });

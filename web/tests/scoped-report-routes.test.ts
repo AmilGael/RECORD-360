@@ -7,8 +7,9 @@ import { SEAL_WARNING_HEADER } from "@/lib/report/params";
 
 const authMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({ auth: authMock }));
-// R3 WS11: company A has no seal on file (tests the missing-seal warning
-// header); company C (added below) does — served from this fake storage.
+// R3 WS11: companies A and C both seed WITH a seal on file, served from this
+// fake storage — without one every export route refuses with 409. The
+// mandatory-seal test below nulls A's sealKey to exercise that refusal.
 const PNG_1PX = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64",
@@ -25,7 +26,7 @@ let companyCId = "", managerCId = "", projectCId = "";
 
 beforeAll(async () => {
   const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  companyAId = (await prisma.company.create({ data: { name: `SR Co A ${s}` } })).id;
+  companyAId = (await prisma.company.create({ data: { name: `SR Co A ${s}`, sealKey: "seal-sr-a.png" } })).id;
   companyBId = (await prisma.company.create({ data: { name: `SR Co B ${s}` } })).id;
   managerAId = (await prisma.user.create({ data: { email: `sr-a-${s}@x.do`, name: "Mgr A", role: "MANAGER", companyId: companyAId, passwordHash: "x" } })).id;
   userBId = (await prisma.user.create({ data: { email: `sr-b-${s}@x.do`, name: "Usr B", role: "MANAGER", companyId: companyBId, passwordHash: "x" } })).id;
@@ -76,11 +77,12 @@ describe("scoped report routes", () => {
     expect((await call(projectReport, projectAId, "?from=not-a-date")).status).toBe(400);
   });
 
-  describe("R3 WS11 — missing-seal warning header", () => {
-    it("sets the warning header when the company has no seal on file", async () => {
+  describe("mandatory company seal", () => {
+    it("blocks export when the company has no seal on file", async () => {
+      await prisma.company.update({ where: { id: companyAId }, data: { sealKey: null } });
       authMock.mockResolvedValue({ user: { id: managerAId, companyId: companyAId, role: "MANAGER" } });
       const res = await call(projectReport, projectAId);
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(409);
       expect(res.headers.get(SEAL_WARNING_HEADER)).toBeTruthy();
     });
     it("omits the warning header when the company has a seal on file", async () => {

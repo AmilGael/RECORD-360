@@ -26,10 +26,10 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
   informes: InformeRow[];
   t: T;
   archetypes: ArchetypeDict;
-  /** R3 WS11 missing-seal policy: server-computed (company has no sealKey AND
-   *  the viewer is ADMIN/MANAGER). The X-Seal-Warning response header covers
-   *  API consumers; this is the human-visible surface, since the download
-   *  links are plain <a href> with no client-side fetch to read headers. */
+  /** R3 WS11 mandatory-seal policy: server-computed (company has no sealKey AND
+   *  the viewer is ADMIN/MANAGER). Without a seal every export route refuses
+   *  with 409, so this is the pre-emptive human-visible surface — the download
+   *  links are plain <a href> with no client-side fetch to read the response. */
   showNoSealNotice?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<InformeResult | null, FormData>(createInforme, null);

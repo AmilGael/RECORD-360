@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/db";
 import { projectAccessWhere } from "@/lib/authz/projects";
 import { buildReportPdf } from "@/lib/report/pdf";
-import { sanitizeFilename, SEAL_WARNING_HEADER, SEAL_WARNING_MESSAGE } from "@/lib/report/params";
+import { missingSealResponse, sanitizeFilename } from "@/lib/report/params";
 import { storage } from "@/lib/storage";
 import { requireFreshSession } from "@/lib/auth/session";
 import { ARCHETYPE_LABEL_ES } from "@/lib/informes/archetypes";
@@ -42,6 +42,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       keyToBuffer(requester?.signatureKey ?? null),
       keyToBuffer(informe.project.company.sealKey),
     ]);
+    if (!sealPng) return missingSealResponse();
 
     const pdf = await buildReportPdf({
       data: {
@@ -75,10 +76,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "X-Content-Type-Options": "nosniff",
-        // WS11 missing-seal policy: export proceeds regardless; this header
-        // is the minimal honest surface for a plain-<a> PDF download (see
-        // lib/report/params.ts).
-        ...(sealPng ? {} : { [SEAL_WARNING_HEADER]: SEAL_WARNING_MESSAGE }),
       },
     });
   } catch (e) {

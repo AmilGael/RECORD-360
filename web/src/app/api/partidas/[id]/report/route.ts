@@ -6,7 +6,7 @@ import { projectAccessWhere } from "@/lib/authz/projects";
 import { verifyChain } from "@/lib/registro/hash";
 import { toStored } from "@/lib/registro/map";
 import { requireFreshSession } from "@/lib/auth/session";
-import { parseRangeParam, sanitizeFilename, SEAL_WARNING_HEADER, SEAL_WARNING_MESSAGE } from "@/lib/report/params";
+import { missingSealResponse, parseRangeParam, sanitizeFilename } from "@/lib/report/params";
 import { loadCompanySealPng } from "@/lib/report/seal";
 import { stampSealOnEveryPage, PAGE_BOTTOM_RESERVED } from "@/lib/report/pdf";
 import QRCode from "qrcode";
@@ -111,6 +111,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
 
     // R3 WS11: company seal on every page, scoped to the caller's own tenant.
     const sealPng = await loadCompanySealPng(user.companyId);
+    if (!sealPng) return missingSealResponse();
 
     // Build PDF. bufferPages: true — without it, pdfkit flushes each page as
     // soon as the next starts and the page-number loop below (which
@@ -258,7 +259,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "X-Content-Type-Options": "nosniff",
-        ...(sealPng ? {} : { [SEAL_WARNING_HEADER]: SEAL_WARNING_MESSAGE }),
       },
     });
   } catch (error) {

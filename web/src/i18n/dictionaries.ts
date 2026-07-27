@@ -503,7 +503,7 @@ export const dictionaries = {
       reportSection: "Reportes del periodo",
       reportHint: "Reporte completo y verificable de lo registrado (sin IA).",
       downloadReport: "Descargar reporte de obra",
-      noSealNotice: "Los PDF se generan sin el sello de la empresa. Un administrador puede subirlo en el perfil de la empresa.",
+      noSealNotice: "No se puede exportar ningún PDF sin el sello de la empresa. Un administrador debe subirlo en el perfil de la empresa.",
     },
   },
   en: {
@@ -1005,7 +1005,7 @@ export const dictionaries = {
       reportSection: "Period reports",
       reportHint: "Complete, verifiable report of what was logged (no AI).",
       downloadReport: "Download site report",
-      noSealNotice: "PDFs are generated without the company seal. An admin can upload it in the company profile.",
+      noSealNotice: "No PDF can be exported without the company seal. An admin must upload it in the company profile.",
     },
   },
 };

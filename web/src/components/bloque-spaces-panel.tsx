@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { AttachmentType, Document, DocumentKind, Registro } from "@prisma/client";
 import type { Lang } from "@/i18n/dictionaries";
 import { formatTimestamp } from "@/lib/format/datetime";
+import type { ReactNode } from "react";
 import { PlanosUpload } from "@/components/planos-upload";
 import { SubmitButton } from "@/components/submit-button";
 import { resolveReminder } from "@/app/actions/reminders";
@@ -9,18 +10,20 @@ import { closeSegment, reopenSegment } from "@/app/actions/lifecycle";
 import { spaceHref, type PreservedParams } from "@/lib/project/space-links";
 
 type SegmentSummary = { id: string; name: string; progress: number; count: number; closedAt: Date | string | null };
-// WS4F (Phase A #2): "Indicadores" was removed — its core numbers (progress %,
-// partida count) duplicated the Analítica tab's per-bloque breakdown, and the
-// remaining block-scoped extras (overdue/no-reminder counts) were low-value
-// and not worth a dedicated nav entry. "Planos" stays: unlike the project-wide
-// Planos tab (which always uploads with no segmentId), this space is the only
-// place a document can be attached to a specific bloque — not a duplicate.
-type SpaceKey = "cuaderno" | "planos" | "levantamientos" | "ideas" | "media" | "recordatorios";
+// "Indicadores" was removed in WS4F: its core numbers (progress %, partida
+// count) duplicated the Analítica tab's per-bloque breakdown, and the remaining
+// block-scoped extras were not worth a nav entry. "Planos" stays: unlike the
+// project-wide Planos tab (which always uploads with no segmentId), this space
+// is the only place a document can be attached to a specific bloque — not a
+// duplicate. "Solicitudes" is block-scoped here: requests created from this
+// space are locked to the selected bloque.
+export type SpaceKey = "cuaderno" | "solicitudes" | "planos" | "levantamientos" | "ideas" | "media" | "recordatorios";
 type MediaItem = { id: string; url: string; fileType: AttachmentType; text: string | null; createdAt: Date };
 type NoteItem = Pick<Registro, "id" | "text" | "serverCreatedAt" | "hash" | "partidaId"> & { partidaName: string };
 
 const SPACES: { key: SpaceKey; label: string; kind?: DocumentKind }[] = [
   { key: "cuaderno", label: "Cuaderno" },
+  { key: "solicitudes", label: "Solicitudes" },
   { key: "planos", label: "Planos", kind: "PLANO" },
   { key: "levantamientos", label: "Levantamientos", kind: "LEVANTAMIENTO" },
   { key: "ideas", label: "Ideas", kind: "IDEA" },
@@ -29,7 +32,7 @@ const SPACES: { key: SpaceKey; label: string; kind?: DocumentKind }[] = [
 ];
 
 export function BloqueSpacesPanel({
-  projectId, segments, selectedSegmentId, selectedSpace, docs, notes, media, reminders, canUpload, canResolve, canManageLifecycle, preserved, lang, t,
+  projectId, segments, selectedSegmentId, selectedSpace, docs, notes, media, reminders, requestsContent, canUpload, canResolve, canManageLifecycle, preserved, lang, t,
 }: {
   projectId: string;
   segments: SegmentSummary[];
@@ -39,6 +42,7 @@ export function BloqueSpacesPanel({
   notes: NoteItem[];
   media: MediaItem[];
   reminders: NoteItem[];
+  requestsContent?: ReactNode;
   canUpload: boolean;
   canResolve: boolean;
   canManageLifecycle: boolean;
@@ -103,6 +107,7 @@ export function BloqueSpacesPanel({
           </>
         )}
         {space.key === "cuaderno" && <NotesList notes={notes} lang={lang} />}
+        {space.key === "solicitudes" && requestsContent}
         {space.key === "media" && <MediaGroups grouped={grouped} />}
         {space.key === "recordatorios" && <RemindersList reminders={reminders} lang={lang} canResolve={canResolve} resolveLabel={t.resolve} />}
       </div>
@@ -183,5 +188,3 @@ function MediaGroups({ grouped }: { grouped: Record<AttachmentType, MediaItem[]>
     </div>
   );
 }
-
-export type { SpaceKey };

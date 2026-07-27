@@ -18,11 +18,12 @@ const dotClass: Record<ChangeStatus, string> = { OPEN: "open", INTEGRATED: "merg
 const severityClass: Record<RequestSeverity, string> = { IMPORTANT: "is-important", CRITICAL: "is-critical" };
 
 export function CambiosList({
-  projectId, rows, partidas, lang, t,
+  projectId, rows, partidas, fixedSegment, lang, t,
 }: {
   projectId: string;
   rows: Row[];
   partidas: { id: string; name: string }[];
+  fixedSegment?: { id: string; name: string };
   lang: Lang;
   t: ListT;
 }) {
@@ -30,7 +31,7 @@ export function CambiosList({
   const severityLabel = (s: RequestSeverity) => (s === "CRITICAL" ? t.severityCritical : t.severityImportant);
   return (
     <div>
-      <CambiosCreate projectId={projectId} segments={partidas} t={t} />
+      <CambiosCreate projectId={projectId} segments={partidas} fixedSegment={fixedSegment} t={t} />
       <div className="repo-list">
         {rows.length === 0 && <div className="repo-list-empty">{t.empty}</div>}
         {rows.map((r) => (

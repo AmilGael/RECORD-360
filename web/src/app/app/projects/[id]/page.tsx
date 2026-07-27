@@ -45,6 +45,18 @@ export default async function ProjectPage({
   const isOwner = sessionUser.role === "ADMIN"; // delete/recycle is ADMIN-only
   const { lang, t } = await getDict();
   const P = t.project;
+  const requestListT = {
+    empty: t.changes.empty, states: t.changes.states,
+    new: t.changes.new, fieldTitle: t.changes.fieldTitle, fieldDescription: t.changes.fieldDescription,
+    fieldPartidas: t.changes.fieldPartidas,
+    fieldReminder: t.changes.fieldReminder, fieldReminderPlaceholder: t.changes.fieldReminderPlaceholder,
+    evidence: t.changes.evidence,
+    kindLabel: t.requests.kindLabel, kindChange: t.requests.kindChange, kindAlert: t.requests.kindAlert,
+    severityLabel: t.requests.severityLabel, severityImportant: t.requests.severityImportant, severityCritical: t.requests.severityCritical,
+    gpsAcquiring: t.requests.gpsAcquiring, gpsAcquired: t.requests.gpsAcquired, gpsDenied: t.requests.gpsDenied,
+    gpsUnavailable: t.requests.gpsUnavailable, gpsTimeout: t.requests.gpsTimeout, gpsInvalid: t.requests.gpsInvalid,
+    gpsRetry: t.requests.gpsRetry,
+  };
 
   // Tenant scoping: only return the project if it belongs to the caller's company.
   const project = await prisma.project.findFirstOrThrow({
@@ -102,7 +114,7 @@ export default async function ProjectPage({
   const activeSegment = inBloqueView && blockParam !== UNGROUPED_FILTER
     ? project.segments.find((s) => s.id === blockParam) ?? null
     : null;
-  const selectedSpace = (["cuaderno", "planos", "levantamientos", "ideas", "media", "recordatorios"].includes(String(space))
+  const selectedSpace = (["cuaderno", "solicitudes", "planos", "levantamientos", "ideas", "media", "recordatorios"].includes(String(space))
     ? String(space)
     : "cuaderno") as SpaceKey;
   const spaceKind: Partial<Record<SpaceKey, DocumentKind>> = {
@@ -181,6 +193,18 @@ export default async function ProjectPage({
         segmentCount: c._count.segments || c._count.partidas,
       }))
     : [];
+  const blockChangeRows = activeTab === "code" && inBloqueView && selectedSpace === "solicitudes" && selectedSpaceBlock
+    ? (await prisma.changeRequest.findMany({
+        where: { projectId: id, segments: { some: { segmentId: selectedSpaceBlock } } },
+        orderBy: { createdAt: "desc" },
+        include: { _count: { select: { partidas: true, segments: true } } },
+      })).map((c) => ({
+        id: c.id, code: c.code, title: c.title, status: c.status,
+        kind: c.kind, severity: c.severity,
+        createdAt: c.createdAt, seal: c.seal,
+        segmentCount: c._count.segments || c._count.partidas,
+      }))
+    : [];
 
   const docs = activeTab === "planos"
     ? await prisma.document.findMany({ where: { projectId: id, kind: { in: ["PLANO", "PLANO_ACTUALIZADO"] } }, orderBy: { createdAt: "desc" } })
@@ -190,6 +214,8 @@ export default async function ProjectPage({
         where: {
           projectId: id,
           segmentId: selectedSpaceBlock,
+          // The Planos space lists revisions alongside originals; the other
+          // kind-backed spaces map 1:1 to a single DocumentKind.
           kind: selectedSpace === "planos"
             ? { in: ["PLANO", "PLANO_ACTUALIZADO"] }
             : spaceKind[selectedSpace],
@@ -449,18 +475,7 @@ export default async function ProjectPage({
             rows={changeRows}
             partidas={segmentOptions}
             lang={lang}
-            t={{
-              empty: t.changes.empty, states: t.changes.states,
-              new: t.changes.new, fieldTitle: t.changes.fieldTitle, fieldDescription: t.changes.fieldDescription,
-              fieldPartidas: t.changes.fieldPartidas,
-              fieldReminder: t.changes.fieldReminder, fieldReminderPlaceholder: t.changes.fieldReminderPlaceholder,
-              evidence: t.changes.evidence,
-              kindLabel: t.requests.kindLabel, kindChange: t.requests.kindChange, kindAlert: t.requests.kindAlert,
-              severityLabel: t.requests.severityLabel, severityImportant: t.requests.severityImportant, severityCritical: t.requests.severityCritical,
-              gpsAcquiring: t.requests.gpsAcquiring, gpsAcquired: t.requests.gpsAcquired, gpsDenied: t.requests.gpsDenied,
-              gpsUnavailable: t.requests.gpsUnavailable, gpsTimeout: t.requests.gpsTimeout, gpsInvalid: t.requests.gpsInvalid,
-              gpsRetry: t.requests.gpsRetry,
-            }}
+            t={requestListT}
           />
         </div>
       ) : activeTab === "planos" ? (
@@ -555,6 +570,19 @@ export default async function ProjectPage({
             notes={spaceNotes}
             media={spaceMedia}
             reminders={spaceReminders}
+            requestsContent={selectedSpaceBlock ? (
+              <CambiosList
+                projectId={project.id}
+                rows={blockChangeRows}
+                partidas={segmentOptions}
+                fixedSegment={{
+                  id: selectedSpaceBlock,
+                  name: segmentOptions.find((s) => s.id === selectedSpaceBlock)?.name ?? "",
+                }}
+                lang={lang}
+                t={requestListT}
+              />
+            ) : null}
             canUpload={canEditStructure}
             canResolve={canEditStructure}
             canManageLifecycle={canEditStructure}
