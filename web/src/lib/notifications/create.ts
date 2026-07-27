@@ -1,9 +1,13 @@
+import type { NotificationSeverity } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 export type NewNotification = {
   companyId: string;
   userId: string;
   type: string;
+  eventKey?: string | null;
+  severity?: NotificationSeverity | null;
+  projectId?: string | null;
   title: string;
   body?: string | null;
   link?: string | null;
