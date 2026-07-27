@@ -28,7 +28,15 @@ export async function updatePartidaProgress(formData: FormData) {
   }
   await requireProjectStructureAccess({ id: user.id, companyId: user.companyId, role: user.role }, partida.projectId);
 
-  await prisma.partida.update({ where: { id: partida.id }, data: { progressPct } });
+  // Atomic guarded update: the pre-check above already rejected a concluded
+  // partida, but that read is not authoritative against a concurrent Conclude
+  // racing this write. The WHERE re-checks completedAt under the row lock, so
+  // if a concurrent conclude wins, this update matches 0 rows and must not
+  // silently overwrite progressPct with a stale 100.
+  const res = await prisma.partida.updateMany({ where: { id: partida.id, completedAt: null }, data: { progressPct } });
+  if (res.count === 0) {
+    throw new Error("La partida está concluida: reábrela antes de editar el avance manualmente.");
+  }
   revalidatePath(`/app/projects/${partida.projectId}`);
   revalidatePath(`/app/partidas/${partida.id}`);
   revalidatePath("/app");

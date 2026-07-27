@@ -362,7 +362,7 @@ export default async function ProjectPage({
   const deleterMap = new Map(deleters.map((u) => [u.id, u.name]));
   const assignableUsers = isAdmin
     ? await prisma.user.findMany({
-        where: { companyId, role: { in: ["SUPERVISOR", "RESIDENT"] } },
+        where: { companyId, role: { in: ["SUPERVISOR", "RESIDENT"] }, disabledAt: null },
         orderBy: [{ role: "asc" }, { name: "asc" }],
         select: { id: true, name: true, email: true, role: true },
       })

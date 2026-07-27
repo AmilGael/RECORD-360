@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/db";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -73,20 +74,35 @@ export async function createPartida(formData: FormData) {
   await requireProjectStructureAccess(user, projectId);
   const { id: segmentId } = await resolveSegment(projectId, parseSegment(formData.get("segment")));
   // Lifecycle (WS4C): a closed block rejects new partidas — server-enforced,
-  // independent of whatever the UI shows.
+  // independent of whatever the UI shows. This pre-check is only a friendly,
+  // fast-path error message; the atomic guard below is what actually enforces
+  // it against a concurrent closeSegment (SERIALIZABLE closeSegment's SSI does
+  // not see a plain read-committed insert from this action, so the create
+  // itself must re-check closedAt atomically at insert time).
   if (segmentId) {
     const segment = await prisma.segment.findUnique({ where: { id: segmentId }, select: { closedAt: true } });
     if (segment?.closedAt) throw new Error("El bloque está cerrado: reábrelo para crear partidas.");
   }
   const name = String(formData.get("name"));
-  const partida = await prisma.partida.create({ data: { projectId, name, segmentId } });
+  const partidaId = randomUUID();
+  if (segmentId) {
+    const inserted = await prisma.$executeRaw`
+      INSERT INTO "Partida" ("id", "projectId", "name", "segmentId")
+      SELECT ${partidaId}, ${projectId}, ${name}, ${segmentId}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM "Segment" s WHERE s."id" = ${segmentId} AND s."closedAt" IS NOT NULL
+      )`;
+    if (inserted === 0) throw new Error("El bloque está cerrado: reábrelo para crear partidas.");
+  } else {
+    await prisma.partida.create({ data: { id: partidaId, projectId, name, segmentId } });
+  }
   await notifyEvent({
     key: "partida.created",
     companyId: user.companyId,
     actorId: user.id,
     projectId,
     title: `Nueva partida: ${name}`,
-    link: `/app/partidas/${partida.id}`,
+    link: `/app/partidas/${partidaId}`,
   });
   revalidatePath(`/app/projects/${projectId}`);
   revalidatePath("/app");

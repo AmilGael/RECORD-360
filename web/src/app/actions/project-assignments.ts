@@ -26,7 +26,7 @@ export async function assignProjectUser(formData: FormData) {
 
   const [project, assignee] = await Promise.all([
     prisma.project.findFirst({ where: { id: projectId, companyId: user.companyId }, select: { id: true } }),
-    prisma.user.findFirst({ where: { id: userId, companyId: user.companyId }, select: { id: true, role: true, name: true } }),
+    prisma.user.findFirst({ where: { id: userId, companyId: user.companyId, disabledAt: null }, select: { id: true, role: true, name: true } }),
   ]);
   if (!project || !assignee) throw new Error("Forbidden");
   if (assignee.role !== role) {

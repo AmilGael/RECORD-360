@@ -7,6 +7,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { assignProjectUser } from "@/app/actions/project-assignments";
+import { archiveUser } from "@/app/actions/admin";
 
 let companyId = "";
 let adminId = "";
@@ -59,5 +60,22 @@ describe("assignProjectUser", () => {
   it("explains a mismatched role instead of generic Forbidden", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
     await expect(assignProjectUser(fd(residentId, "SUPERVISOR"))).rejects.toThrow(/rol global/i);
+  });
+
+  it("rejects assigning an archived user and creates no ProjectAssignment", async () => {
+    const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const archived = await prisma.user.create({
+      data: { email: `assign-archived-${s}@x.do`, name: "Archived", role: "RESIDENT", companyId, passwordHash: "x" },
+    });
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+
+    const archiveFd = new FormData();
+    archiveFd.set("userId", archived.id);
+    await archiveUser(archiveFd);
+
+    await expect(assignProjectUser(fd(archived.id, "RESIDENT"))).rejects.toThrow(/Forbidden/);
+    const assignment = await prisma.projectAssignment.findFirst({ where: { projectId, userId: archived.id } });
+    expect(assignment).toBeNull();
+    await prisma.user.delete({ where: { id: archived.id } });
   });
 });

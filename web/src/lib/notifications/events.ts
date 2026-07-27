@@ -37,6 +37,8 @@ export const LEGACY_TYPE_ALIASES: Record<string, EventKey> = {
 const DEFAULT_SEVERITY: Partial<Record<EventKey, NotificationSeverity>> = {
   "partida.completed": NotificationSeverity.SUCCESS,
   "block.closed": NotificationSeverity.SUCCESS,
+  "partida.reopened": NotificationSeverity.SUCCESS,
+  "block.reopened": NotificationSeverity.SUCCESS,
   "request.resolved": NotificationSeverity.SUCCESS,
   "request.rejected": NotificationSeverity.SUCCESS,
   "reminder.resolved": NotificationSeverity.SUCCESS,
