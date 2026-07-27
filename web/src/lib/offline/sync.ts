@@ -29,13 +29,26 @@ export async function syncQueue(deps: SyncDeps): Promise<void> {
         if (res.ok) {
           await deps.queue.remove(item.id);
         } else if (res.status === 401) {
-          await deps.queue.update(item.id, { status: "error", error: "Sesión expirada. Inicia sesión y reintenta." });
+          // Session expired. Not the user's fault and not fixable by retrying
+          // the same request — the offline provider already re-runs syncQueue
+          // on the next login/app load, so this clears itself automatically.
+          await deps.queue.update(item.id, { status: "blocked", error: "Sesión expirada. Inicia sesión y vuelve a intentar; se sincronizará automáticamente." });
+        } else if (res.status === 403) {
+          // Terminal: the caller lost access to the project. Retrying changes
+          // nothing until an admin restores access, so don't auto-retry.
+          await deps.queue.update(item.id, { status: "error", error: "Sin acceso al proyecto." });
+        } else if (res.status >= 500) {
+          // Server-side failure — transient by nature, keep retrying.
+          await deps.queue.update(item.id, { status: "pending", attempts: item.attempts + 1 });
         } else {
+          // 400 and other 4xx: the server rejected the payload itself
+          // (validation). Terminal — surface the server's own message.
           let msg = "No se pudo registrar.";
           try { msg = (await res.json())?.error ?? msg; } catch {}
           await deps.queue.update(item.id, { status: "error", error: msg });
         }
       } catch {
+        // Network failure (offline, DNS, timeout…) — retryable.
         await deps.queue.update(item.id, { status: "pending", attempts: item.attempts + 1 });
       }
       deps.onChange?.();

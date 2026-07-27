@@ -53,13 +53,40 @@ describe("POST /api/offline/registros", () => {
     expect(rec?.text).toBe("hola");
     expect(rec?.clientCapturedAt?.toISOString()).toBe("2026-06-01T14:03:00.000Z");
   });
-  it("rejects past-dated reminderDueAt values on the offline API", async () => {
+  it("rejects past-dated reminderDueAt values on the offline API when no clientCapturedAt anchors it", async () => {
     asUser();
     const res = await POST(req({
       partidaId,
       idempotencyKey: "k-reminder",
       text: "reminder",
       reminderDueAt: "2026-06-01T14:03:00.000Z",
+    }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/Recordatorio/i);
+  });
+  it("accepts a now-past reminderDueAt that was still valid at clientCapturedAt (R3 WS10 offline policy)", async () => {
+    asUser();
+    // Captured at 2026-06-01T14:00:00Z with a reminder 3 minutes later — valid
+    // at capture time, but both are long past "now" by the time this test runs.
+    const res = await POST(req({
+      partidaId,
+      idempotencyKey: "k-reminder-offline",
+      text: "reminder offline",
+      clientCapturedAt: "2026-06-01T14:00:00.000Z",
+      reminderDueAt: "2026-06-01T14:03:00.000Z",
+    }));
+    expect(res.status).toBe(200);
+    const rec = await prisma.registro.findFirst({ where: { idempotencyKey: "k-reminder-offline" } });
+    expect(rec?.reminderDueAt?.toISOString()).toBe("2026-06-01T14:03:00.000Z");
+  });
+  it("still rejects an offline reminderDueAt that was ALREADY past clientCapturedAt - 60s", async () => {
+    asUser();
+    const res = await POST(req({
+      partidaId,
+      idempotencyKey: "k-reminder-bad-offline",
+      text: "reminder bad offline",
+      clientCapturedAt: "2026-06-01T14:00:00.000Z",
+      reminderDueAt: "2026-06-01T13:00:00.000Z",
     }));
     expect(res.status).toBe(400);
     expect((await res.json()).error).toMatch(/Recordatorio/i);

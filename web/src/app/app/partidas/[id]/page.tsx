@@ -113,8 +113,11 @@ export default async function PartidaPage({
           partidaId={partida.id}
           t={{ verify: t.partida.verify, verifyOk: t.partida.verifyOk, verifyBroken: t.partida.verifyBroken, verifyError: t.partida.verifyError }}
         />
+        {/* R3 WS11 (Agent 4): label swap only — dict key exports.partidaPdf.
+            Filename/content-type/route are unchanged. This is Agent 1's file;
+            flagged per the R3 dispatch brief (single-line label change only). */}
         <a href={`/api/partidas/${partida.id}/report`} className="btn btn-ghost" download>
-          {t.partida.exportPdf}
+          {t.exports.partidaPdf}
         </a>
       </div>
       {partida.completedAt ? (
@@ -150,7 +153,7 @@ export default async function PartidaPage({
       <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
       <PendingEntries
         partidaId={partida.id}
-        t={{ pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, errorTitle: t.offlineCapture.errorTitle }}
+        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle }}
       />
       {registros.map((r) => (
         <RecordCard

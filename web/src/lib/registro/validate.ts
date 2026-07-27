@@ -18,7 +18,10 @@ export function parseProgressPct(raw: unknown): number | null {
 }
 
 /** Parse an optional reminder timestamp. Empty → null; otherwise the date must
- * exist and be in the future (with a small skew buffer for offline capture). */
+ * exist and be in the future (with a small skew buffer for offline capture).
+ * This is the ONLINE path's rule — it stays strict. Offline captures that were
+ * valid at the moment they were taken go through parseOfflineReminderDueAt
+ * instead (see R3 WS10 contracts §5). */
 export function parseReminderDueAt(raw: unknown): Date | null {
   if (raw === null || raw === undefined) return null;
   const v = String(raw).trim();
@@ -28,6 +31,39 @@ export function parseReminderDueAt(raw: unknown): Date | null {
     throw new Error("Recordatorio inválido.");
   }
   if (d.getTime() < Date.now() - 60 * 1000) {
+    throw new Error("El recordatorio debe ser una fecha futura.");
+  }
+  return d;
+}
+
+/**
+ * Parse a reminder timestamp coming from the offline sync route. An offline
+ * capture can sit in the device's queue past its own reminder time before it
+ * ever reaches the server — that is expected, not an error. The rule (R3 WS10
+ * contracts §5): accept a `reminderDueAt` that is now in the past PROVIDED it
+ * was valid at the moment of capture, i.e. `reminderDueAt >= clientCapturedAt -
+ * 60s`. The synced registro is then simply an already-overdue reminder (it
+ * will show up in the pending queue as overdue) — this does NOT relax the
+ * online path (`parseReminderDueAt` above), which still requires a future date
+ * relative to "now".
+ */
+export function parseOfflineReminderDueAt(raw: unknown, clientCapturedAt: Date | null): Date | null {
+  if (raw === null || raw === undefined) return null;
+  const v = String(raw).trim();
+  if (v === "") return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) {
+    throw new Error("Recordatorio inválido.");
+  }
+  const SKEW_MS = 60 * 1000;
+  if (clientCapturedAt && !Number.isNaN(clientCapturedAt.getTime())) {
+    if (d.getTime() >= clientCapturedAt.getTime() - SKEW_MS) return d;
+    throw new Error("El recordatorio debe ser una fecha futura.");
+  }
+  // No (valid) clientCapturedAt to anchor against — fall back to the strict
+  // online rule so a malformed/omitted capture time can't be used to sneak an
+  // arbitrarily old reminder past validation.
+  if (d.getTime() < Date.now() - SKEW_MS) {
     throw new Error("El recordatorio debe ser una fecha futura.");
   }
   return d;

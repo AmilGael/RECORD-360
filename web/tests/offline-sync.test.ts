@@ -25,17 +25,37 @@ describe("syncQueue", () => {
     const [it0] = await q.all();
     expect(it0.status).toBe("pending"); expect(it0.attempts).toBe(1);
   });
-  it("marks error (no retry) on 4xx", async () => {
+  it("marks error (terminal, no retry) on 400 with the server's message", async () => {
     await q.enqueue(item("a"));
     const bad = () => Promise.resolve(new Response(JSON.stringify({ error: "malo" }), { status: 400 }));
     await syncQueue({ queue: q, fetchFn: bad, isOnline: () => true });
-    expect((await q.all())[0].status).toBe("error");
+    const [it0] = await q.all();
+    expect(it0.status).toBe("error");
+    expect(it0.error).toBe("malo");
   });
-  it("marks 'sesión expirada' on 401", async () => {
+  it("marks 'blocked' (not terminal error) on 401, with a session-expired message", async () => {
     await q.enqueue(item("a"));
     const un = () => Promise.resolve(new Response("", { status: 401 }));
     await syncQueue({ queue: q, fetchFn: un, isOnline: () => true });
-    expect((await q.all())[0].error).toMatch(/sesión/i);
+    const [it0] = await q.all();
+    expect(it0.status).toBe("blocked");
+    expect(it0.error).toMatch(/sesión/i);
+  });
+  it("marks terminal error 'sin acceso' on 403", async () => {
+    await q.enqueue(item("a"));
+    const forbidden = () => Promise.resolve(new Response("", { status: 403 }));
+    await syncQueue({ queue: q, fetchFn: forbidden, isOnline: () => true });
+    const [it0] = await q.all();
+    expect(it0.status).toBe("error");
+    expect(it0.error).toMatch(/sin acceso/i);
+  });
+  it("keeps + counts attempts as 'pending' on 5xx (retryable, not terminal)", async () => {
+    await q.enqueue(item("a"));
+    const down = () => Promise.resolve(new Response("", { status: 503 }));
+    await syncQueue({ queue: q, fetchFn: down, isOnline: () => true });
+    const [it0] = await q.all();
+    expect(it0.status).toBe("pending");
+    expect(it0.attempts).toBe(1);
   });
   it("does nothing when offline", async () => {
     await q.enqueue(item("a"));
