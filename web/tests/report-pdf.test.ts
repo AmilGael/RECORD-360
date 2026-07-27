@@ -97,6 +97,32 @@ describe("buildReportPdf", () => {
     expect(sealImageDelta % pageCount).toBe(0);
     expect(sealImageDelta / pageCount).toBeGreaterThan(0);
   });
+  it("reserves the bottom band: a worst-case very long paragraph page-breaks above the seal zone instead of painting over it", async () => {
+    // One giant unbroken paragraph (review IMPORTANT 1's worst case): with
+    // only the old symmetric 50px bottom margin, its wrapped lines would flow
+    // down into the seal band (y >= height-140) and paint over the stamp. The
+    // asymmetric bottom margin (PAGE_BOTTOM_RESERVED) makes pdfkit page-break
+    // instead — observable as page-count GROWTH, with the per-page seal
+    // relationship still exact.
+    const longText = Array.from({ length: 120 }, (_, i) => `frase ${i} del parrafo continuo sin cortes que obliga a saltar de pagina`).join(" ");
+    const worstCase: ReportData = {
+      ...data,
+      registros: [
+        ...manyRegistrosData(20).registros,
+        { partidaName: "Zapatas", serverCreatedAt: new Date("2026-01-30T10:00:00Z"), authorName: "Autor Largo",
+          category: null, locationLabel: null, gpsLat: null, gpsLng: null,
+          text: longText, hash: "hash-long", attachmentCount: 0 },
+      ],
+    };
+    const withSeal = await buildReportPdf({ data: worstCase, generatedBy: "Gerente Test", sealPng: PNG_1PX });
+    const without = await buildReportPdf({ data: worstCase, generatedBy: "Gerente Test" });
+    const pageCount = countPdfPageObjects(withSeal);
+    expect(pageCount).toBeGreaterThanOrEqual(2); // the long paragraph forced growth past one page
+    expect(countPdfPageObjects(without)).toBe(pageCount);
+    const sealImageDelta = countPdfImageObjects(withSeal) - countPdfImageObjects(without);
+    expect(sealImageDelta % pageCount).toBe(0);
+    expect(sealImageDelta / pageCount).toBeGreaterThan(0);
+  });
   it("embeds the seal as (a) distinct image object(s) from the firma on the informe path — not confused or deduped together", async () => {
     const firmaOnly = await buildReportPdf({
       data, generatedBy: "Gerente Test",

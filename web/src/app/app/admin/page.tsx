@@ -203,7 +203,7 @@ export default async function AdminPage() {
 
       {/* Archived members (WS2A) — collapsed by default, restore-only actions */}
       {archivedUsers.length > 0 && (
-        <details className="team-section archived-section">
+        <details className="team-section">
           <summary className="team-section-head" style={{ cursor: "pointer" }}>
             {A.archivedTitle} — {archivedUsers.length}
           </summary>

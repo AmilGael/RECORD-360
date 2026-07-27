@@ -1,5 +1,6 @@
 import type { ReportData } from "@/lib/report/data";
 import type { InformeArchetype } from "@prisma/client";
+import { ARCHETYPE_LABEL_ES } from "./archetypes";
 
 /**
  * Fixed report format (spec R2.2, extended R3 WS7): every informe shares the
@@ -12,12 +13,6 @@ const BASE_RULES = `Eres el redactor tecnico de Raphel, la bitacora digital inal
 Redactas informes en espanol, sobrios y precisos, SOLO con los datos proporcionados — nunca inventes hechos, cifras ni fechas.
 Markdown simple, sin tablas ni enlaces ni emojis. Si una seccion no tiene datos, escribe "Sin novedades en el periodo."
 Maximo 900 palabras. No incluyas encabezado de obra ni firmas: el PDF los agrega.`;
-
-const ARCHETYPE_LABEL: Record<InformeArchetype, string> = {
-  OWNER: "Propietario",
-  SENIOR_MANAGEMENT: "Alta gerencia",
-  PERSONAL_FEEDBACK: "Retroalimentacion personal",
-};
 
 /** Section structure + emphasis, each materially different per audience (WS7). */
 const ARCHETYPE_SPEC: Record<InformeArchetype, { sections: string; emphasis: string }> = {
@@ -52,7 +47,7 @@ const ARCHETYPE_SPEC: Record<InformeArchetype, { sections: string; emphasis: str
 export function buildInformeSystem(archetype: InformeArchetype): string {
   const spec = ARCHETYPE_SPEC[archetype];
   return `${BASE_RULES}
-AUDIENCIA DEL INFORME: ${ARCHETYPE_LABEL[archetype]}
+AUDIENCIA DEL INFORME: ${ARCHETYPE_LABEL_ES[archetype]}
 Formato OBLIGATORIO (usa exactamente estos encabezados, en este orden):
 ${spec.sections}
 ${spec.emphasis}`;

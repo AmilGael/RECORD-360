@@ -5,10 +5,9 @@ import { assembleReportData, type ReportScope } from "@/lib/report/data";
 import { buildInformeSystem, buildInformeUserMessage } from "@/lib/informes/prompt";
 import { generateInformeContent, INFORME_MODEL } from "@/lib/informes/client";
 import { requireFreshSession } from "@/lib/auth/session";
-import { InformeArchetype } from "@prisma/client";
+import type { InformeArchetype } from "@prisma/client";
+import { ARCHETYPE_VALUES } from "@/lib/informes/archetypes";
 import Anthropic from "@anthropic-ai/sdk";
-
-const VALID_ARCHETYPES: InformeArchetype[] = [InformeArchetype.OWNER, InformeArchetype.SENIOR_MANAGEMENT, InformeArchetype.PERSONAL_FEEDBACK];
 
 export type InformeResult =
   | { ok: true; informeId: string }
@@ -45,7 +44,7 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     // WS7: audience archetype is required (no default/preselect) — it drives
     // both the AI prompt's section structure and the PDF's audience label.
     const archetypeRaw = String(formData.get("archetype") ?? "");
-    if (!VALID_ARCHETYPES.includes(archetypeRaw as InformeArchetype)) {
+    if (!ARCHETYPE_VALUES.includes(archetypeRaw as InformeArchetype)) {
       return { ok: false, error: "Selecciona la audiencia del informe." };
     }
     const archetype = archetypeRaw as InformeArchetype;

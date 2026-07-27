@@ -21,6 +21,20 @@ const SEAL_SIZE = 70;
 const SEAL_MARGIN_RIGHT = 50;
 const SEAL_BOTTOM_OFFSET = 130; // top edge this far above the page bottom
 
+// Reserved footer band (review IMPORTANT 1): the seal occupies
+// y ∈ [height-130, height-60] inside the default text column, and flowing
+// body text would otherwise reach down to the old 50px bottom margin and
+// paint OVER a seal stamped earlier on the same page. Reserving the band via
+// an asymmetric BOTTOM margin makes pdfkit page-break body text above it —
+// the seal and the page-number line (explicit-y writes ignore margins) then
+// live alone in the band. Used as `margins.bottom` by BOTH pdf builders
+// (this file and the partida report route).
+export const PAGE_BOTTOM_RESERVED = 140;
+// The informe footer block (rule + "Solicitado por" + firma image) needs
+// ~100px of writable space to stay together on one page; the addPage guard
+// below fires when less than that remains above the reserved band.
+const INFORME_FOOTER_BLOCK = 100;
+
 export function sanitizePdfText(s: string): string {
   return s
     .normalize("NFKD")
@@ -95,7 +109,15 @@ export async function buildReportPdf(opts: {
   // written) throws "out of bounds" on any report spanning more pages than
   // pdfkit's internal window. Pre-existing latent bug (Phase A finding) —
   // it never surfaced because no prior test produced a multi-page report.
-  const doc = new PDFDocument({ margin: 50, size: "A4", autoFirstPage: true, bufferPages: true });
+  // Asymmetric bottom margin: reserves the seal/page-number band so flowing
+  // body text page-breaks above it instead of painting over the seal (see
+  // PAGE_BOTTOM_RESERVED).
+  const doc = new PDFDocument({
+    margins: { top: 50, left: 50, right: 50, bottom: PAGE_BOTTOM_RESERVED },
+    size: "A4",
+    autoFirstPage: true,
+    bufferPages: true,
+  });
   const done = collect(doc);
 
   stampSealOnEveryPage(doc, sealPng);
@@ -142,8 +164,9 @@ export async function buildReportPdf(opts: {
     // ── Footer block: requester + firma (bottom-left, in-flow). The company
     // seal is NOT repeated here — it is already stamped fixed bottom-right on
     // every page (stampSealOnEveryPage above), so it isn't duplicated on the
-    // last page.
-    if (doc.y > doc.page.height - 180) doc.addPage();
+    // last page. The guard keeps the whole block on one page: writable space
+    // now ends at height - PAGE_BOTTOM_RESERVED (reserved seal band).
+    if (doc.y > doc.page.height - (PAGE_BOTTOM_RESERVED + INFORME_FOOTER_BLOCK)) doc.addPage();
     doc.moveDown(1.2);
     rule(doc);
     doc.moveDown(0.6);

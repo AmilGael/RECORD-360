@@ -6,12 +6,7 @@ import { buildReportPdf } from "@/lib/report/pdf";
 import { sanitizeFilename, SEAL_WARNING_HEADER, SEAL_WARNING_MESSAGE } from "@/lib/report/params";
 import { storage } from "@/lib/storage";
 import { requireFreshSession } from "@/lib/auth/session";
-
-const ARCHETYPE_LABEL_ES: Record<string, string> = {
-  OWNER: "Propietario",
-  SENIOR_MANAGEMENT: "Alta gerencia",
-  PERSONAL_FEEDBACK: "Retroalimentacion personal",
-};
+import { ARCHETYPE_LABEL_ES } from "@/lib/informes/archetypes";
 
 async function keyToBuffer(key: string | null): Promise<Buffer | null> {
   if (!key) return null;
@@ -69,7 +64,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         contentMd: informe.contentMd,
         requesterName: requester?.name ?? "—",
         firmaPng,
-        archetypeLabel: informe.archetype ? ARCHETYPE_LABEL_ES[informe.archetype] ?? null : null,
+        archetypeLabel: informe.archetype ? ARCHETYPE_LABEL_ES[informe.archetype] : null,
       },
     });
 

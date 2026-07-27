@@ -323,6 +323,12 @@ export default async function ProjectPage({
     ? await prisma.user.findMany({ where: { id: { in: informeRequesterIds }, companyId }, select: { id: true, name: true } })
     : [];
   const informeRequesterMap = new Map(informeRequesters.map((u) => [u.id, u.name]));
+  // R3 WS11 missing-seal notice: server-computed, ADMIN/MANAGER only (isAdmin
+  // here = hasCompanyWideAccess), shown on the informes tab where the PDF
+  // download links live.
+  const companyHasSeal = activeTab === "informes"
+    ? Boolean((await prisma.company.findUnique({ where: { id: companyId }, select: { sealKey: true } }))?.sealKey)
+    : true;
 
   const selected = selectedId
     ? await prisma.partida.findFirst({
@@ -493,6 +499,7 @@ export default async function ProjectPage({
           }))}
           t={t.informes}
           archetypes={t.archetypes}
+          showNoSealNotice={isAdmin && !companyHasSeal}
         />
       ) : inBloqueView ? (
         <>

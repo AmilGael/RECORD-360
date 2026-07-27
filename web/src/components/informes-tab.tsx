@@ -14,18 +14,23 @@ type T = {
   scope: string; scopeProject: string; scopeSegment: string; scopePartida: string;
   from: string; to: string; generate: string; generating: string;
   missingFirma: string; goToEquipo: string; empty: string; requestedBy: string; downloadPdf: string;
-  reportSection: string; reportHint: string; downloadReport: string;
+  reportSection: string; reportHint: string; downloadReport: string; noSealNotice: string;
 };
 
 const ARCHETYPE_OPTIONS = ["OWNER", "SENIOR_MANAGEMENT", "PERSONAL_FEEDBACK"] as const;
 
-export function InformesTab({ projectId, segments, partidas, informes, t, archetypes }: {
+export function InformesTab({ projectId, segments, partidas, informes, t, archetypes, showNoSealNotice = false }: {
   projectId: string;
   segments: Option[];
   partidas: Option[];
   informes: InformeRow[];
   t: T;
   archetypes: ArchetypeDict;
+  /** R3 WS11 missing-seal policy: server-computed (company has no sealKey AND
+   *  the viewer is ADMIN/MANAGER). The X-Seal-Warning response header covers
+   *  API consumers; this is the human-visible surface, since the download
+   *  links are plain <a href> with no client-side fetch to read headers. */
+  showNoSealNotice?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<InformeResult | null, FormData>(createInforme, null);
   const archetypeLabels: Record<(typeof ARCHETYPE_OPTIONS)[number], string> = {
@@ -41,6 +46,9 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
         <a href={`/api/projects/${projectId}/report`} className="btn btn-ghost" style={{ fontSize: "0.8rem", textDecoration: "none" }}>
           <FileText size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{t.downloadReport}
         </a>
+        {showNoSealNotice && (
+          <p className="mono text-steel" role="note" style={{ fontSize: "0.7rem", margin: "10px 0 0" }}>{t.noSealNotice}</p>
+        )}
       </div>
 
       {/* AI generator */}
