@@ -19,6 +19,16 @@ describe("security headers", () => {
     expect(byKey["X-Content-Type-Options"]).toBe("nosniff");
   });
 
+  it("allows self microphone + geolocation (dictation and GPS capture need them)", () => {
+    expect(byKey["Permissions-Policy"]).toContain("microphone=(self)");
+    expect(byKey["Permissions-Policy"]).toContain("geolocation=(self)");
+  });
+
+  it("keeps unsafe-eval out of the CSP outside development", () => {
+    // vitest runs with NODE_ENV=test, same branch production takes.
+    expect(byKey["Content-Security-Policy"]).not.toContain("unsafe-eval");
+  });
+
   it("next.config applies the full set to every route", async () => {
     const rules = await nextConfig.headers!();
     expect(rules).toEqual([{ source: "/:path*", headers: SECURITY_HEADERS }]);

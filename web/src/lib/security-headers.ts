@@ -17,12 +17,18 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(self), interest-cohort=()" },
+  // microphone=(self): voice dictation (Web Speech API) needs mic access on our
+  // own origin — microphone=() denied it everywhere and silently broke Dictar.
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self), interest-cohort=()" },
   {
     key: "Content-Security-Policy",
     value:
       "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; " +
-      "script-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; " +
+      // 'unsafe-eval' is DEV-ONLY: Next.js react-refresh evaluates strings in
+      // development; without it the CSP kills hydration locally (every client
+      // effect dead). Production keeps the strict directive.
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}; ` +
+      "font-src 'self' data:; connect-src 'self'; " +
       "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
   },
 ];

@@ -26,3 +26,17 @@ export function sanitizeFilename(s: string): string {
     .replace(/-{2,}/g, "-")
     .slice(0, 80);
 }
+
+export const SEAL_WARNING_HEADER = "X-Seal-Warning";
+export const SEAL_WARNING_MESSAGE = "Configura un sello de la compania valido antes de exportar el documento.";
+
+/** Production invariant: an exported PDF may never be emitted without its seal. */
+export function missingSealResponse(): Response {
+  return new Response(SEAL_WARNING_MESSAGE, {
+    status: 409,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      [SEAL_WARNING_HEADER]: SEAL_WARNING_MESSAGE,
+    },
+  });
+}

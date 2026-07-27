@@ -3,9 +3,10 @@
 import { prisma } from "@/lib/db";
 import { projectAccessWhere } from "@/lib/authz/projects";
 import { buildReportPdf } from "@/lib/report/pdf";
-import { sanitizeFilename } from "@/lib/report/params";
+import { missingSealResponse, sanitizeFilename } from "@/lib/report/params";
 import { storage } from "@/lib/storage";
 import { requireFreshSession } from "@/lib/auth/session";
+import { ARCHETYPE_LABEL_ES } from "@/lib/informes/archetypes";
 
 async function keyToBuffer(key: string | null): Promise<Buffer | null> {
   if (!key) return null;
@@ -41,6 +42,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       keyToBuffer(requester?.signatureKey ?? null),
       keyToBuffer(informe.project.company.sealKey),
     ]);
+    if (!sealPng) return missingSealResponse();
 
     const pdf = await buildReportPdf({
       data: {
@@ -58,11 +60,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         cambios: [],
       },
       generatedBy: requester?.name ?? "—",
+      sealPng,
       informe: {
         contentMd: informe.contentMd,
         requesterName: requester?.name ?? "—",
         firmaPng,
-        sealPng,
+        archetypeLabel: informe.archetype ? ARCHETYPE_LABEL_ES[informe.archetype] : null,
       },
     });
 

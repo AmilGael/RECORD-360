@@ -63,7 +63,16 @@ export async function appendRegistroTx(tx: Prisma.TransactionClient, input: Appe
     include: { attachments: true },
   });
   if (input.progressPct !== null) {
-    await tx.partida.update({ where: { id: input.partidaId }, data: { progressPct: input.progressPct } });
+    // Lifecycle invariant (WS8, R3 remediation): a registro-driven progress write
+    // is a manual write, same as updatePartidaProgress — it caps at 99 (100 is
+    // only reachable via Conclude, actions/lifecycle.ts) and never touches a
+    // concluded partida's progress. The registro row itself keeps the raw
+    // progressPct the caller sent (historical ledger data, unaffected by this
+    // cap) — only the derived Partida.progressPct write is constrained.
+    const current = await tx.partida.findUnique({ where: { id: input.partidaId }, select: { completedAt: true } });
+    if (!current?.completedAt) {
+      await tx.partida.update({ where: { id: input.partidaId }, data: { progressPct: Math.min(input.progressPct, 99) } });
+    }
   }
   return created;
 }

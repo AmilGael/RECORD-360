@@ -10,7 +10,16 @@
 -- NOTE: any table added in a future migration needs its own
 -- `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` line.
 
-ALTER TABLE "public"."_prisma_migrations" ENABLE ROW LEVEL SECURITY;
+-- Guarded: `_prisma_migrations` exists in real databases but NOT in the shadow
+-- database Prisma uses to replay migrations during `migrate dev` — an unguarded
+-- ALTER here breaks every future `migrate dev` (P3006). `migrate deploy` matches
+-- applied migrations by name, so this edit is safe for deployed environments.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = '_prisma_migrations') THEN
+    ALTER TABLE "public"."_prisma_migrations" ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 ALTER TABLE "public"."Company" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."User" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."LoginAttempt" ENABLE ROW LEVEL SECURITY;

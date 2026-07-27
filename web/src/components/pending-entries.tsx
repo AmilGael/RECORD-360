@@ -7,8 +7,12 @@ import type { QueuedRegistro } from "@/lib/offline/types";
 let _queue: IndexedDbQueue | null = null;
 function getQueue(): IndexedDbQueue { if (!_queue) _queue = new IndexedDbQueue(); return _queue; }
 
-type T = { pendingOne: string; syncing: string; retry: string; errorTitle: string };
+type T = { syncTitle: string; pendingOne: string; syncing: string; retry: string; errorTitle: string; blockedTitle: string };
 
+// This list is ONLY the device's local offline-capture queue (this partida's
+// unsent registros) — never the operational "pendientes por resolver" queue
+// (open requests/alerts/reminders, owned elsewhere). Never relabel these as
+// project alerts.
 export function PendingEntries({ partidaId, t }: { partidaId: string; t: T }) {
   const [items, setItems] = useState<QueuedRegistro[]>([]);
   const reload = useCallback(() => {
@@ -32,15 +36,27 @@ export function PendingEntries({ partidaId, t }: { partidaId: string; t: T }) {
   }
 
   if (items.length === 0) return null;
+
+  function statusLine(i: QueuedRegistro): string {
+    if (i.status === "error") return `${t.errorTitle}: ${i.error ?? ""}`;
+    if (i.status === "blocked") return t.blockedTitle;
+    if (i.status === "syncing") return t.syncing;
+    return t.pendingOne; // "pending" — queued locally, retried automatically
+  }
+
   return (
     <div style={{ marginBottom: 16 }}>
+      <div className="form-label" style={{ marginBottom: 6 }}>{t.syncTitle}</div>
       {items.map((i) => (
-        <div key={i.id} className="card" style={{ padding: 12, marginBottom: 8, borderStyle: "dashed", opacity: i.status === "error" ? 1 : 0.85 }}>
+        <div key={i.id} className="card" style={{ padding: 12, marginBottom: 8, borderStyle: "dashed", opacity: i.status === "error" || i.status === "blocked" ? 1 : 0.85 }}>
           <div style={{ fontSize: "0.9rem" }}>{i.text || "—"}</div>
           <div className="kicker" style={{ color: "var(--steel)", marginTop: 4 }}>
-            {i.status === "error" ? `${t.errorTitle}: ${i.error ?? ""}` : i.status === "syncing" ? t.syncing : t.pendingOne}
+            {statusLine(i)}
             {i.attachments.length > 0 ? ` · ${i.attachments.length}` : ""}
           </div>
+          {/* Only a terminal error (400/403) is fixable by a manual retry:
+              "pending" already auto-retries in the background, and "blocked"
+              (401) needs the user to log back in, not another attempt. */}
           {i.status === "error" && (
             <button type="button" className="btn btn-ghost" style={{ marginTop: 6 }} onClick={() => retry(i.id)}>{t.retry}</button>
           )}

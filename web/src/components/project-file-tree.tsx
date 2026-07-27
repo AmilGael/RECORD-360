@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { createPartida, createSegment } from "@/app/actions/admin";
+import { createPartida } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
 import { Folder, Search } from "@/components/icons";
 import { MovePartidaForm, RenamePartidaForm, RenameSegmentForm } from "@/components/project-edit-controls";
-import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 import { projectProgress } from "@/lib/project/progress";
 import { setPartidaTags } from "@/app/actions/partida-tags";
 
@@ -21,7 +20,14 @@ type TreeT = {
   searchPartidas: string; allBlocks: string; filter: string; clear: string; noResults: string;
   facetTags: string; facetProgress: string; facetProgressMin: string; facetProgressMax: string;
   facetOpenCambios: string; facetCreated: string;
+  blockClosedNoCreate: string;
 };
+
+// The bloque a partida is created in while inside the block workspace (WS4C):
+// creation always targets the active block implicitly (hidden input), never
+// a free-typed segment name. `null` means the workspace is scoped to
+// "Sin bloque" (ungrouped) — always open, no lifecycle state.
+type ActiveBlock = { id: string; name: string; closedAt: Date | string | null } | null;
 
 type FacetsState = {
   tagCounts: [string, number][];
@@ -84,20 +90,19 @@ function FileRow({
 }
 
 export function ProjectFileTree({
-  projectId, segments, ungrouped, segmentNames, segmentOptions, selectedId, isAdmin, filters, facets, t,
+  projectId, segments, ungrouped, segmentOptions, selectedId, isAdmin, filters, facets, activeBlock, t,
 }: {
   projectId: string;
   segments: { id: string; name: string; partidas: PartidaRow[] }[];
   ungrouped: PartidaRow[];
-  segmentNames: string[];
   segmentOptions: SegmentOption[];
   selectedId?: string;
   isAdmin: boolean;
   filters: FilterState;
   facets: FacetsState;
+  activeBlock: ActiveBlock;
   t: TreeT;
 }) {
-  const segListId = `segment-opts-${projectId}`;
   return (
     <div className="tree">
       <form action={`/app/projects/${projectId}`} className="tree-filter">
@@ -106,11 +111,11 @@ export function ProjectFileTree({
           <span className="icon"><Search size={13} /></span>
           <input name="q" defaultValue={filters.q} placeholder={t.searchPartidas} className="search-input" />
         </label>
-        <select name="block" defaultValue={filters.block} className="input" aria-label={t.filter}>
-          <option value="">{t.allBlocks}</option>
-          <option value={UNGROUPED_FILTER}>{t.ungrouped}</option>
-          {segmentOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        {/* WS4F: the active block is fixed by the workspace context (Bloques
+            overview / space nav switch it), not by a second selector nested
+            inside this filter form — a hidden field just preserves it across
+            facet-only submissions. */}
+        <input type="hidden" name="block" value={filters.block} />
         <details className="facet-panel" open={facets.hasActive}>
           <summary className="form-label" style={{ cursor: "pointer" }}>{t.filter}</summary>
           <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
@@ -167,20 +172,20 @@ export function ProjectFileTree({
       )}
       {isAdmin && (
         <div className="tree-actions">
-          <form action={createPartida} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <input type="hidden" name="projectId" value={projectId} />
-            <input name="name" placeholder={t.newPartida} required className="input" />
-            <input name="segment" list={segListId} placeholder={t.segmentPlaceholder} className="input" />
-            <datalist id={segListId}>
-              {segmentNames.map((n) => <option key={n} value={n} />)}
-            </datalist>
-            <SubmitButton className="btn btn-accent" style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem" }}>{t.add}</SubmitButton>
-          </form>
-          <form action={createSegment} style={{ display: "flex", gap: 6 }}>
-            <input type="hidden" name="projectId" value={projectId} />
-            <input name="name" placeholder={t.newSegment} required className="input" style={{ flex: 1 }} />
-            <SubmitButton className="btn btn-ghost" style={{ padding: "0.5rem 0.7rem", fontSize: "0.78rem" }}>{t.addSegment}</SubmitButton>
-          </form>
+          {activeBlock?.closedAt ? (
+            <p className="text-steel" style={{ fontSize: "0.8rem" }}>{t.blockClosedNoCreate}</p>
+          ) : (
+            // WS4C: creation always targets the active block implicitly — no
+            // free-typed segment name and no "create another block" control
+            // here (block creation stays at the project overview level, via
+            // BloqueCards' own add-bloque form).
+            <form action={createPartida} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <input type="hidden" name="projectId" value={projectId} />
+              {activeBlock && <input type="hidden" name="segment" value={activeBlock.name} />}
+              <input name="name" placeholder={t.newPartida} required className="input" />
+              <SubmitButton className="btn btn-accent" style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem" }}>{t.add}</SubmitButton>
+            </form>
+          )}
         </div>
       )}
     </div>

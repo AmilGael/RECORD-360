@@ -36,6 +36,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.notification.deleteMany({ where: { companyId } });
   await prisma.registro.deleteMany({ where: { partida: { projectId } } });
   await prisma.projectAssignment.deleteMany({ where: { projectId } });
   await prisma.partida.deleteMany({ where: { projectId } });

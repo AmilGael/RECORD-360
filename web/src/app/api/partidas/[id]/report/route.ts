@@ -6,7 +6,9 @@ import { projectAccessWhere } from "@/lib/authz/projects";
 import { verifyChain } from "@/lib/registro/hash";
 import { toStored } from "@/lib/registro/map";
 import { requireFreshSession } from "@/lib/auth/session";
-import { parseRangeParam, sanitizeFilename } from "@/lib/report/params";
+import { missingSealResponse, parseRangeParam, sanitizeFilename } from "@/lib/report/params";
+import { loadCompanySealPng } from "@/lib/report/seal";
+import { stampSealOnEveryPage, PAGE_BOTTOM_RESERVED } from "@/lib/report/pdf";
 import QRCode from "qrcode";
 // pdfkit is listed in serverExternalPackages and must be required at runtime.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -107,9 +109,25 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const progressPct = partida.progressPct ?? 0;
     const generatedAt = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
-    // Build PDF
-    const doc = new PDFDocument({ margin: 50, size: "A4", autoFirstPage: true });
+    // R3 WS11: company seal on every page, scoped to the caller's own tenant.
+    const sealPng = await loadCompanySealPng(user.companyId);
+    if (!sealPng) return missingSealResponse();
+
+    // Build PDF. bufferPages: true — without it, pdfkit flushes each page as
+    // soon as the next starts and the page-number loop below (which
+    // switchToPage()s back to every page) throws "out of bounds" past a
+    // couple of pages (pre-existing latent bug, fixed here — see lib/report/pdf.ts).
+    // Asymmetric bottom margin: reserves the seal/page-number band so body
+    // text page-breaks above it instead of painting over the per-page seal
+    // (PAGE_BOTTOM_RESERVED, shared with lib/report/pdf.ts).
+    const doc = new PDFDocument({
+      margins: { top: 50, left: 50, right: 50, bottom: PAGE_BOTTOM_RESERVED },
+      size: "A4",
+      autoFirstPage: true,
+      bufferPages: true,
+    });
     const bufferPromise = collectPdfBuffer(doc);
+    stampSealOnEveryPage(doc, sealPng);
 
   // ── Header ──────────────────────────────────────────────────────────────────
   const FONT_BOLD = "Helvetica-Bold";

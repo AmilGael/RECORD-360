@@ -252,3 +252,14 @@ export function FileText({ size = 14, className, style }: IconProps) {
     </svg>
   );
 }
+
+// R3 WS1: nav icon for the operational pending queue ("Pendientes por resolver").
+export function AlertCircle({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M12 7.5v5.5" />
+      <circle cx="12" cy="16.5" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

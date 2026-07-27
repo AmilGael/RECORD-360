@@ -1,33 +1,34 @@
-import { healthLevel } from "@/lib/project/health";
-
-type PRow = { id: string; name: string; progressPct: number };
+// WS6 (analytics neutralization): progress bars/indicators use ONE neutral
+// accent color. `healthLevel`-derived red/yellow/green dots and phase labels
+// are gone from every progress row — green is reserved for a partida that is
+// actually concluded (lifecycle state), never inferred from hitting 100% by
+// itself, and yellow/red are reserved for request severity elsewhere in the
+// app (see cambios-list / cambios detail).
+type PRow = { id: string; name: string; progressPct: number; completed?: boolean };
 type BRow = { id: string; name: string; progress: number; partidas: PRow[] };
 type AnaliticaT = {
   general: string; byBloque: string; openChanges: string; overdue: string;
   partidasWord: string; noBloques: string;
-  phaseRed: string; phaseYellow: string; phaseGreen: string;
 };
 
-const phaseLabel = (level: string, t: { phaseRed: string; phaseYellow: string; phaseGreen: string }) =>
-  level === "green" ? t.phaseGreen : level === "yellow" ? t.phaseYellow : t.phaseRed;
-
-function Bar({ pct }: { pct: number }) {
+// `done` is passed explicitly rather than derived from `pct >= 100` — an
+// aggregate (project-wide or per-bloque average) can only ever show the
+// neutral accent, even at 100%, because "done" only has meaning for a single
+// concluded partida (Partida.completedAt != null), not for an average.
+function Bar({ pct, done }: { pct: number; done: boolean }) {
   return (
-    <div style={{ height: 6, borderRadius: 99, background: "var(--line)", overflow: "hidden", flex: 1, minWidth: 80 }}>
-      <i style={{ display: "block", height: "100%", width: `${pct}%`, background: "var(--accent)" }} />
+    <div className="progress-track" style={{ flex: 1, minWidth: 80 }}>
+      <div className={`progress-fill${done ? " is-done" : ""}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
-function Row({ name, pct, sub, phaseT, small }: { name: string; pct: number; sub?: string; phaseT?: { phaseRed: string; phaseYellow: string; phaseGreen: string }; small?: boolean }) {
-  const level = healthLevel(pct);
+function Row({ name, pct, sub, done, small }: { name: string; pct: number; sub?: string; done?: boolean; small?: boolean }) {
   return (
     <div className="analitica-row">
-      <span className={`health-dot ${level}`} aria-hidden="true" />
-      {phaseT && <span className="mono text-steel" style={{ fontSize: small ? "0.62rem" : "0.7rem" }}>{phaseLabel(level, phaseT)}</span>}
       <span className="analitica-row-name">{name}{sub ? <span className="text-steel"> · {sub}</span> : null}</span>
-      <Bar pct={pct} />
-      <span className="analitica-pct mono">{pct}%</span>
+      <Bar pct={pct} done={Boolean(done)} />
+      <span className="analitica-pct mono" style={small ? { fontSize: "0.78rem" } : undefined}>{pct}%</span>
     </div>
   );
 }
@@ -42,8 +43,6 @@ export function AnaliticaTab({ general, bloques, ungrouped, t }: {
     <div style={{ marginTop: 16 }}>
       <div className="analitica-cards">
         <div className="analitica-card">
-          <span className={`health-dot ${healthLevel(general.progress)}`} aria-hidden="true" />
-          <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>{phaseLabel(healthLevel(general.progress), t)}</span>
           <strong>{general.progress}%</strong><span>{t.general}</span>
         </div>
         <div className="analitica-card"><strong>{general.partidas}</strong><span>{t.partidasWord}</span></div>
@@ -56,16 +55,16 @@ export function AnaliticaTab({ general, bloques, ungrouped, t }: {
       <div className="repo-list">
         {bloques.map((b) => (
           <div key={b.id} style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
-            <Row name={b.name} pct={b.progress} sub={`${b.partidas.length} ${t.partidasWord}`} phaseT={t} />
+            <Row name={b.name} pct={b.progress} sub={`${b.partidas.length} ${t.partidasWord}`} />
             <div style={{ marginTop: 8, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
-              {b.partidas.map((p) => <Row key={p.id} name={p.name} pct={p.progressPct} phaseT={t} small />)}
+              {b.partidas.map((p) => <Row key={p.id} name={p.name} pct={p.progressPct} done={p.completed} small />)}
             </div>
           </div>
         ))}
         {ungrouped.length > 0 && (
           <div style={{ padding: "12px 14px" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {ungrouped.map((p) => <Row key={p.id} name={p.name} pct={p.progressPct} phaseT={t} small />)}
+              {ungrouped.map((p) => <Row key={p.id} name={p.name} pct={p.progressPct} done={p.completed} small />)}
             </div>
           </div>
         )}

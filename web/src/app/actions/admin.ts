@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/db";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -13,6 +14,7 @@ import { accountActivationEmail, passwordResetLinkEmail } from "@/lib/email/temp
 import { createActivationToken, activationUrl, createToken, resetUrl } from "@/lib/auth/tokens";
 import { requireFreshSession } from "@/lib/auth/session";
 import { createNotifications } from "@/lib/notifications/create";
+import { notifyEvent } from "@/lib/notifications/events";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
 import { storage } from "@/lib/storage";
 import { uploadBrandedImage } from "@/lib/storage/image-upload";
@@ -35,17 +37,30 @@ async function requireAdmin() {
   return ctx;
 }
 
+// WS4A: ownerName is the obra's client/owner — free text (least-complex
+// model), NOT an address and NOT a user relation. Description is unchanged
+// (a general description, not an address either). Both optional; legacy
+// projects simply have ownerName == null.
+function parseOwnerName(raw: FormDataEntryValue | null): string | null {
+  const v = String(raw ?? "").trim().replace(/\s+/g, " ");
+  if (!v) return null;
+  if (v.length > 120) throw new Error("El nombre del propietario es demasiado largo (máx. 120 caracteres).");
+  return v;
+}
+
 export async function createProject(formData: FormData) {
   const { companyId } = await requireAdmin();
   const cover = formData.get("cover");
   const coverImageKey = cover instanceof File && cover.size > 0
     ? await uploadBrandedImage(cover, storage)
     : null;
+  const ownerName = parseOwnerName(formData.get("ownerName"));
   await prisma.project.create({
     data: {
       companyId,
       name: String(formData.get("name")),
       description: String(formData.get("description") ?? "") || null,
+      ownerName,
       registrationCode: generateRegistrationCode(),
       coverImageKey,
     },
@@ -57,8 +72,39 @@ export async function createPartida(formData: FormData) {
   const user = await requireSession();
   const projectId = String(formData.get("projectId"));
   await requireProjectStructureAccess(user, projectId);
-  const segmentId = await resolveSegment(projectId, parseSegment(formData.get("segment")));
-  await prisma.partida.create({ data: { projectId, name: String(formData.get("name")), segmentId } });
+  const { id: segmentId } = await resolveSegment(projectId, parseSegment(formData.get("segment")));
+  // Lifecycle (WS4C): a closed block rejects new partidas — server-enforced,
+  // independent of whatever the UI shows. This pre-check is only a friendly,
+  // fast-path error message; the atomic guard below is what actually enforces
+  // it against a concurrent closeSegment (SERIALIZABLE closeSegment's SSI does
+  // not see a plain read-committed insert from this action, so the create
+  // itself must re-check closedAt atomically at insert time).
+  if (segmentId) {
+    const segment = await prisma.segment.findUnique({ where: { id: segmentId }, select: { closedAt: true } });
+    if (segment?.closedAt) throw new Error("El bloque está cerrado: reábrelo para crear partidas.");
+  }
+  const name = String(formData.get("name"));
+  const partidaId = randomUUID();
+  if (segmentId) {
+    const inserted = await prisma.$executeRaw`
+      INSERT INTO "Partida" ("id", "projectId", "name", "segmentId")
+      SELECT ${partidaId}, ${projectId}, ${name}, ${segmentId}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM "Segment" s WHERE s."id" = ${segmentId} AND s."closedAt" IS NOT NULL
+      )`;
+    if (inserted === 0) throw new Error("El bloque está cerrado: reábrelo para crear partidas.");
+  } else {
+    await prisma.partida.create({ data: { id: partidaId, projectId, name, segmentId } });
+  }
+  await notifyEvent({
+    key: "partida.created",
+    companyId: user.companyId,
+    actorId: user.id,
+    includeActor: true,
+    projectId,
+    title: `Nueva partida: ${name}`,
+    link: `/app/partidas/${partidaId}`,
+  });
   revalidatePath(`/app/projects/${projectId}`);
   revalidatePath("/app");
 }
@@ -67,7 +113,23 @@ export async function createSegment(formData: FormData) {
   const user = await requireSession();
   const projectId = String(formData.get("projectId"));
   await requireProjectStructureAccess(user, projectId);
-  await resolveSegment(projectId, parseSegment(formData.get("name")));
+  const label = parseSegment(formData.get("name"));
+  // resolveSegment reuses a matching block case-insensitively rather than
+  // duplicating it, and reports `created` from the create path itself — of two
+  // concurrent creators exactly one sees created: true, so block.created fires
+  // once per actually-created block (never for a reuse, never twice).
+  const { id: segmentId, created } = await resolveSegment(projectId, label);
+  if (segmentId && created) {
+    await notifyEvent({
+      key: "block.created",
+      companyId: user.companyId,
+      actorId: user.id,
+      includeActor: true,
+      projectId,
+      title: `Nuevo bloque: ${label}`,
+      link: `/app/projects/${projectId}`,
+    });
+  }
   revalidatePath(`/app/projects/${projectId}`);
   revalidatePath("/app");
 }
@@ -287,4 +349,110 @@ export async function resetUserPassword(formData: FormData) {
   });
 
   redirect("/app/admin");
+}
+
+/**
+ * Archive a company member (R3 WS2/User archival). Reuses `disabledAt` — the
+ * fresh-session gate already revokes their access (requireFreshSession throws
+ * for disabledAt users). ADMIN-only, company-scoped: a non-existent user,
+ * a user in another company, and a SUPERADMIN target (which non-SUPERADMINs
+ * may never touch) all fail the same generic way so none leak which case
+ * applies. Self-archive is blocked. Historical registros/signatures/audit rows
+ * are untouched — only the ProjectAssignment rows (membership, not history)
+ * are removed, after their {projectId, role} is captured for the audit trail.
+ * Idempotent: archiving an already-archived user is a stable no-op.
+ */
+export async function archiveUser(formData: FormData) {
+  const actor = await requireFreshSession();
+  if (actor.role !== Role.ADMIN) throw new Error("Forbidden");
+
+  const userId = String(formData.get("userId"));
+  if (userId === actor.id) throw new Error("No puedes archivar tu propia cuenta.");
+
+  const target = await prisma.user.findFirst({ where: { id: userId, companyId: actor.companyId } });
+  if (!target || target.role === Role.SUPERADMIN) throw new Error("Forbidden");
+
+  if (target.disabledAt) { revalidatePath("/app/admin"); return; } // idempotent fast path
+
+  // Atomic guarded flip: the updateMany WHERE re-checks disabledAt under the
+  // row lock, so of two concurrent archives exactly one proceeds (count 1) —
+  // the loser bails before touching assignments, audit, or notifications.
+  // Assignments are read and deleted inside the same transaction as the audit
+  // write, so the captured {projectId, role} list is an exact snapshot of what
+  // was removed (no race with a concurrent assignment change).
+  const assignments = await prisma.$transaction(async (tx) => {
+    const res = await tx.user.updateMany({
+      where: { id: target.id, companyId: actor.companyId, disabledAt: null },
+      data: { disabledAt: new Date() },
+    });
+    if (res.count === 0) return null;
+    const removed = await tx.projectAssignment.findMany({
+      where: { userId: target.id },
+      select: { projectId: true, role: true, project: { select: { name: true } } },
+    });
+    await tx.projectAssignment.deleteMany({ where: { userId: target.id } });
+    await writeAudit(tx, {
+      companyId: actor.companyId,
+      actorId: actor.id,
+      action: "user.archived",
+      targetType: "User",
+      targetId: target.id,
+      summary: `Usuario archivado: ${target.name}`,
+      metadata: { targetUserId: target.id, assignments: removed.map((a) => ({ projectId: a.projectId, role: a.role })) },
+    });
+    return removed;
+  });
+  if (assignments === null) { revalidatePath("/app/admin"); return; } // lost the race: already archived
+
+  // One notification per removed project assignment (WS2B): different projects
+  // may notify the same recipient — that is correct, each references a
+  // different project's stakeholders.
+  for (const a of assignments) {
+    await notifyEvent({
+      key: "user.archived",
+      companyId: actor.companyId,
+      actorId: actor.id,
+      projectId: a.projectId,
+      title: `Usuario archivado: ${target.name}`,
+      body: `${target.name} (${a.role}) fue removido de ${a.project.name} por ${actor.name}.`,
+      link: `/app/projects/${a.projectId}`,
+    });
+  }
+
+  revalidatePath("/app/admin");
+}
+
+/**
+ * Restore an archived member: clears `disabledAt` only. Assignments removed by
+ * archiveUser are NEVER restored — the admin must re-assign explicitly.
+ */
+export async function restoreUser(formData: FormData) {
+  const actor = await requireFreshSession();
+  if (actor.role !== Role.ADMIN) throw new Error("Forbidden");
+
+  const userId = String(formData.get("userId"));
+  const target = await prisma.user.findFirst({ where: { id: userId, companyId: actor.companyId } });
+  if (!target || target.role === Role.SUPERADMIN) throw new Error("Forbidden");
+
+  if (!target.disabledAt) { revalidatePath("/app/admin"); return; } // idempotent fast path
+
+  await prisma.$transaction(async (tx) => {
+    // Atomic guarded flip (see archiveUser): only the invocation that actually
+    // clears disabledAt writes the audit row.
+    const res = await tx.user.updateMany({
+      where: { id: target.id, companyId: actor.companyId, disabledAt: { not: null } },
+      data: { disabledAt: null },
+    });
+    if (res.count === 0) return;
+    await writeAudit(tx, {
+      companyId: actor.companyId,
+      actorId: actor.id,
+      action: "user.restored",
+      targetType: "User",
+      targetId: target.id,
+      summary: `Usuario restaurado: ${target.name}`,
+    });
+  });
+
+  revalidatePath("/app/admin");
 }

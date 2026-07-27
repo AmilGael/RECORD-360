@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { createSegment } from "@/app/actions/admin";
+import { closeSegment, reopenSegment } from "@/app/actions/lifecycle";
 import { SubmitButton } from "@/components/submit-button";
 import { DeleteSegmentButton } from "@/components/delete-segment-button";
 import { Layers, Plus } from "@/components/icons";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 
-export type BloqueCard = { id: string; name: string; progress: number; count: number; deletable: boolean };
+export type BloqueCard = { id: string; name: string; progress: number; count: number; deletable: boolean; closedAt: Date | string | null };
 
 type T = {
   bloquesTitle: string; bloqueCard: string; openBloque: string; ungrouped: string;
   newSegment: string; addSegment: string; deleteBloque: string; deleteBloqueConfirm: string; yes: string; no: string;
+  blockClosed: string; closeBlock: string; reopenBlock: string;
 };
 
 export function BloqueCards({ projectId, bloques, ungroupedCount, canEdit, isOwner, t }: {
@@ -24,12 +26,15 @@ export function BloqueCards({ projectId, bloques, ungroupedCount, canEdit, isOwn
     <div style={{ marginTop: 16 }}>
       <div className="kicker" style={{ marginBottom: 10 }}>{t.bloquesTitle}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
-        {bloques.map((b) => (
+        {bloques.map((b) => {
+          const isClosed = Boolean(b.closedAt);
+          return (
           <div key={b.id} className="card" style={{ padding: 14 }}>
             <Link href={`/app/projects/${projectId}?block=${b.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
                 <Layers size={14} />
                 <strong>{b.name}</strong>
+                {isClosed && <span className="state-badge is-archived">{t.blockClosed}</span>}
               </div>
               <div className="mono text-steel" style={{ fontSize: "0.72rem", marginBottom: 8 }}>
                 {b.count} {t.bloqueCard} · {b.progress}%
@@ -38,16 +43,27 @@ export function BloqueCards({ projectId, bloques, ungroupedCount, canEdit, isOwn
                 <div className={`progress-fill${b.progress >= 100 ? " is-done" : ""}`} style={{ width: `${b.progress}%` }} />
               </div>
             </Link>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, flexWrap: "wrap", gap: 6 }}>
               <Link href={`/app/projects/${projectId}?block=${b.id}`} className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-deep)", textDecoration: "none" }}>
                 {t.openBloque}
               </Link>
-              {isOwner && b.deletable && (
-                <DeleteSegmentButton segmentId={b.id} t={{ deleteBloque: t.deleteBloque, deleteBloqueConfirm: t.deleteBloqueConfirm, yes: t.yes, no: t.no }} />
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {canEdit && (
+                  <form action={isClosed ? reopenSegment : closeSegment}>
+                    <input type="hidden" name="segmentId" value={b.id} />
+                    <SubmitButton className="btn btn-ghost" style={{ padding: "0.25rem 0.6rem", fontSize: "0.68rem" }}>
+                      {isClosed ? t.reopenBlock : t.closeBlock}
+                    </SubmitButton>
+                  </form>
+                )}
+                {isOwner && b.deletable && (
+                  <DeleteSegmentButton segmentId={b.id} t={{ deleteBloque: t.deleteBloque, deleteBloqueConfirm: t.deleteBloqueConfirm, yes: t.yes, no: t.no }} />
+                )}
+              </div>
             </div>
           </div>
-        ))}
+          );
+        })}
         {ungroupedCount > 0 && (
           <Link href={`/app/projects/${projectId}?block=${UNGROUPED_FILTER}`} className="card" style={{ padding: 14, textDecoration: "none", color: "inherit" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>

@@ -18,5 +18,5 @@ export function SyncIndicator({ t }: { t: { pending: string } }) {
     };
   }, []);
   if (count === 0) return null;
-  return <span className="kicker" style={{ color: "var(--steel)" }} aria-live="polite">{count} {t.pending}</span>;
+  return <span className="sync-chip kicker" style={{ color: "var(--steel)" }} aria-live="polite">{count} {t.pending}</span>;
 }

@@ -2,7 +2,8 @@
 import { assembleReportData } from "@/lib/report/data";
 import { buildReportPdf } from "@/lib/report/pdf";
 import { requireFreshSession } from "@/lib/auth/session";
-import { parseRangeParam, sanitizeFilename } from "@/lib/report/params";
+import { missingSealResponse, parseRangeParam, sanitizeFilename } from "@/lib/report/params";
+import { loadCompanySealPng } from "@/lib/report/seal";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -20,7 +21,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     );
     if (!data) return new Response("Not found", { status: 404 });
 
-    const pdf = await buildReportPdf({ data, generatedBy: user.name });
+    // R3 WS11: company seal on every page. Scoped to the CALLER's own tenant
+    // (user.companyId) — never the target project's, though they coincide
+    // here since assembleReportData already access-checked the project.
+    const sealPng = await loadCompanySealPng(user.companyId);
+    if (!sealPng) return missingSealResponse();
+
+    const pdf = await buildReportPdf({ data, generatedBy: user.name, sealPng });
     const filename = `${sanitizeFilename(data.project.name)}-reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
     return new Response(new Uint8Array(pdf), {
       status: 200,

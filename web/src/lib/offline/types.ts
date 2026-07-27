@@ -17,7 +17,13 @@ export interface QueuedRegistro {
   reminderDueAt: string | null;     // ISO or null
   clientCapturedAt: string;         // ISO, set at capture
   attachments: QueuedAttachment[];
-  status: "pending" | "syncing" | "error";
+  // "blocked": session expired (401) — needs the user to log back in; the
+  // offline provider retries automatically after the next successful login/app
+  // load. "error" stays TERMINAL — a 403 (no project access) or 400 (rejected
+  // by the server, e.g. bad reminder) that a retry cannot fix without the user
+  // changing something. Old persisted records only ever used "error"; they
+  // remain valid values (no migration needed for IndexedDB-stored rows).
+  status: "pending" | "syncing" | "blocked" | "error";
   error?: string;
   attempts: number;
 }

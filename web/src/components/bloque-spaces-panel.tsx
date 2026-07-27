@@ -2,31 +2,37 @@ import Link from "next/link";
 import type { AttachmentType, Document, DocumentKind, Registro } from "@prisma/client";
 import type { Lang } from "@/i18n/dictionaries";
 import { formatTimestamp } from "@/lib/format/datetime";
+import type { ReactNode } from "react";
 import { PlanosUpload } from "@/components/planos-upload";
 import { SubmitButton } from "@/components/submit-button";
 import { resolveReminder } from "@/app/actions/reminders";
+import { closeSegment, reopenSegment } from "@/app/actions/lifecycle";
+import { spaceHref, type PreservedParams } from "@/lib/project/space-links";
 
-type SegmentSummary = { id: string; name: string; progress: number; count: number };
-type SpaceKey = "cuaderno" | "planos" | "levantamientos" | "ideas" | "media" | "recordatorios" | "indicadores";
+type SegmentSummary = { id: string; name: string; progress: number; count: number; closedAt: Date | string | null };
+// "Indicadores" was removed in WS4F: its core numbers (progress %, partida
+// count) duplicated the Analítica tab's per-bloque breakdown, and the remaining
+// block-scoped extras were not worth a nav entry. "Planos" stays: unlike the
+// project-wide Planos tab (which always uploads with no segmentId), this space
+// is the only place a document can be attached to a specific bloque — not a
+// duplicate. "Solicitudes" is block-scoped here: requests created from this
+// space are locked to the selected bloque.
+export type SpaceKey = "cuaderno" | "solicitudes" | "planos" | "levantamientos" | "ideas" | "media" | "recordatorios";
 type MediaItem = { id: string; url: string; fileType: AttachmentType; text: string | null; createdAt: Date };
 type NoteItem = Pick<Registro, "id" | "text" | "serverCreatedAt" | "hash" | "partidaId"> & { partidaName: string };
 
 const SPACES: { key: SpaceKey; label: string; kind?: DocumentKind }[] = [
   { key: "cuaderno", label: "Cuaderno" },
+  { key: "solicitudes", label: "Solicitudes" },
   { key: "planos", label: "Planos", kind: "PLANO" },
   { key: "levantamientos", label: "Levantamientos", kind: "LEVANTAMIENTO" },
   { key: "ideas", label: "Ideas", kind: "IDEA" },
   { key: "media", label: "Media" },
   { key: "recordatorios", label: "Recordatorios" },
-  { key: "indicadores", label: "Indicadores" },
 ];
 
-function href(projectId: string, segmentId: string, space: SpaceKey) {
-  return `/app/projects/${projectId}?tab=code&spaceBlock=${segmentId}&space=${space}`;
-}
-
 export function BloqueSpacesPanel({
-  projectId, segments, selectedSegmentId, selectedSpace, docs, notes, media, reminders, overdueCount, noReminderCount, canUpload, canResolve, lang, t,
+  projectId, segments, selectedSegmentId, selectedSpace, docs, notes, media, reminders, requestsContent, canUpload, canResolve, canManageLifecycle, preserved, lang, t,
 }: {
   projectId: string;
   segments: SegmentSummary[];
@@ -36,16 +42,21 @@ export function BloqueSpacesPanel({
   notes: NoteItem[];
   media: MediaItem[];
   reminders: NoteItem[];
-  overdueCount: number;
-  noReminderCount: number;
+  requestsContent?: ReactNode;
   canUpload: boolean;
   canResolve: boolean;
+  canManageLifecycle: boolean;
+  preserved: PreservedParams;
   lang: Lang;
-  t: { emptyDocs: string; upload: string; uploadByKind: Record<DocumentKind, string>; title: string; error: string; uploadedBy: string; view: string; resolve: string };
+  t: {
+    emptyDocs: string; upload: string; uploadByKind: Record<DocumentKind, string>; title: string; error: string; uploadedBy: string; view: string; resolve: string;
+    blockClosed: string; closeBlock: string; reopenBlock: string;
+  };
 }) {
   if (segments.length === 0 || !selectedSegmentId) return null;
   const selected = segments.find((s) => s.id === selectedSegmentId) ?? segments[0];
   const space = SPACES.find((s) => s.key === selectedSpace) ?? SPACES[0];
+  const isClosed = Boolean(selected.closedAt);
   const grouped = media.reduce<Record<AttachmentType, MediaItem[]>>((acc, item) => {
     acc[item.fileType] ??= [];
     acc[item.fileType].push(item);
@@ -57,23 +68,36 @@ export function BloqueSpacesPanel({
       <aside className="space-nav" aria-label="Bloque spaces">
         <div className="space-nav-title">Bloques</div>
         {segments.map((s) => (
-          <Link key={s.id} href={href(projectId, s.id, selectedSpace)} className={`space-block${s.id === selected.id ? " is-on" : ""}`}>
+          <Link key={s.id} href={spaceHref(projectId, preserved, s.id, selectedSpace)} className={`space-block${s.id === selected.id ? " is-on" : ""}`}>
             <span>{s.name}</span>
             <span>{s.progress}%</span>
           </Link>
         ))}
         <div className="space-nav-title">Espacios</div>
         {SPACES.map((s) => (
-          <Link key={s.key} href={href(projectId, selected.id, s.key)} className={`space-link${s.key === selectedSpace ? " is-on" : ""}`}>{s.label}</Link>
+          <Link key={s.key} href={spaceHref(projectId, preserved, selected.id, s.key)} className={`space-link${s.key === selectedSpace ? " is-on" : ""}`}>{s.label}</Link>
         ))}
       </aside>
       <div className="space-main">
         <div className="space-head">
           <div>
             <div className="mono text-steel" style={{ fontSize: 11 }}>Obra / Bloque / {space.label}</div>
-            <h2 className="h-md">{selected.name}</h2>
+            <h2 className="h-md" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {selected.name}
+              {isClosed && <span className="state-badge is-archived">{t.blockClosed}</span>}
+            </h2>
           </div>
-          <div className="space-meter"><span>{selected.progress}%</span><small>{selected.count} partidas</small></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {canManageLifecycle && (
+              <form action={isClosed ? reopenSegment : closeSegment}>
+                <input type="hidden" name="segmentId" value={selected.id} />
+                <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem" }}>
+                  {isClosed ? t.reopenBlock : t.closeBlock}
+                </SubmitButton>
+              </form>
+            )}
+            <div className="space-meter"><span>{selected.progress}%</span><small>{selected.count} partidas</small></div>
+          </div>
         </div>
 
         {space.kind && (
@@ -83,17 +107,9 @@ export function BloqueSpacesPanel({
           </>
         )}
         {space.key === "cuaderno" && <NotesList notes={notes} lang={lang} />}
+        {space.key === "solicitudes" && requestsContent}
         {space.key === "media" && <MediaGroups grouped={grouped} />}
         {space.key === "recordatorios" && <RemindersList reminders={reminders} lang={lang} canResolve={canResolve} resolveLabel={t.resolve} />}
-        {space.key === "indicadores" && (
-          <div className="indicator-grid">
-            <div><strong>{selected.progress}%</strong><span>Avance medio</span></div>
-            <div><strong>{selected.count}</strong><span>Partidas activas</span></div>
-            <div><strong>{notes.length}</strong><span>Registros recientes</span></div>
-            <div><strong>{overdueCount}</strong><span>Recordatorios vencidos</span></div>
-            <div><strong>{noReminderCount}</strong><span>Registros sin recordatorio</span></div>
-          </div>
-        )}
       </div>
     </section>
   );
@@ -172,5 +188,3 @@ function MediaGroups({ grouped }: { grouped: Record<AttachmentType, MediaItem[]>
     </div>
   );
 }
-
-export type { SpaceKey };

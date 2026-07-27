@@ -16,6 +16,7 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
   const u = session!.user as { id: string; companyId: string; role: Role };
   const { lang, t } = await getDict();
   const C = t.changes;
+  const R = t.requests;
 
   const cr = await prisma.changeRequest.findFirstOrThrow({
     where: { id: crId, projectId: id, project: projectAccessWhere(u) },
@@ -38,7 +39,7 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
 
   return (
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
-      <Link href={`/app/projects/${id}?tab=cambios`} className="kicker" style={{ textDecoration: "none" }}>← {C.itemPlural}</Link>
+      <Link href={`/app/projects/${id}?tab=cambios`} className="kicker" style={{ textDecoration: "none" }}>← {R.tab}</Link>
       <div className="cr-detail card" style={{ marginTop: 12 }}>
         <div className="cr-detail-head">
           <span className="mono" style={{ fontSize: "0.7rem", letterSpacing: "0.1em" }}>{cr.code}</span>
@@ -46,6 +47,12 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
             <span className={`pdot ${dot}`} aria-hidden="true" /> {C.states[cr.status]}
           </span>
         </div>
+        <Field label={R.kindLabel}>{cr.kind === "ALERT" ? R.kindAlert : R.kindChange}</Field>
+        <Field label={R.severityLabel}>
+          <span className={`severity-chip ${cr.severity === "CRITICAL" ? "is-critical" : "is-important"}`}>
+            {cr.severity === "CRITICAL" ? R.severityCritical : R.severityImportant}
+          </span>
+        </Field>
         <Field label={C.fieldTitle}><span className="h-md" style={{ fontSize: "1.05rem" }}>{cr.title}</span></Field>
         {cr.description && <Field label={C.fieldDescription}>{cr.description}</Field>}
         <Field label={C.fieldPartidas}>

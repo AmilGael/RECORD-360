@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { appendRegistro } from "@/lib/registro/append";
-import { parseCategory, parseLocation, parseReminderDueAt } from "@/lib/registro/validate";
+import { parseCategory, parseLocation, parseOfflineReminderDueAt } from "@/lib/registro/validate";
 import { prepareAttachments } from "@/lib/registro/upload";
 import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
@@ -54,12 +54,15 @@ export async function POST(request: Request) {
     if (replyToId && !(await prisma.registro.findFirst({ where: { id: replyToId, partidaId }, select: { id: true } })))
       return Response.json({ error: "Destino de respuesta inválido." }, { status: 400 });
 
-    const reminderDueAt = parseReminderDueAt(form.get("reminderDueAt"));
-
     const capRaw = String(form.get("clientCapturedAt") ?? "").trim();
     const clientCapturedAt = capRaw ? new Date(capRaw) : null;
     if (clientCapturedAt && Number.isNaN(clientCapturedAt.getTime()))
       return Response.json({ error: "Fecha de captura inválida." }, { status: 400 });
+
+    // Offline-specific reminder rule (R3 WS10 §5): a reminder that was still in
+    // the future when the device captured it is accepted even if it is past
+    // due by the time the queued item reaches the server.
+    const reminderDueAt = parseOfflineReminderDueAt(form.get("reminderDueAt"), clientCapturedAt);
 
     const rec = await appendRegistro({
       partidaId, authorId: user.id, category, text, progressPct: null,

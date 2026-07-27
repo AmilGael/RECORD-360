@@ -7,7 +7,13 @@ const revalidatePathMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
-import { createChangeRequest, resolveChangeRequest } from "@/app/actions/cambios";
+import { createChangeRequest, resolveChangeRequest, type CreateChangeRequestState } from "@/app/actions/cambios";
+
+const INITIAL: CreateChangeRequestState = { status: "idle" };
+// WS5: kind/severity/GPS are now mandatory on every request — these fixtures
+// aren't testing that (see tests/cambios-action.test.ts), so a fixed valid
+// default keeps every existing scenario here focused on notifications.
+const REQUIRED_FIELDS = { kind: "CHANGE", severity: "IMPORTANT", gpsLat: "18.4861", gpsLng: "-69.9312" };
 
 let companyId = "", adminId = "", managerId = "", residentId = "", projectId = "", segmentId = "";
 
@@ -53,7 +59,7 @@ describe("createChangeRequest notifications", () => {
   it("notifies ADMIN and MANAGER (not the RESIDENT author) when a CR is created", async () => {
     authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
     await prisma.notification.deleteMany({ where: { companyId } });
-    await createChangeRequest(fd({ projectId, title: "Refuerzo extra", segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
+    await createChangeRequest(INITIAL, fd({ ...REQUIRED_FIELDS, projectId, title: "Refuerzo extra", segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
 
     const cr = await prisma.changeRequest.findFirstOrThrow({ where: { projectId, title: "Refuerzo extra" } });
     const notifications = await prisma.notification.findMany({ where: { companyId } });
@@ -64,9 +70,10 @@ describe("createChangeRequest notifications", () => {
     expect(recipientIds).toEqual([adminId, managerId].sort());
 
     for (const n of notifications) {
-      expect(n.type).toBe("cambio.created");
+      expect(n.type).toBe("request.created");
+      expect(n.eventKey).toBe("request.created");
       expect(n.title).toContain(cr.code);
-      expect(n.body).toBe("Refuerzo extra");
+      expect(n.body).toBeNull();
       expect(n.link).toBe(`/app/projects/${projectId}/cambios/${cr.id}`);
       expect(n.readAt).toBeNull();
       expect(n.companyId).toBe(companyId);
@@ -76,7 +83,7 @@ describe("createChangeRequest notifications", () => {
   it("does NOT notify the ADMIN author themselves", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
     await prisma.notification.deleteMany({ where: { companyId } });
-    await createChangeRequest(fd({ projectId, title: "Admin CR", segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
+    await createChangeRequest(INITIAL, fd({ ...REQUIRED_FIELDS, projectId, title: "Admin CR", segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
 
     const notifications = await prisma.notification.findMany({ where: { companyId } });
     const recipientIds = notifications.map((n) => n.userId);
@@ -88,7 +95,7 @@ describe("createChangeRequest notifications", () => {
 describe("resolveChangeRequest notifications", () => {
   async function openCR() {
     authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
-    await createChangeRequest(fd({ projectId, title: `T-${Math.random()}`, segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
+    await createChangeRequest(INITIAL, fd({ ...REQUIRED_FIELDS, projectId, title: `T-${Math.random()}`, segmentIds: [segmentId], reminderDueAt: "2027-01-15T10:00" }));
     return prisma.changeRequest.findFirstOrThrow({ orderBy: { createdAt: "desc" }, where: { projectId } });
   }
 
@@ -101,7 +108,8 @@ describe("resolveChangeRequest notifications", () => {
     const notifications = await prisma.notification.findMany({ where: { companyId, userId: residentId } });
     expect(notifications).toHaveLength(1);
     const [n] = notifications;
-    expect(n.type).toBe("cambio.resolved");
+    expect(n.type).toBe("request.rejected");
+    expect(n.eventKey).toBe("request.rejected");
     expect(n.title).toContain(cr.code);
     expect(n.title).toContain("rechazada");
     expect(n.body).toContain("Fuera de alcance.");
@@ -119,7 +127,8 @@ describe("resolveChangeRequest notifications", () => {
     const notifications = await prisma.notification.findMany({ where: { companyId, userId: residentId } });
     expect(notifications).toHaveLength(1);
     const [n] = notifications;
-    expect(n.type).toBe("cambio.resolved");
+    expect(n.type).toBe("request.resolved");
+    expect(n.eventKey).toBe("request.resolved");
     expect(n.title).toContain(cr.code);
     expect(n.title).toContain("integrada");
     expect(n.body).toContain("Aprobado");

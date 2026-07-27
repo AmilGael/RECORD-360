@@ -21,15 +21,17 @@ afterAll(async () => {
 });
 
 describe("resolveSegment", () => {
-  it("returns null for a null label", async () => {
-    expect(await resolveSegment(projectId, null)).toBeNull();
+  it("returns a null id for a null label", async () => {
+    expect(await resolveSegment(projectId, null)).toEqual({ id: null, created: false });
   });
 
   it("creates a segment, then reuses it case-insensitively (no duplicate)", async () => {
-    const id1 = await resolveSegment(projectId, "Cimentación");
-    expect(id1).not.toBeNull();
-    const id2 = await resolveSegment(projectId, "cimentación");
-    expect(id2).toBe(id1);
+    const r1 = await resolveSegment(projectId, "Cimentación");
+    expect(r1.id).not.toBeNull();
+    expect(r1.created).toBe(true);
+    const r2 = await resolveSegment(projectId, "cimentación");
+    expect(r2.id).toBe(r1.id);
+    expect(r2.created).toBe(false); // reuse, not a new creation
     const count = await prisma.segment.count({ where: { projectId, name: { equals: "cimentación", mode: "insensitive" } } });
     expect(count).toBe(1);
   });
@@ -37,6 +39,7 @@ describe("resolveSegment", () => {
   it("creates a distinct segment for a new name", async () => {
     const a = await resolveSegment(projectId, "Estructura");
     const b = await resolveSegment(projectId, "Cimentación");
-    expect(a).not.toBe(b);
+    expect(a.id).not.toBe(b.id);
+    expect(a.created).toBe(true);
   });
 });

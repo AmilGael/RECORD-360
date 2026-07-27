@@ -29,10 +29,14 @@ export async function updateUserProfile(formData: FormData) {
   if (photo instanceof File && photo.size > 0) {
     data.photoKey = await uploadBrandedImage(photo, storage);
   }
+  // Distinguish first-time vs replacement firma for the audit trail (WS2C):
+  // decide BEFORE the update, from the pre-update target row.
+  let signatureAction: "signature.added" | "signature.replaced" | null = null;
   const signature = formData.get("signature");
   if (signature instanceof File && signature.size > 0) {
     // Firma contract: PNG with transparent/white background (architect requirement).
     data.signatureKey = await uploadBrandedImage(signature, storage, { pngOnly: true });
+    signatureAction = target.signatureKey ? "signature.replaced" : "signature.added";
   }
   if (Object.keys(data).length === 0) return;
 
@@ -46,6 +50,18 @@ export async function updateUserProfile(formData: FormData) {
       targetId: target.id,
       summary: `Perfil actualizado: ${target.name}`,
     });
+    if (signatureAction) {
+      await writeAudit(tx, {
+        companyId: actor.companyId,
+        actorId: actor.id,
+        action: signatureAction,
+        targetType: "User",
+        targetId: target.id,
+        summary: signatureAction === "signature.added"
+          ? `Firma registrada: ${target.name}`
+          : `Firma reemplazada: ${target.name}`,
+      });
+    }
   });
   revalidatePath("/app/admin");
 }

@@ -28,15 +28,16 @@ import { BloqueCards } from "@/components/bloque-cards";
 import { ProjectSearchResultsPanel } from "@/components/project-search-results";
 import { MediaGalleries, isMediaTab, type MediaItem, type MediaTab } from "@/components/media-galleries";
 import { searchProject } from "@/lib/project/search";
+import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 
 export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; spaceBlock?: string; space?: string; media?: string; mpage?: string; tags?: string | string[]; pmin?: string; pmax?: string; cambios?: string; ffrom?: string; fto?: string }>;
+  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; space?: string; media?: string; mpage?: string; tags?: string | string[]; pmin?: string; pmax?: string; cambios?: string; ffrom?: string; fto?: string }>;
 }) {
   const { id } = await params;
-  const { p: selectedId, tab, q, block, spaceBlock, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto } = await searchParams;
+  const { p: selectedId, tab, q, block, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto } = await searchParams;
   const session = await auth();
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
@@ -44,6 +45,18 @@ export default async function ProjectPage({
   const isOwner = sessionUser.role === "ADMIN"; // delete/recycle is ADMIN-only
   const { lang, t } = await getDict();
   const P = t.project;
+  const requestListT = {
+    empty: t.changes.empty, states: t.changes.states,
+    new: t.changes.new, fieldTitle: t.changes.fieldTitle, fieldDescription: t.changes.fieldDescription,
+    fieldPartidas: t.changes.fieldPartidas,
+    fieldReminder: t.changes.fieldReminder, fieldReminderPlaceholder: t.changes.fieldReminderPlaceholder,
+    evidence: t.changes.evidence,
+    kindLabel: t.requests.kindLabel, kindChange: t.requests.kindChange, kindAlert: t.requests.kindAlert,
+    severityLabel: t.requests.severityLabel, severityImportant: t.requests.severityImportant, severityCritical: t.requests.severityCritical,
+    gpsAcquiring: t.requests.gpsAcquiring, gpsAcquired: t.requests.gpsAcquired, gpsDenied: t.requests.gpsDenied,
+    gpsUnavailable: t.requests.gpsUnavailable, gpsTimeout: t.requests.gpsTimeout, gpsInvalid: t.requests.gpsInvalid,
+    gpsRetry: t.requests.gpsRetry,
+  };
 
   // Tenant scoping: only return the project if it belongs to the caller's company.
   const project = await prisma.project.findFirstOrThrow({
@@ -75,23 +88,33 @@ export default async function ProjectPage({
   const allPartidas = [...project.segments.flatMap((s) => s.partidas), ...project.partidas];
   const canEditStructure = isAdmin || project.assignments.some((a) => a.userId === sessionUser.id);
   const avg = projectProgress(allPartidas);
-  const segmentNames = project.segments.map((s) => s.name);
   const segmentOptions = project.segments.map((s) => ({ id: s.id, name: s.name }));
   const segmentSummaries = project.segments.map((s) => ({
     id: s.id,
     name: s.name,
     progress: projectProgress(s.partidas),
     count: s.partidas.length,
+    closedAt: s.closedAt,
   }));
 
   const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : tab === "analitica" ? "analitica" : tab === "informes" ? "informes" : "code";
   const blockParam = String(block ?? "");
   const inBloqueView = activeTab === "code" && Boolean(blockParam);
-  // When in bloque view, selectedSpaceBlock derives from blockParam (fall back to first segment for UNGROUPED).
+  // WS4F: `block` is the ONLY canonical param for the active bloque — the
+  // workspace (file tree + spaces panel) both derive from it directly. There
+  // is no second `spaceBlock` param to reconcile anymore (that mismatch was
+  // the bug: bloque-spaces-panel's own links used `spaceBlock`, dropping
+  // `block` and silently kicking the page out of the workspace view).
   const selectedSpaceBlock = inBloqueView
     ? (segmentSummaries.some((s) => s.id === blockParam) ? blockParam : (segmentSummaries[0]?.id ?? null))
-    : (segmentSummaries.some((s) => s.id === spaceBlock) ? String(spaceBlock) : (segmentSummaries[0]?.id ?? null));
-  const selectedSpace = (["cuaderno", "planos", "levantamientos", "ideas", "media", "recordatorios", "indicadores"].includes(String(space))
+    : null;
+  // The active bloque's lifecycle state, for the file-tree creation gate
+  // (WS4C). null when the workspace is scoped to "Sin bloque" (ungrouped) —
+  // ungrouped partidas have no block lifecycle to respect.
+  const activeSegment = inBloqueView && blockParam !== UNGROUPED_FILTER
+    ? project.segments.find((s) => s.id === blockParam) ?? null
+    : null;
+  const selectedSpace = (["cuaderno", "solicitudes", "planos", "levantamientos", "ideas", "media", "recordatorios"].includes(String(space))
     ? String(space)
     : "cuaderno") as SpaceKey;
   const spaceKind: Partial<Record<SpaceKey, DocumentKind>> = {
@@ -165,6 +188,19 @@ export default async function ProjectPage({
         include: { _count: { select: { partidas: true, segments: true } } },
       })).map((c) => ({
         id: c.id, code: c.code, title: c.title, status: c.status,
+        kind: c.kind, severity: c.severity,
+        createdAt: c.createdAt, seal: c.seal,
+        segmentCount: c._count.segments || c._count.partidas,
+      }))
+    : [];
+  const blockChangeRows = activeTab === "code" && inBloqueView && selectedSpace === "solicitudes" && selectedSpaceBlock
+    ? (await prisma.changeRequest.findMany({
+        where: { projectId: id, segments: { some: { segmentId: selectedSpaceBlock } } },
+        orderBy: { createdAt: "desc" },
+        include: { _count: { select: { partidas: true, segments: true } } },
+      })).map((c) => ({
+        id: c.id, code: c.code, title: c.title, status: c.status,
+        kind: c.kind, severity: c.severity,
         createdAt: c.createdAt, seal: c.seal,
         segmentCount: c._count.segments || c._count.partidas,
       }))
@@ -178,6 +214,8 @@ export default async function ProjectPage({
         where: {
           projectId: id,
           segmentId: selectedSpaceBlock,
+          // The Planos space lists revisions alongside originals; the other
+          // kind-backed spaces map 1:1 to a single DocumentKind.
           kind: selectedSpace === "planos"
             ? { in: ["PLANO", "PLANO_ACTUALIZADO"] }
             : spaceKind[selectedSpace],
@@ -208,11 +246,15 @@ export default async function ProjectPage({
   const overdueReminders = activeTab === "analitica"
     ? await prisma.registro.count({ where: { partida: { projectId: id, deletedAt: null }, reminderDueAt: { lt: now }, reminderResolvedAt: null } })
     : 0;
+  // WS6: `completed` (Partida.completedAt != null) threads the real lifecycle
+  // state through so the analítica progress bar only shows green ("is-done")
+  // for an actually-concluded partida, never for an aggregate that happens to
+  // read 100%.
   const analiticaBloques = project.segments.map((s) => ({
     id: s.id, name: s.name, progress: projectProgress(s.partidas),
-    partidas: s.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct })),
+    partidas: s.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct, completed: p.completedAt != null })),
   }));
-  const analiticaUngrouped = project.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct }));
+  const analiticaUngrouped = project.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct, completed: p.completedAt != null }));
   const reminderRows = activeTab === "code" && inBloqueView && selectedSpaceBlock
     ? await prisma.registro.findMany({
         where: {
@@ -226,16 +268,6 @@ export default async function ProjectPage({
       })
     : [];
   const spaceReminders = reminderRows.map((r) => ({ id: r.id, partidaId: r.partidaId, text: r.text, serverCreatedAt: r.serverCreatedAt, hash: r.hash, partidaName: r.partida.name }));
-  const overdueCount = activeTab === "code" && inBloqueView && selectedSpaceBlock
-    ? await prisma.registro.count({
-        where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null }, reminderDueAt: { lt: now }, reminderResolvedAt: null },
-      })
-    : 0;
-  const noReminderCount = activeTab === "code" && inBloqueView && selectedSpaceBlock
-    ? await prisma.registro.count({
-        where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null }, reminderDueAt: null },
-      })
-    : 0;
   // Overview data — only computed when NOT in the bloque workspace view.
   const searchResults = !inBloqueView && activeTab === "code" && partidaFilters.q
     ? await searchProject(sessionUser, id, partidaFilters.q)
@@ -300,12 +332,16 @@ export default async function ProjectPage({
     : [];
   const docAuthorMap = new Map(uploaders.map((u) => [u.id, u.name]));
 
+  // R3 WS7 (Agent 4): +archetype select/mapping only — flagged per the R3
+  // dispatch brief as a minimal cross-file touch in Agent 3's file (the
+  // archetype label needs to reach InformesTab's history list, and this
+  // query/mapping is where every other informe row field is already built).
   const informeRows = activeTab === "informes"
     ? await prisma.informe.findMany({
         where: { projectId: id, project: projectAccessWhere(sessionUser) },
         orderBy: { createdAt: "desc" },
         take: 30,
-        select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true },
+        select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true, archetype: true },
       })
     : [];
   const informeRequesterIds = [...new Set(informeRows.map((i) => i.requestedById))];
@@ -313,6 +349,12 @@ export default async function ProjectPage({
     ? await prisma.user.findMany({ where: { id: { in: informeRequesterIds }, companyId }, select: { id: true, name: true } })
     : [];
   const informeRequesterMap = new Map(informeRequesters.map((u) => [u.id, u.name]));
+  // R3 WS11 missing-seal notice: server-computed, ADMIN/MANAGER only (isAdmin
+  // here = hasCompanyWideAccess), shown on the informes tab where the PDF
+  // download links live.
+  const companyHasSeal = activeTab === "informes"
+    ? Boolean((await prisma.company.findUnique({ where: { id: companyId }, select: { sealKey: true } }))?.sealKey)
+    : true;
 
   const selected = selectedId
     ? await prisma.partida.findFirst({
@@ -346,7 +388,7 @@ export default async function ProjectPage({
   const deleterMap = new Map(deleters.map((u) => [u.id, u.name]));
   const assignableUsers = isAdmin
     ? await prisma.user.findMany({
-        where: { companyId, role: { in: ["SUPERVISOR", "RESIDENT"] } },
+        where: { companyId, role: { in: ["SUPERVISOR", "RESIDENT"] }, disabledAt: null },
         orderBy: [{ role: "asc" }, { name: "asc" }],
         select: { id: true, name: true, email: true, role: true },
       })
@@ -372,6 +414,12 @@ export default async function ProjectPage({
         </span>
         {isAdmin && <RenameProjectForm projectId={project.id} currentName={project.name} t={{ rename: P.rename, save: P.save, move: P.move, moveTo: P.moveTo, ungrouped: P.ungrouped }} />}
       </div>
+      {(project.ownerName || project.description) && (
+        <div className="mono text-steel" style={{ fontSize: "0.78rem", display: "flex", flexDirection: "column", gap: 2, margin: "2px 0" }}>
+          {project.ownerName && <span>{t.projectFields.owner}: {project.ownerName}</span>}
+          {project.description && <span>{t.projectFields.generalDescription}: {project.description}</span>}
+        </div>
+      )}
       <div className="mono text-steel" style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span>{project.company.name} · {allPartidas.length} {P.partidasWord} · {avg}%</span>
         <span className="sep">·</span>
@@ -386,9 +434,6 @@ export default async function ProjectPage({
             <input type="file" name="cover" required accept="image/jpeg,image/png,image/webp" style={{ fontSize: "0.72rem", maxWidth: 180 }} />
             <SubmitButton className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{P.changeCover}</SubmitButton>
           </form>
-          <span className="mono text-steel" style={{ fontSize: "0.7rem" }}>
-            {project.archivedAt ? P.dangerArchivedHint : P.dangerArchiveHint}
-          </span>
           {project.archivedAt ? (
             <>
               <form action={restoreProject} style={{ display: "inline" }}>
@@ -417,7 +462,7 @@ export default async function ProjectPage({
       <div className="tabs">
         <Link href={`/app/projects/${id}?tab=code`} className={`tab ${activeTab === "code" ? "is-on" : ""}`} aria-current={activeTab === "code" ? "page" : undefined}><Layers size={13} />{P.tabPartidas}</Link>
         <Link href={`/app/projects/${id}?tab=planos`} className={`tab ${activeTab === "planos" ? "is-on" : ""}`} aria-current={activeTab === "planos" ? "page" : undefined}><Folder size={13} />{P.tabPlanos}</Link>
-        <Link href={`/app/projects/${id}?tab=cambios`} className={`tab ${activeTab === "cambios" ? "is-on" : ""}`} aria-current={activeTab === "cambios" ? "page" : undefined}><Branch size={13} />{P.tabChanges}</Link>
+        <Link href={`/app/projects/${id}?tab=cambios`} className={`tab ${activeTab === "cambios" ? "is-on" : ""}`} aria-current={activeTab === "cambios" ? "page" : undefined}><Branch size={13} />{t.requests.tab}</Link>
         <Link href={`/app/projects/${id}?tab=analitica`} className={`tab ${activeTab === "analitica" ? "is-on" : ""}`} aria-current={activeTab === "analitica" ? "page" : undefined}><BarChart size={13} />{P.tabAnalytics}</Link>
         <Link href={`/app/projects/${id}?tab=informes`} className={`tab ${activeTab === "informes" ? "is-on" : ""}`} aria-current={activeTab === "informes" ? "page" : undefined}><FileText size={13} />{P.tabInformes}</Link>
         <span className="tab is-off" aria-disabled="true"><Sliders size={13} />{P.tabSettings} <span className="soon">{P.soon}</span></span>
@@ -430,13 +475,7 @@ export default async function ProjectPage({
             rows={changeRows}
             partidas={segmentOptions}
             lang={lang}
-            t={{
-              empty: t.changes.empty, states: t.changes.states,
-              new: t.changes.new, fieldTitle: t.changes.fieldTitle, fieldDescription: t.changes.fieldDescription,
-              fieldPartidas: t.changes.fieldPartidas,
-              fieldReminder: t.changes.fieldReminder, fieldReminderPlaceholder: t.changes.fieldReminderPlaceholder,
-              evidence: t.changes.evidence, gps: t.composer.gps, gpsOk: t.composer.gpsOk,
-            }}
+            t={requestListT}
           />
         </div>
       ) : activeTab === "planos" ? (
@@ -455,7 +494,7 @@ export default async function ProjectPage({
           general={{ progress: avg, partidas: allPartidas.length, openCambios, overdueReminders }}
           bloques={analiticaBloques}
           ungrouped={analiticaUngrouped}
-          t={{ general: P.analiticaGeneral, byBloque: P.analiticaByBloque, openChanges: P.analiticaOpenChanges, overdue: P.analiticaOverdue, partidasWord: P.partidasWord, noBloques: P.analiticaNoBloques, phaseRed: t.dash.analyticsRed, phaseYellow: t.dash.analyticsYellow, phaseGreen: t.dash.analyticsGreen }}
+          t={{ general: P.analiticaGeneral, byBloque: P.analiticaByBloque, openChanges: P.analiticaOpenChanges, overdue: P.analiticaOverdue, partidasWord: P.partidasWord, noBloques: P.analiticaNoBloques }}
         />
       ) : activeTab === "informes" ? (
         <InformesTab
@@ -468,8 +507,14 @@ export default async function ProjectPage({
             createdAt: formatTimestamp(i.createdAt, lang),
             requesterName: informeRequesterMap.get(i.requestedById) ?? "—",
             scopeLabel: i.partidaId ? t.informes.scopePartida : i.segmentId ? t.informes.scopeSegment : t.informes.scopeProject,
+            archetypeLabel: i.archetype === "OWNER" ? t.archetypes.owner
+              : i.archetype === "SENIOR_MANAGEMENT" ? t.archetypes.senior
+              : i.archetype === "PERSONAL_FEEDBACK" ? t.archetypes.personal
+              : t.archetypes.legacy,
           }))}
           t={t.informes}
+          archetypes={t.archetypes}
+          showNoSealNotice={isAdmin && !companyHasSeal}
         />
       ) : inBloqueView ? (
         <>
@@ -481,7 +526,6 @@ export default async function ProjectPage({
               projectId={project.id}
               segments={filteredPartidas.segments}
               ungrouped={filteredPartidas.ungrouped}
-              segmentNames={segmentNames}
               segmentOptions={segmentOptions}
               selectedId={selectedId}
               isAdmin={canEditStructure}
@@ -491,6 +535,7 @@ export default async function ProjectPage({
                 selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios, createdFrom: String(ffrom ?? ""), createdTo: String(fto ?? "") },
                 hasActive: hasActiveFacets,
               }}
+              activeBlock={activeSegment ? { id: activeSegment.id, name: activeSegment.name, closedAt: activeSegment.closedAt } : null}
               t={{
                 ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add,
                 segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment,
@@ -501,6 +546,7 @@ export default async function ProjectPage({
                 facetTags: P.facetTags, facetProgress: P.facetProgress,
                 facetProgressMin: P.facetProgressMin, facetProgressMax: P.facetProgressMax,
                 facetOpenCambios: P.facetOpenCambios, facetCreated: P.facetCreated,
+                blockClosedNoCreate: t.lifecycle.blockClosedNoCreate,
               }}
             />
             {selected ? (
@@ -524,12 +570,28 @@ export default async function ProjectPage({
             notes={spaceNotes}
             media={spaceMedia}
             reminders={spaceReminders}
-            overdueCount={overdueCount}
-            noReminderCount={noReminderCount}
+            requestsContent={selectedSpaceBlock ? (
+              <CambiosList
+                projectId={project.id}
+                rows={blockChangeRows}
+                partidas={segmentOptions}
+                fixedSegment={{
+                  id: selectedSpaceBlock,
+                  name: segmentOptions.find((s) => s.id === selectedSpaceBlock)?.name ?? "",
+                }}
+                lang={lang}
+                t={requestListT}
+              />
+            ) : null}
             canUpload={canEditStructure}
             canResolve={canEditStructure}
+            canManageLifecycle={canEditStructure}
+            preserved={{ p: selectedId, q: partidaFilters.q, tags: tagsParam, pmin: pmin ?? null, pmax: pmax ?? null, cambios: cambios ?? null, ffrom: ffrom ?? null, fto: fto ?? null }}
             lang={lang}
-            t={{ emptyDocs: t.planos.empty, upload: t.planos.upload, uploadByKind: t.planos.uploadByKind, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder }}
+            t={{
+              emptyDocs: t.planos.empty, upload: t.planos.upload, uploadByKind: t.planos.uploadByKind, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder,
+              blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
+            }}
           />
           <PartidaRecycle
             rows={deletedPartidas}
@@ -547,7 +609,10 @@ export default async function ProjectPage({
             ungroupedCount={project.partidas.length}
             canEdit={canEditStructure}
             isOwner={isOwner}
-            t={{ bloquesTitle: P.bloquesTitle, bloqueCard: P.bloqueCard, openBloque: P.openBloque, ungrouped: P.ungrouped, newSegment: P.newSegment, addSegment: P.addSegment, deleteBloque: P.deleteBloque, deleteBloqueConfirm: P.deleteBloqueConfirm, yes: P.yes, no: P.no }}
+            t={{
+              bloquesTitle: P.bloquesTitle, bloqueCard: P.bloqueCard, openBloque: P.openBloque, ungrouped: P.ungrouped, newSegment: P.newSegment, addSegment: P.addSegment, deleteBloque: P.deleteBloque, deleteBloqueConfirm: P.deleteBloqueConfirm, yes: P.yes, no: P.no,
+              blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
+            }}
           />
           <form action={`/app/projects/${project.id}`} style={{ display: "flex", gap: 8, marginTop: 16 }}>
             <input name="q" defaultValue={partidaFilters.q} placeholder={P.searchObra} className="search-input" style={{ flex: 1 }} />

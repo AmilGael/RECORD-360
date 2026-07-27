@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInformeUserMessage } from "@/lib/informes/prompt";
+import { buildInformeUserMessage, buildInformeSystem } from "@/lib/informes/prompt";
 import type { ReportData } from "@/lib/report/data";
 
 function makeRegistro(i: number): ReportData["registros"][number] {
@@ -52,5 +52,48 @@ describe("buildInformeUserMessage — prompt cap", () => {
     expect(msg).toContain("PARTIDAS Y AVANCE:");
     expect(msg).toContain("REGISTROS DEL PERIODO (2)");
     expect(msg).toContain("SOLICITUDES DE CAMBIO (0)");
+  });
+});
+
+describe("buildInformeSystem — archetype branching (R3 WS7)", () => {
+  it("produces materially distinct prompts for the three archetypes", () => {
+    const owner = buildInformeSystem("OWNER");
+    const senior = buildInformeSystem("SENIOR_MANAGEMENT");
+    const personal = buildInformeSystem("PERSONAL_FEEDBACK");
+    expect(owner).not.toBe(senior);
+    expect(owner).not.toBe(personal);
+    expect(senior).not.toBe(personal);
+  });
+
+  it("OWNER emphasizes executive status, milestones, risks and decisions", () => {
+    const s = buildInformeSystem("OWNER");
+    expect(s).toContain("Hitos y Avance");
+    expect(s).toContain("Decisiones Requeridas");
+    expect(s).toContain("Cronograma y Costos");
+    expect(s).toMatch(/propietario/i);
+  });
+
+  it("SENIOR_MANAGEMENT emphasizes delivery risk, trends, escalation and dependencies", () => {
+    const s = buildInformeSystem("SENIOR_MANAGEMENT");
+    expect(s).toContain("Riesgo de Entrega");
+    expect(s).toContain("Tendencias de Desempeno");
+    expect(s).toContain("Responsables y Escalamiento");
+    expect(s).toContain("Dependencias entre Bloques");
+  });
+
+  it("PERSONAL_FEEDBACK emphasizes individual contributions, record quality and forbids unsupported personnel judgments", () => {
+    const s = buildInformeSystem("PERSONAL_FEEDBACK");
+    expect(s).toContain("Contribuciones Individuales");
+    expect(s).toContain("Calidad y Consistencia de Registros");
+    expect(s).toMatch(/PROHIBIDO/);
+    expect(s).toMatch(/juicios de personal no respaldados/i);
+  });
+
+  it("all archetypes still keep the shared base rules (no invention, markdown, Spanish, length cap)", () => {
+    for (const a of ["OWNER", "SENIOR_MANAGEMENT", "PERSONAL_FEEDBACK"] as const) {
+      const s = buildInformeSystem(a);
+      expect(s).toMatch(/nunca inventes/i);
+      expect(s).toMatch(/900 palabras/);
+    }
   });
 });
