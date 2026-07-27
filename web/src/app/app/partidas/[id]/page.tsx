@@ -12,6 +12,8 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PendingEntries } from "@/components/pending-entries";
 import { SignPartidaForm } from "@/components/sign-partida-form";
 import { pageWindow } from "@/lib/feed/paginate";
+import { SubmitButton } from "@/components/submit-button";
+import { concludePartida, reopenPartida } from "@/app/actions/lifecycle";
 import type { Role } from "@prisma/client";
 
 export default async function PartidaPage({
@@ -38,6 +40,7 @@ export default async function PartidaPage({
           assignments: { select: { userId: true } },
         },
       },
+      segment: { select: { closedAt: true } },
     },
   });
   // Pagination
@@ -114,7 +117,36 @@ export default async function PartidaPage({
           {t.partida.exportPdf}
         </a>
       </div>
-      <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
+      {partida.completedAt ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", marginBottom: 8 }}>
+          <div>
+            <div className="mono" style={{ fontSize: "0.8rem" }}>{t.lifecycle.concluded} · 100%</div>
+            <div className="kicker" style={{ color: "var(--steel)" }}>
+              {t.lifecycle.concludedOn} {new Date(partida.completedAt).toLocaleString(lang === "es" ? "es-DO" : "en-US")}
+            </div>
+          </div>
+          {canEditStructure && !partida.segment?.closedAt && (
+            <form action={reopenPartida}>
+              <input type="hidden" name="partidaId" value={partida.id} />
+              <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem" }}>
+                {t.lifecycle.reopenPartida}
+              </SubmitButton>
+            </form>
+          )}
+        </div>
+      ) : (
+        <>
+          <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
+          {canEditStructure && (
+            <form action={concludePartida} style={{ marginBottom: 8 }}>
+              <input type="hidden" name="partidaId" value={partida.id} />
+              <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem" }}>
+                {t.lifecycle.concludePartida}
+              </SubmitButton>
+            </form>
+          )}
+        </>
+      )}
       <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
       <PendingEntries
         partidaId={partida.id}
