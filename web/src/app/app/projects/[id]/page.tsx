@@ -514,7 +514,7 @@ export default async function ProjectPage({
           }))}
           t={t.informes}
           archetypes={t.archetypes}
-          showNoSealNotice={isAdmin && !companyHasSeal}
+          hasCompanySeal={companyHasSeal}
         />
       ) : inBloqueView ? (
         <>

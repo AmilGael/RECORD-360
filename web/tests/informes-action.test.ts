@@ -1,12 +1,18 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/db";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const generateMock = vi.hoisted(() => vi.fn());
+const loadSealMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/informes/client", () => ({
+vi.mock("@/lib/report/seal", () => ({ loadCompanySealPng: loadSealMock }));
+// Keep the real module's other exports (isCreditExhaustedError) — only the
+// network call is stubbed.
+vi.mock("@/lib/informes/client", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/informes/client")>()),
   INFORME_MODEL: "claude-sonnet-4-6",
   generateInformeContent: generateMock,
 }));
@@ -23,6 +29,7 @@ function fd(obj: Record<string, string>) {
 
 beforeAll(async () => {
   process.env.ANTHROPIC_API_KEY = "test-key";
+  loadSealMock.mockResolvedValue(Buffer.from("seal"));
   const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   companyId = (await prisma.company.create({ data: { name: `Inf Co ${s}`, sealKey: "seal-inf.png" } })).id;
   outCompanyId = (await prisma.company.create({ data: { name: `Inf Out ${s}` } })).id;
@@ -57,6 +64,25 @@ describe("createInforme", () => {
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false, missingFirma: true });
   });
+  it("does not call Anthropic or persist an informe when the company seal is missing", async () => {
+    generateMock.mockClear();
+    loadSealMock.mockResolvedValueOnce(null);
+    try {
+      authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+      const res = await createInforme(null, fd({
+        projectId,
+        scopeType: "project",
+        scopeId: projectId,
+        brief: "sin sello",
+        archetype: "OWNER",
+      }));
+      expect(res).toMatchObject({ ok: false, missingSeal: true });
+      expect(generateMock).not.toHaveBeenCalled();
+      expect(await prisma.informe.count({ where: { projectId, brief: "sin sello" } })).toBe(0);
+    } finally {
+      loadSealMock.mockResolvedValue(Buffer.from("seal"));
+    }
+  });
   it("requires a brief", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "  ", archetype: "OWNER" }));
@@ -89,11 +115,66 @@ describe("createInforme", () => {
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false });
   });
+  it("deduplicates a resubmitted identical request: one row, one paid generation (M2)", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockClear();
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nIdempotente.");
+    const form = () => fd({ projectId, scopeType: "project", scopeId: projectId, brief: "idempotente", archetype: "OWNER" });
+
+    const first = await createInforme(null, form());
+    const second = await createInforme(null, form());
+
+    expect(first).toMatchObject({ ok: true });
+    expect(second).toMatchObject({ ok: true });
+    // Same informe returned, not a second one.
+    expect((second as { informeId: string }).informeId).toBe((first as { informeId: string }).informeId);
+    expect(await prisma.informe.count({ where: { projectId, brief: "idempotente" } })).toBe(1);
+    // The second submission must not have cost another Anthropic call.
+    expect(generateMock).toHaveBeenCalledTimes(1);
+  });
+  it("a genuinely different brief still generates its own informe", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nOtro.");
+    const a = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "distinto-a", archetype: "OWNER" }));
+    const b = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "distinto-b", archetype: "OWNER" }));
+    expect((a as { informeId: string }).informeId).not.toBe((b as { informeId: string }).informeId);
+  });
+  it("concurrent identical submissions collapse to one row via the unique index", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nCarrera.");
+    const form = () => fd({ projectId, scopeType: "project", scopeId: projectId, brief: "carrera", archetype: "OWNER" });
+    // Both start before either has persisted, so both clear the pre-check —
+    // exactly the real double-submit window (generation takes 15-32s).
+    const [r1, r2] = await Promise.all([createInforme(null, form()), createInforme(null, form())]);
+    expect(r1).toMatchObject({ ok: true });
+    expect(r2).toMatchObject({ ok: true });
+    expect((r1 as { informeId: string }).informeId).toBe((r2 as { informeId: string }).informeId);
+    expect(await prisma.informe.count({ where: { projectId, brief: "carrera" } })).toBe(1);
+  });
   it("surfaces generator failures as a friendly error", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
     generateMock.mockRejectedValue(new Error("api down"));
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "y", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false });
+  });
+  it("maps an exhausted credit balance to a saldo message, not the generic retry advice", async () => {
+    // Shape observed live from the real API: 400 invalid_request_error, which
+    // is neither a 401 nor a 429, so it used to fall through to "Intentalo de
+    // nuevo" — advice that can never succeed until the account is topped up.
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockRejectedValue(
+      new Anthropic.APIError(
+        400,
+        { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits." } },
+        '  400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."}}',
+        undefined,
+      ),
+    );
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "saldo", archetype: "OWNER" }));
+    expect(res).toMatchObject({ ok: false });
+    expect((res as { error?: string }).error).toMatch(/saldo/i);
+    expect((res as { error?: string }).error).not.toMatch(/Intentalo de nuevo/i);
+    expect(await prisma.informe.count({ where: { projectId, brief: "saldo" } })).toBe(0);
   });
   it("returns a missing-key error immediately when ANTHROPIC_API_KEY is absent", async () => {
     const saved = process.env.ANTHROPIC_API_KEY;

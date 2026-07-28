@@ -3,24 +3,28 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { assembleReportData, type ReportScope } from "@/lib/report/data";
 import { buildInformeSystem, buildInformeUserMessage } from "@/lib/informes/prompt";
-import { generateInformeContent, INFORME_MODEL } from "@/lib/informes/client";
+import { generateInformeContent, INFORME_MODEL, isCreditExhaustedError } from "@/lib/informes/client";
 import { requireFreshSession } from "@/lib/auth/session";
 import type { InformeArchetype } from "@prisma/client";
 import { ARCHETYPE_VALUES } from "@/lib/informes/archetypes";
+import { loadCompanySealPng } from "@/lib/report/seal";
+import { buildInformeIdempotencyKey } from "@/lib/informes/idempotency";
+import { Prisma } from "@prisma/client";
 import Anthropic from "@anthropic-ai/sdk";
 
 export type InformeResult =
   | { ok: true; informeId: string }
-  | { ok: false; error: string; missingFirma?: boolean };
+  | { ok: false; error: string; missingFirma?: boolean; missingSeal?: boolean };
 
 /**
  * Generate and persist an AI informe. Any project member may request one (the
  * informe records who); the requester must have a firma on file because it is
  * stamped into the PDF footer.
  *
- * NOTE (deploy): generation is a synchronous Claude call (~10-30s at
- * max_tokens 4096). Fine in dev and within Netlify Pro's 26s window; if
- * production timeouts appear, move to a background function.
+ * NOTE (deploy): generation remains synchronous. Live calls measured 15-32s;
+ * Netlify's current buffered synchronous-function ceiling is 60s. The
+ * Anthropic client has its own 50s timeout and one-retry ceiling so a provider
+ * stall fails cleanly before the platform terminates the request.
  */
 export async function createInforme(_prev: InformeResult | null, formData: FormData): Promise<InformeResult> {
   try {
@@ -35,6 +39,15 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     if (!requester) return { ok: false, error: "No autorizado." };
     if (!requester.signatureKey) {
       return { ok: false, missingFirma: true, error: "Necesitas registrar tu firma en Equipo antes de generar informes." };
+    }
+    // Match the PDF route's real requirement: a key alone is insufficient if
+    // the object was removed or storage is unavailable.
+    if (!(await loadCompanySealPng(user.companyId))) {
+      return {
+        ok: false,
+        missingSeal: true,
+        error: "Necesitas registrar el sello de la empresa en Equipo antes de generar informes.",
+      };
     }
 
     const brief = String(formData.get("brief") ?? "").trim();
@@ -73,22 +86,56 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     const data = await assembleReportData({ id: user.id, companyId: user.companyId, role: user.role }, scope, from, to);
     if (!data) return { ok: false, error: "No autorizado." };
 
+    // M2: a resubmitted identical request must never bill a second generation
+    // or leave a second row. The key is derived server-side from the inputs, so
+    // a client cannot forge or opt out of it.
+    const idempotencyKey = buildInformeIdempotencyKey({
+      requesterId: requester.id,
+      projectId: data.project.id,
+      scopeType: scope.type,
+      scopeId: scope.id,
+      archetype,
+      brief,
+      from,
+      to,
+    });
+    const already = await prisma.informe.findUnique({ where: { idempotencyKey }, select: { id: true } });
+    if (already) return { ok: true, informeId: already.id };
+
     const contentMd = await generateInformeContent(buildInformeSystem(archetype), buildInformeUserMessage(data, brief));
 
-    const informe = await prisma.informe.create({
-      data: {
-        projectId: data.project.id,
-        segmentId: scope.type === "segment" ? scope.id : null,
-        partidaId: scope.type === "partida" ? scope.id : null,
-        requestedById: requester.id,
-        archetype,
-        brief,
-        periodFrom: from,
-        periodTo: to,
-        contentMd,
-        model: INFORME_MODEL,
-      },
-    });
+    // The pre-check cannot see a sibling request that is still generating
+    // (generation takes 15-32s, so a double-submit overlaps). The unique index
+    // is the real guarantee: the loser of the race returns the winner's row
+    // instead of creating a second one.
+    let informe: { id: string };
+    try {
+      informe = await prisma.informe.create({
+        data: {
+          projectId: data.project.id,
+          segmentId: scope.type === "segment" ? scope.id : null,
+          partidaId: scope.type === "partida" ? scope.id : null,
+          requestedById: requester.id,
+          archetype,
+          brief,
+          periodFrom: from,
+          periodTo: to,
+          contentMd,
+          model: INFORME_MODEL,
+          idempotencyKey,
+        },
+        select: { id: true },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        const winner = await prisma.informe.findUnique({ where: { idempotencyKey }, select: { id: true } });
+        if (winner) {
+          revalidatePath(`/app/projects/${data.project.id}`);
+          return { ok: true, informeId: winner.id };
+        }
+      }
+      throw e;
+    }
 
     revalidatePath(`/app/projects/${data.project.id}`);
     return { ok: true, informeId: informe.id };
@@ -98,6 +145,13 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     }
     if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.APIConnectionTimeoutError || (e instanceof Anthropic.APIError && Number(e.status) >= 529)) {
       return { ok: false, error: "El servicio esta ocupado. Intentalo de nuevo en un momento." };
+    }
+    // Exhausted credits arrive as a 400 invalid_request_error, which would
+    // otherwise fall through to the generic "try again" message — advice that
+    // can never succeed until someone tops up the account. Treat it as the
+    // configuration problem it is so the operator knows where to look.
+    if (isCreditExhaustedError(e)) {
+      return { ok: false, error: "El generador de informes no esta disponible: la cuenta de API no tiene saldo. Contacta al administrador." };
     }
     return { ok: false, error: "No se pudo generar el informe. Intentalo de nuevo." };
   }
