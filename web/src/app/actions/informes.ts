@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { assembleReportData, type ReportScope } from "@/lib/report/data";
 import { buildInformeSystem, buildInformeUserMessage } from "@/lib/informes/prompt";
-import { generateInformeContent, INFORME_MODEL } from "@/lib/informes/client";
+import { generateInformeContent, INFORME_MODEL, isCreditExhaustedError } from "@/lib/informes/client";
 import { requireFreshSession } from "@/lib/auth/session";
 import type { InformeArchetype } from "@prisma/client";
 import { ARCHETYPE_VALUES } from "@/lib/informes/archetypes";
@@ -98,6 +98,13 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     }
     if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.APIConnectionTimeoutError || (e instanceof Anthropic.APIError && Number(e.status) >= 529)) {
       return { ok: false, error: "El servicio esta ocupado. Intentalo de nuevo en un momento." };
+    }
+    // Exhausted credits arrive as a 400 invalid_request_error, which would
+    // otherwise fall through to the generic "try again" message — advice that
+    // can never succeed until someone tops up the account. Treat it as the
+    // configuration problem it is so the operator knows where to look.
+    if (isCreditExhaustedError(e)) {
+      return { ok: false, error: "El generador de informes no esta disponible: la cuenta de API no tiene saldo. Contacta al administrador." };
     }
     return { ok: false, error: "No se pudo generar el informe. Intentalo de nuevo." };
   }

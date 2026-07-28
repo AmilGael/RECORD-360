@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/db";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
 
@@ -6,7 +7,10 @@ const authMock = vi.hoisted(() => vi.fn());
 const generateMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/informes/client", () => ({
+// Keep the real module's other exports (isCreditExhaustedError) — only the
+// network call is stubbed.
+vi.mock("@/lib/informes/client", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/informes/client")>()),
   INFORME_MODEL: "claude-sonnet-4-6",
   generateInformeContent: generateMock,
 }));
@@ -94,6 +98,25 @@ describe("createInforme", () => {
     generateMock.mockRejectedValue(new Error("api down"));
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "y", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false });
+  });
+  it("maps an exhausted credit balance to a saldo message, not the generic retry advice", async () => {
+    // Shape observed live from the real API: 400 invalid_request_error, which
+    // is neither a 401 nor a 429, so it used to fall through to "Intentalo de
+    // nuevo" — advice that can never succeed until the account is topped up.
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockRejectedValue(
+      new Anthropic.APIError(
+        400,
+        { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits." } },
+        '  400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."}}',
+        undefined,
+      ),
+    );
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "saldo", archetype: "OWNER" }));
+    expect(res).toMatchObject({ ok: false });
+    expect((res as { error?: string }).error).toMatch(/saldo/i);
+    expect((res as { error?: string }).error).not.toMatch(/Intentalo de nuevo/i);
+    expect(await prisma.informe.count({ where: { projectId, brief: "saldo" } })).toBe(0);
   });
   it("returns a missing-key error immediately when ANTHROPIC_API_KEY is absent", async () => {
     const saved = process.env.ANTHROPIC_API_KEY;
