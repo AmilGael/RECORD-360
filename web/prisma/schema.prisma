@@ -371,6 +371,12 @@ model Informe {
   contentMd     String
   model         String
   createdAt     DateTime @default(now())
+  // M2: deterministic fingerprint of the request inputs (requester + scope +
+  // archetype + brief + period), computed server-side so a client cannot forge
+  // or bypass it. Unique, so a resubmitted identical request can never create a
+  // second row — and never a second paid generation once the first has landed.
+  // Nullable for legacy rows; Postgres allows many NULLs under a unique index.
+  idempotencyKey String? @unique
 
   @@index([projectId, createdAt])
 }

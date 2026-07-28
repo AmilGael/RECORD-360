@@ -8,6 +8,8 @@ import { requireFreshSession } from "@/lib/auth/session";
 import type { InformeArchetype } from "@prisma/client";
 import { ARCHETYPE_VALUES } from "@/lib/informes/archetypes";
 import { loadCompanySealPng } from "@/lib/report/seal";
+import { buildInformeIdempotencyKey } from "@/lib/informes/idempotency";
+import { Prisma } from "@prisma/client";
 import Anthropic from "@anthropic-ai/sdk";
 
 export type InformeResult =
@@ -84,22 +86,56 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     const data = await assembleReportData({ id: user.id, companyId: user.companyId, role: user.role }, scope, from, to);
     if (!data) return { ok: false, error: "No autorizado." };
 
+    // M2: a resubmitted identical request must never bill a second generation
+    // or leave a second row. The key is derived server-side from the inputs, so
+    // a client cannot forge or opt out of it.
+    const idempotencyKey = buildInformeIdempotencyKey({
+      requesterId: requester.id,
+      projectId: data.project.id,
+      scopeType: scope.type,
+      scopeId: scope.id,
+      archetype,
+      brief,
+      from,
+      to,
+    });
+    const already = await prisma.informe.findUnique({ where: { idempotencyKey }, select: { id: true } });
+    if (already) return { ok: true, informeId: already.id };
+
     const contentMd = await generateInformeContent(buildInformeSystem(archetype), buildInformeUserMessage(data, brief));
 
-    const informe = await prisma.informe.create({
-      data: {
-        projectId: data.project.id,
-        segmentId: scope.type === "segment" ? scope.id : null,
-        partidaId: scope.type === "partida" ? scope.id : null,
-        requestedById: requester.id,
-        archetype,
-        brief,
-        periodFrom: from,
-        periodTo: to,
-        contentMd,
-        model: INFORME_MODEL,
-      },
-    });
+    // The pre-check cannot see a sibling request that is still generating
+    // (generation takes 15-32s, so a double-submit overlaps). The unique index
+    // is the real guarantee: the loser of the race returns the winner's row
+    // instead of creating a second one.
+    let informe: { id: string };
+    try {
+      informe = await prisma.informe.create({
+        data: {
+          projectId: data.project.id,
+          segmentId: scope.type === "segment" ? scope.id : null,
+          partidaId: scope.type === "partida" ? scope.id : null,
+          requestedById: requester.id,
+          archetype,
+          brief,
+          periodFrom: from,
+          periodTo: to,
+          contentMd,
+          model: INFORME_MODEL,
+          idempotencyKey,
+        },
+        select: { id: true },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        const winner = await prisma.informe.findUnique({ where: { idempotencyKey }, select: { id: true } });
+        if (winner) {
+          revalidatePath(`/app/projects/${data.project.id}`);
+          return { ok: true, informeId: winner.id };
+        }
+      }
+      throw e;
+    }
 
     revalidatePath(`/app/projects/${data.project.id}`);
     return { ok: true, informeId: informe.id };

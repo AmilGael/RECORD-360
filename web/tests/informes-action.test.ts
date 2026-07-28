@@ -115,6 +115,42 @@ describe("createInforme", () => {
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false });
   });
+  it("deduplicates a resubmitted identical request: one row, one paid generation (M2)", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockClear();
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nIdempotente.");
+    const form = () => fd({ projectId, scopeType: "project", scopeId: projectId, brief: "idempotente", archetype: "OWNER" });
+
+    const first = await createInforme(null, form());
+    const second = await createInforme(null, form());
+
+    expect(first).toMatchObject({ ok: true });
+    expect(second).toMatchObject({ ok: true });
+    // Same informe returned, not a second one.
+    expect((second as { informeId: string }).informeId).toBe((first as { informeId: string }).informeId);
+    expect(await prisma.informe.count({ where: { projectId, brief: "idempotente" } })).toBe(1);
+    // The second submission must not have cost another Anthropic call.
+    expect(generateMock).toHaveBeenCalledTimes(1);
+  });
+  it("a genuinely different brief still generates its own informe", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nOtro.");
+    const a = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "distinto-a", archetype: "OWNER" }));
+    const b = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "distinto-b", archetype: "OWNER" }));
+    expect((a as { informeId: string }).informeId).not.toBe((b as { informeId: string }).informeId);
+  });
+  it("concurrent identical submissions collapse to one row via the unique index", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nCarrera.");
+    const form = () => fd({ projectId, scopeType: "project", scopeId: projectId, brief: "carrera", archetype: "OWNER" });
+    // Both start before either has persisted, so both clear the pre-check —
+    // exactly the real double-submit window (generation takes 15-32s).
+    const [r1, r2] = await Promise.all([createInforme(null, form()), createInforme(null, form())]);
+    expect(r1).toMatchObject({ ok: true });
+    expect(r2).toMatchObject({ ok: true });
+    expect((r1 as { informeId: string }).informeId).toBe((r2 as { informeId: string }).informeId);
+    expect(await prisma.informe.count({ where: { projectId, brief: "carrera" } })).toBe(1);
+  });
   it("surfaces generator failures as a friendly error", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
     generateMock.mockRejectedValue(new Error("api down"));
