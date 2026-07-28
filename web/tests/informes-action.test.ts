@@ -5,8 +5,10 @@ import { generateRegistrationCode } from "@/lib/project/registration-code";
 
 const authMock = vi.hoisted(() => vi.fn());
 const generateMock = vi.hoisted(() => vi.fn());
+const loadSealMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/lib/report/seal", () => ({ loadCompanySealPng: loadSealMock }));
 // Keep the real module's other exports (isCreditExhaustedError) — only the
 // network call is stubbed.
 vi.mock("@/lib/informes/client", async (importActual) => ({
@@ -27,6 +29,7 @@ function fd(obj: Record<string, string>) {
 
 beforeAll(async () => {
   process.env.ANTHROPIC_API_KEY = "test-key";
+  loadSealMock.mockResolvedValue(Buffer.from("seal"));
   const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   companyId = (await prisma.company.create({ data: { name: `Inf Co ${s}`, sealKey: "seal-inf.png" } })).id;
   outCompanyId = (await prisma.company.create({ data: { name: `Inf Out ${s}` } })).id;
@@ -60,6 +63,25 @@ describe("createInforme", () => {
     authMock.mockResolvedValue({ user: { id: noFirmaId, companyId, role: "ADMIN" } });
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "x", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false, missingFirma: true });
+  });
+  it("does not call Anthropic or persist an informe when the company seal is missing", async () => {
+    generateMock.mockClear();
+    loadSealMock.mockResolvedValueOnce(null);
+    try {
+      authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+      const res = await createInforme(null, fd({
+        projectId,
+        scopeType: "project",
+        scopeId: projectId,
+        brief: "sin sello",
+        archetype: "OWNER",
+      }));
+      expect(res).toMatchObject({ ok: false, missingSeal: true });
+      expect(generateMock).not.toHaveBeenCalled();
+      expect(await prisma.informe.count({ where: { projectId, brief: "sin sello" } })).toBe(0);
+    } finally {
+      loadSealMock.mockResolvedValue(Buffer.from("seal"));
+    }
   });
   it("requires a brief", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });

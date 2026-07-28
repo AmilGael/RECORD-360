@@ -7,20 +7,22 @@ import { generateInformeContent, INFORME_MODEL, isCreditExhaustedError } from "@
 import { requireFreshSession } from "@/lib/auth/session";
 import type { InformeArchetype } from "@prisma/client";
 import { ARCHETYPE_VALUES } from "@/lib/informes/archetypes";
+import { loadCompanySealPng } from "@/lib/report/seal";
 import Anthropic from "@anthropic-ai/sdk";
 
 export type InformeResult =
   | { ok: true; informeId: string }
-  | { ok: false; error: string; missingFirma?: boolean };
+  | { ok: false; error: string; missingFirma?: boolean; missingSeal?: boolean };
 
 /**
  * Generate and persist an AI informe. Any project member may request one (the
  * informe records who); the requester must have a firma on file because it is
  * stamped into the PDF footer.
  *
- * NOTE (deploy): generation is a synchronous Claude call (~10-30s at
- * max_tokens 4096). Fine in dev and within Netlify Pro's 26s window; if
- * production timeouts appear, move to a background function.
+ * NOTE (deploy): generation remains synchronous. Live calls measured 15-32s;
+ * Netlify's current buffered synchronous-function ceiling is 60s. The
+ * Anthropic client has its own 50s timeout and one-retry ceiling so a provider
+ * stall fails cleanly before the platform terminates the request.
  */
 export async function createInforme(_prev: InformeResult | null, formData: FormData): Promise<InformeResult> {
   try {
@@ -35,6 +37,15 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     if (!requester) return { ok: false, error: "No autorizado." };
     if (!requester.signatureKey) {
       return { ok: false, missingFirma: true, error: "Necesitas registrar tu firma en Equipo antes de generar informes." };
+    }
+    // Match the PDF route's real requirement: a key alone is insufficient if
+    // the object was removed or storage is unavailable.
+    if (!(await loadCompanySealPng(user.companyId))) {
+      return {
+        ok: false,
+        missingSeal: true,
+        error: "Necesitas registrar el sello de la empresa en Equipo antes de generar informes.",
+      };
     }
 
     const brief = String(formData.get("brief") ?? "").trim();

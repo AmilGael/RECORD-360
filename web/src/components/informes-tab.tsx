@@ -19,18 +19,16 @@ type T = {
 
 const ARCHETYPE_OPTIONS = ["OWNER", "SENIOR_MANAGEMENT", "PERSONAL_FEEDBACK"] as const;
 
-export function InformesTab({ projectId, segments, partidas, informes, t, archetypes, showNoSealNotice = false }: {
+export function InformesTab({ projectId, segments, partidas, informes, t, archetypes, hasCompanySeal = true }: {
   projectId: string;
   segments: Option[];
   partidas: Option[];
   informes: InformeRow[];
   t: T;
   archetypes: ArchetypeDict;
-  /** R3 WS11 mandatory-seal policy: server-computed (company has no sealKey AND
-   *  the viewer is ADMIN/MANAGER). Without a seal every export route refuses
-   *  with 409, so this is the pre-emptive human-visible surface — the download
-   *  links are plain <a href> with no client-side fetch to read the response. */
-  showNoSealNotice?: boolean;
+  /** Server-computed for every role. Without a seal neither AI generation nor
+   * PDF export is permitted, preventing persisted-but-unexportable informes. */
+  hasCompanySeal?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<InformeResult | null, FormData>(createInforme, null);
   const archetypeLabels: Record<(typeof ARCHETYPE_OPTIONS)[number], string> = {
@@ -46,7 +44,7 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
         <a href={`/api/projects/${projectId}/report`} className="btn btn-ghost" style={{ fontSize: "0.8rem", textDecoration: "none" }}>
           <FileText size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{t.downloadReport}
         </a>
-        {showNoSealNotice && (
+        {!hasCompanySeal && (
           <p className="mono text-steel" role="note" style={{ fontSize: "0.7rem", margin: "10px 0 0" }}>{t.noSealNotice}</p>
         )}
       </div>
@@ -90,12 +88,14 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
             {t.to}
             <input type="date" name="to" className="input" style={{ display: "block", marginTop: 4 }} />
           </label>
-          <SubmitButton className="btn btn-accent">{pending ? t.generating : t.generate}</SubmitButton>
+          <SubmitButton className="btn btn-accent" disabled={!hasCompanySeal}>{pending ? t.generating : t.generate}</SubmitButton>
         </div>
         {state && !state.ok && (
           <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem" }}>
             {state.missingFirma ? (
               <>{t.missingFirma} <Link href="/app/admin" style={{ color: "var(--accent-deep)" }}>{t.goToEquipo}</Link></>
+            ) : state.missingSeal ? (
+              t.noSealNotice
             ) : state.error}
           </p>
         )}

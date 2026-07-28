@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import Anthropic from "@anthropic-ai/sdk";
-import { isCreditExhaustedError } from "@/lib/informes/client";
+import {
+  INFORME_MAX_RETRIES,
+  INFORME_MAX_TOKENS,
+  INFORME_TIMEOUT_MS,
+  isCreditExhaustedError,
+} from "@/lib/informes/client";
 
 const apiError = (status: number, message: string) =>
   new Anthropic.APIError(status, { type: "error", error: { message } }, message, undefined);
@@ -38,5 +43,13 @@ describe("isCreditExhaustedError", () => {
     expect(isCreditExhaustedError(new Error("credit balance is too low"))).toBe(false);
     expect(isCreditExhaustedError(null)).toBe(false);
     expect(isCreditExhaustedError(undefined)).toBe(false);
+  });
+});
+
+describe("Informe request budget", () => {
+  it("stays below Netlify's synchronous ceiling and bounds retries/output", () => {
+    expect(INFORME_TIMEOUT_MS).toBe(50_000);
+    expect(INFORME_MAX_RETRIES).toBe(1);
+    expect(INFORME_MAX_TOKENS).toBe(2048);
   });
 });
