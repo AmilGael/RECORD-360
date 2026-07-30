@@ -202,6 +202,8 @@ export const dictionaries = {
       light: "Claro",
       dark: "Oscuro",
       signOut: "Salir",
+      openMenu: "Abrir menú",
+      closeMenu: "Cerrar menú",
     },
     project: {
       back: "OBRAS",
@@ -715,6 +717,8 @@ export const dictionaries = {
       light: "Light",
       dark: "Dark",
       signOut: "Sign out",
+      openMenu: "Open menu",
+      closeMenu: "Close menu",
     },
     project: {
       back: "SITES",
