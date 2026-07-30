@@ -76,6 +76,7 @@ button, input, select, textarea { font: inherit; }
 button, input, select, textarea, a { min-width: 0; }
 input, select, textarea { max-width: 100%; }
 img, svg { max-width: 100%; }
+video { max-width: 100%; height: auto; }
 
 body {
   background: var(--paper);
@@ -136,6 +137,15 @@ body {
 .btn:disabled { opacity: 0.55; cursor: progress; transform: none; }
 .btn[aria-busy="true"] { animation: working 1.1s ease-in-out infinite; }
 @keyframes working { 50% { opacity: 0.4; } }
+
+/* 44px minimum touch targets on touch devices only — desktop density unchanged. */
+@media (pointer: coarse) {
+  .btn, .tab, .sidebar-link, .sidebar-icon-button, .sidebar-signout,
+  .space-link, .space-block, .input, select.input, .drawer-toggle {
+    min-height: 44px;
+  }
+  .tab { align-items: center; }
+}
 
 /* ---------- inputs ---------- */
 .input {
