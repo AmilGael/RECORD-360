@@ -9,6 +9,7 @@ import { pageWindow } from "@/lib/feed/paginate";
 import { EVENT_KEYS, type EventKey } from "@/lib/notifications/events";
 import { buildNotificationWhere } from "@/lib/notifications/query";
 import { SeverityMarker } from "@/components/severity-marker";
+import { FiltersSheet } from "@/components/filters-sheet";
 
 const SEVERITIES = ["SUCCESS", "IMPORTANT", "CRITICAL"] as const;
 const PAGE_SIZE = 25;
@@ -89,8 +90,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       <p className="kicker">{N.title.toUpperCase()}</p>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 20px" }}>{N.title}</h1>
 
-      <details className="filters-sheet">
-        <summary className="filters-sheet-summary">{F.sheetTitle}</summary>
+      <FiltersSheet title={F.sheetTitle}>
         <form action="/app/notifications" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
           <input type="text" name="q" defaultValue={sp.q ?? ""} placeholder={F.searchPlaceholder} className="input" style={{ flex: "1 1 220px" }} />
           <select name="status" defaultValue={sp.status ?? ""} className="input" aria-label={F.statusLabel}>
@@ -123,7 +123,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
             <Link href="/app/notifications" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{F.clear}</Link>
           )}
         </form>
-      </details>
+      </FiltersSheet>
 
       {unreadTotal > 0 && (
         <form action={markAllNotificationsRead} style={{ marginBottom: 16 }}>

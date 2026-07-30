@@ -478,7 +478,7 @@ Pattern (notifications shown; pending is identical with its own `t` object):
 }
 ```
 
-Note: on desktop the `form` is forced visible whether or not the `details` is open, and the summary is hidden — so desktop behavior is exactly today's. On phones the native disclosure applies, collapsed by default.
+Note: on desktop the `form` is forced visible whether or not the `details` is open, and the summary is hidden — so desktop behavior is exactly today's. On phones the native disclosure applies, collapsed by default. CORRECTION (final review): a closed <details> suppresses content in modern engines regardless of author display; the shipped implementation uses a client FiltersSheet component instead of <details> for exactly this reason.
 
 - [ ] **Step 4: Verify**
 

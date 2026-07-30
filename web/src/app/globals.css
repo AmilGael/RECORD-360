@@ -239,6 +239,10 @@ body {
 
 @media (max-width: 1040px) {
   .app-shell { grid-template-columns: 1fr; }
+  /* Reserve space so the fixed drawer-toggle (top-right, ~150px incl.
+     label + padding + border) never underlaps the brand or the
+     SyncIndicator chip, both of which live in .appbar-inner. */
+  .appbar-inner { padding-right: 160px; }
   .drawer-toggle {
     position: fixed; top: calc(14px + var(--safe-t)); right: calc(16px + var(--safe-r));
     z-index: 60; display: inline-flex; align-items: center; gap: 7px;
@@ -882,23 +886,27 @@ body {
   }
 }
 
-/* Filters: plain always-visible section on desktop, disclosure on phones. */
+/* Filters: plain always-visible section on desktop, disclosure on phones.
+   A client component (FiltersSheet) drives open state — a native <details>
+   cannot be forced open by CSS at desktop widths (::details-content
+   suppression), which shipped desktop-invisible filters the first time. */
 .filters-sheet > .filters-sheet-summary { display: none; }
-.filters-sheet > form { display: flex; }
-.filters-sheet > form .input { width: auto; }
+.filters-sheet > .filters-sheet-body { display: block; }
+.filters-sheet > .filters-sheet-body > form { display: flex; }
+.filters-sheet > .filters-sheet-body > form .input { width: auto; }
 @media (max-width: 640px) {
   .filters-sheet {
     border: 1px solid var(--line); border-radius: var(--radius-sm);
     background: var(--paper-2); margin-bottom: 14px;
   }
   .filters-sheet > .filters-sheet-summary {
-    display: flex; align-items: center; min-height: 44px; padding: 0 14px;
-    cursor: pointer; list-style: none;
+    display: flex; align-items: center; width: 100%; min-height: 44px; padding: 0 14px;
+    cursor: pointer; background: none; border: none; text-align: left; color: var(--ink-soft);
     font-family: var(--font-mono), monospace; font-size: 0.68rem;
-    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft);
+    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
   }
-  .filters-sheet > .filters-sheet-summary::-webkit-details-marker { display: none; }
-  .filters-sheet:not([open]) > form { display: none; }
-  .filters-sheet > form { flex-direction: column; align-items: stretch; padding: 0 14px 14px; }
-  .filters-sheet > form .input { width: 100%; }
+  .filters-sheet > .filters-sheet-body { display: none; }
+  .filters-sheet > .filters-sheet-body.is-open { display: block; padding: 0 14px 14px; }
+  .filters-sheet > .filters-sheet-body > form { flex-direction: column; align-items: stretch; }
+  .filters-sheet > .filters-sheet-body > form .input { width: 100%; }
 }
