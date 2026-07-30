@@ -55,6 +55,7 @@ export const dictionaries = {
       dueLabel: "Vence",
       authorLabel: "Reportado por",
       noResults: "Ningún pendiente coincide con los filtros.",
+      sheetTitle: "Filtros",
       filterTypeLabel: "Tipo",
       filterTypeAll: "Todos",
       filterProjectLabel: "Obra",
@@ -436,6 +437,7 @@ export const dictionaries = {
       markAllRead: "Marcar todo como leído",
       unread: "no leída",
       filters: {
+        sheetTitle: "Filtros",
         searchPlaceholder: "Buscar en notificaciones…",
         apply: "Filtrar",
         clear: "Limpiar filtros",
@@ -570,6 +572,7 @@ export const dictionaries = {
       dueLabel: "Due",
       authorLabel: "Reported by",
       noResults: "No open items match the filters.",
+      sheetTitle: "Filters",
       filterTypeLabel: "Type",
       filterTypeAll: "All",
       filterProjectLabel: "Site",
@@ -950,6 +953,7 @@ export const dictionaries = {
       markAllRead: "Mark all as read",
       unread: "unread",
       filters: {
+        sheetTitle: "Filters",
         searchPlaceholder: "Search notifications…",
         apply: "Filter",
         clear: "Clear filters",

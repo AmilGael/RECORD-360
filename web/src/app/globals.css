@@ -881,3 +881,23 @@ body {
     color: var(--steel);
   }
 }
+
+/* Filters: plain always-visible section on desktop, disclosure on phones. */
+.filters-sheet > .filters-sheet-summary { display: none; }
+.filters-sheet > form { display: flex; }
+@media (max-width: 640px) {
+  .filters-sheet {
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    background: var(--paper-2); margin-bottom: 14px;
+  }
+  .filters-sheet > .filters-sheet-summary {
+    display: flex; align-items: center; min-height: 44px; padding: 0 14px;
+    cursor: pointer; list-style: none;
+    font-family: var(--font-mono), monospace; font-size: 0.68rem;
+    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft);
+  }
+  .filters-sheet > .filters-sheet-summary::-webkit-details-marker { display: none; }
+  .filters-sheet:not([open]) > form { display: none; }
+  .filters-sheet > form { flex-direction: column; align-items: stretch; padding: 0 14px 14px; }
+  .filters-sheet > form .input { width: 100%; }
+}

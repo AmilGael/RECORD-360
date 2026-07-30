@@ -89,38 +89,41 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       <p className="kicker">{N.title.toUpperCase()}</p>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 20px" }}>{N.title}</h1>
 
-      <form action="/app/notifications" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
-        <input type="text" name="q" defaultValue={sp.q ?? ""} placeholder={F.searchPlaceholder} className="input" style={{ flex: "1 1 220px" }} />
-        <select name="status" defaultValue={sp.status ?? ""} className="input" style={{ width: "auto" }} aria-label={F.statusLabel}>
-          <option value="">{F.statusAll}</option>
-          <option value="unread">{F.statusUnread}</option>
-          <option value="read">{F.statusRead}</option>
-        </select>
-        <select name="projectId" defaultValue={sp.projectId ?? ""} className="input" style={{ width: "auto" }} aria-label={F.projectLabel}>
-          <option value="">{F.projectAll}</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <select name="type" defaultValue={sp.type ?? ""} className="input" style={{ width: "auto" }} aria-label={F.typeLabel}>
-          <option value="">{F.typeAll}</option>
-          {EVENT_KEYS.map((k) => (
-            <option key={k} value={k}>{F.eventLabels[k]}</option>
-          ))}
-        </select>
-        <select name="severity" defaultValue={sp.severity ?? ""} className="input" style={{ width: "auto" }} aria-label={F.severityLabel}>
-          <option value="">{F.severityAll}</option>
-          <option value="SUCCESS">{t.severity.success}</option>
-          <option value="IMPORTANT">{t.severity.important}</option>
-          <option value="CRITICAL">{t.severity.critical}</option>
-        </select>
-        <input type="date" name="from" defaultValue={sp.from ?? ""} aria-label={F.fromLabel} className="input" style={{ width: "auto" }} />
-        <input type="date" name="to" defaultValue={sp.to ?? ""} aria-label={F.toLabel} className="input" style={{ width: "auto" }} />
-        <button type="submit" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{F.apply}</button>
-        {hasActiveFilters && (
-          <Link href="/app/notifications" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{F.clear}</Link>
-        )}
-      </form>
+      <details className="filters-sheet">
+        <summary className="filters-sheet-summary">{F.sheetTitle}</summary>
+        <form action="/app/notifications" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
+          <input type="text" name="q" defaultValue={sp.q ?? ""} placeholder={F.searchPlaceholder} className="input" style={{ flex: "1 1 220px" }} />
+          <select name="status" defaultValue={sp.status ?? ""} className="input" style={{ width: "auto" }} aria-label={F.statusLabel}>
+            <option value="">{F.statusAll}</option>
+            <option value="unread">{F.statusUnread}</option>
+            <option value="read">{F.statusRead}</option>
+          </select>
+          <select name="projectId" defaultValue={sp.projectId ?? ""} className="input" style={{ width: "auto" }} aria-label={F.projectLabel}>
+            <option value="">{F.projectAll}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <select name="type" defaultValue={sp.type ?? ""} className="input" style={{ width: "auto" }} aria-label={F.typeLabel}>
+            <option value="">{F.typeAll}</option>
+            {EVENT_KEYS.map((k) => (
+              <option key={k} value={k}>{F.eventLabels[k]}</option>
+            ))}
+          </select>
+          <select name="severity" defaultValue={sp.severity ?? ""} className="input" style={{ width: "auto" }} aria-label={F.severityLabel}>
+            <option value="">{F.severityAll}</option>
+            <option value="SUCCESS">{t.severity.success}</option>
+            <option value="IMPORTANT">{t.severity.important}</option>
+            <option value="CRITICAL">{t.severity.critical}</option>
+          </select>
+          <input type="date" name="from" defaultValue={sp.from ?? ""} aria-label={F.fromLabel} className="input" style={{ width: "auto" }} />
+          <input type="date" name="to" defaultValue={sp.to ?? ""} aria-label={F.toLabel} className="input" style={{ width: "auto" }} />
+          <button type="submit" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{F.apply}</button>
+          {hasActiveFilters && (
+            <Link href="/app/notifications" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{F.clear}</Link>
+          )}
+        </form>
+      </details>
 
       {unreadTotal > 0 && (
         <form action={markAllNotificationsRead} style={{ marginBottom: 16 }}>
