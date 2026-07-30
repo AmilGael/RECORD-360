@@ -57,6 +57,16 @@ body[data-theme="dark"] {
 }
 
 * { box-sizing: border-box; }
+
+/* Safe-area support (notched phones). viewport-fit=cover exposes env(); these
+   vars are 0 on ordinary screens so desktop is unaffected. */
+:root {
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+
 html { scroll-behavior: smooth; }
 
 /* Translation-safe foundations. Native controls otherwise switch to a
@@ -177,6 +187,7 @@ body {
 
 /* ---------- app shell ---------- */
 .appbar { position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 82%, transparent); backdrop-filter: blur(10px); }
+.appbar { padding-top: var(--safe-t); padding-left: var(--safe-l); padding-right: var(--safe-r); }
 .appbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .brand { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--ink); }
 .brand b { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; letter-spacing: -0.01em; font-size: 1.25rem; }
@@ -187,7 +198,10 @@ body {
 .app-shell {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 28px;
+  padding-top: 28px;
+  padding-left: calc(28px + var(--safe-l));
+  padding-right: calc(28px + var(--safe-r));
+  padding-bottom: calc(28px + var(--safe-b));
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 24px;
