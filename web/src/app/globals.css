@@ -885,6 +885,7 @@ body {
 /* Filters: plain always-visible section on desktop, disclosure on phones. */
 .filters-sheet > .filters-sheet-summary { display: none; }
 .filters-sheet > form { display: flex; }
+.filters-sheet > form .input { width: auto; }
 @media (max-width: 640px) {
   .filters-sheet {
     border: 1px solid var(--line); border-radius: var(--radius-sm);

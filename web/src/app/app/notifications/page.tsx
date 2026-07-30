@@ -93,31 +93,31 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         <summary className="filters-sheet-summary">{F.sheetTitle}</summary>
         <form action="/app/notifications" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
           <input type="text" name="q" defaultValue={sp.q ?? ""} placeholder={F.searchPlaceholder} className="input" style={{ flex: "1 1 220px" }} />
-          <select name="status" defaultValue={sp.status ?? ""} className="input" style={{ width: "auto" }} aria-label={F.statusLabel}>
+          <select name="status" defaultValue={sp.status ?? ""} className="input" aria-label={F.statusLabel}>
             <option value="">{F.statusAll}</option>
             <option value="unread">{F.statusUnread}</option>
             <option value="read">{F.statusRead}</option>
           </select>
-          <select name="projectId" defaultValue={sp.projectId ?? ""} className="input" style={{ width: "auto" }} aria-label={F.projectLabel}>
+          <select name="projectId" defaultValue={sp.projectId ?? ""} className="input" aria-label={F.projectLabel}>
             <option value="">{F.projectAll}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-          <select name="type" defaultValue={sp.type ?? ""} className="input" style={{ width: "auto" }} aria-label={F.typeLabel}>
+          <select name="type" defaultValue={sp.type ?? ""} className="input" aria-label={F.typeLabel}>
             <option value="">{F.typeAll}</option>
             {EVENT_KEYS.map((k) => (
               <option key={k} value={k}>{F.eventLabels[k]}</option>
             ))}
           </select>
-          <select name="severity" defaultValue={sp.severity ?? ""} className="input" style={{ width: "auto" }} aria-label={F.severityLabel}>
+          <select name="severity" defaultValue={sp.severity ?? ""} className="input" aria-label={F.severityLabel}>
             <option value="">{F.severityAll}</option>
             <option value="SUCCESS">{t.severity.success}</option>
             <option value="IMPORTANT">{t.severity.important}</option>
             <option value="CRITICAL">{t.severity.critical}</option>
           </select>
-          <input type="date" name="from" defaultValue={sp.from ?? ""} aria-label={F.fromLabel} className="input" style={{ width: "auto" }} />
-          <input type="date" name="to" defaultValue={sp.to ?? ""} aria-label={F.toLabel} className="input" style={{ width: "auto" }} />
+          <input type="date" name="from" defaultValue={sp.from ?? ""} aria-label={F.fromLabel} className="input" />
+          <input type="date" name="to" defaultValue={sp.to ?? ""} aria-label={F.toLabel} className="input" />
           <button type="submit" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{F.apply}</button>
           {hasActiveFilters && (
             <Link href="/app/notifications" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{F.clear}</Link>

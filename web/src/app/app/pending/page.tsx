@@ -64,24 +64,24 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
       <details className="filters-sheet">
         <summary className="filters-sheet-summary">{P.sheetTitle}</summary>
         <form action="/app/pending" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
-          <select name="kind" defaultValue={sp.kind ?? ""} className="input" style={{ width: "auto" }} aria-label={P.filterTypeLabel}>
+          <select name="kind" defaultValue={sp.kind ?? ""} className="input" aria-label={P.filterTypeLabel}>
             <option value="">{P.filterTypeAll}</option>
             <option value="request">{P.typeRequest}</option>
             <option value="alert">{P.typeAlert}</option>
             <option value="reminder">{P.typeReminder}</option>
           </select>
-          <select name="projectId" defaultValue={sp.projectId ?? ""} className="input" style={{ width: "auto" }} aria-label={P.filterProjectLabel}>
+          <select name="projectId" defaultValue={sp.projectId ?? ""} className="input" aria-label={P.filterProjectLabel}>
             <option value="">{P.filterProjectAll}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-          <select name="severity" defaultValue={sp.severity ?? ""} className="input" style={{ width: "auto" }} aria-label={P.filterSeverityLabel}>
+          <select name="severity" defaultValue={sp.severity ?? ""} className="input" aria-label={P.filterSeverityLabel}>
             <option value="">{P.filterSeverityAll}</option>
             <option value="IMPORTANT">{t.severity.important}</option>
             <option value="CRITICAL">{t.severity.critical}</option>
           </select>
-          <select name="due" defaultValue={sp.due ?? ""} className="input" style={{ width: "auto" }} aria-label={P.filterDueLabel}>
+          <select name="due" defaultValue={sp.due ?? ""} className="input" aria-label={P.filterDueLabel}>
             <option value="">{P.filterDueAll}</option>
             <option value="overdue">{P.filterDueOverdue}</option>
           </select>
