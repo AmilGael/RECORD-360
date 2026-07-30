@@ -341,7 +341,7 @@ export default async function ProjectPage({
         where: { projectId: id, project: projectAccessWhere(sessionUser) },
         orderBy: { createdAt: "desc" },
         take: 30,
-        select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true, archetype: true },
+        select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true, archetype: true, status: true, errorMessage: true },
       })
     : [];
   const informeRequesterIds = [...new Set(informeRows.map((i) => i.requestedById))];
@@ -511,6 +511,8 @@ export default async function ProjectPage({
               : i.archetype === "SENIOR_MANAGEMENT" ? t.archetypes.senior
               : i.archetype === "PERSONAL_FEEDBACK" ? t.archetypes.personal
               : t.archetypes.legacy,
+            status: i.status,
+            errorMessage: i.errorMessage,
           }))}
           t={t.informes}
           archetypes={t.archetypes}

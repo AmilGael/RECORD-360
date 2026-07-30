@@ -377,8 +377,25 @@ model Informe {
   // second row — and never a second paid generation once the first has landed.
   // Nullable for legacy rows; Postgres allows many NULLs under a unique index.
   idempotencyKey String? @unique
+  // Background-generation lifecycle: the row is created PENDING before the AI
+  // call and flipped to READY/FAILED after, so a dropped response or killed
+  // invocation leaves visible, retryable state instead of silence. Default
+  // READY keeps every legacy row (which always has content) downloadable; new
+  // writes always set PENDING explicitly.
+  status        InformeStatus @default(READY)
+  errorMessage  String?
+  // When this generation attempt started (stale-PENDING reclaim measures from
+  // here) and when content landed. Nullable on legacy rows.
+  startedAt     DateTime?
+  generatedAt   DateTime?
 
   @@index([projectId, createdAt])
+}
+
+enum InformeStatus {
+  PENDING
+  READY
+  FAILED
 }
 
 model AuditLog {

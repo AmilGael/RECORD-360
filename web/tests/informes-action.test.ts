@@ -41,6 +41,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   delete process.env.ANTHROPIC_API_KEY;
+  await prisma.notification.deleteMany({ where: { companyId } });
   await prisma.informe.deleteMany({ where: { projectId } });
   await prisma.project.deleteMany({ where: { companyId } });
   await prisma.user.deleteMany({ where: { companyId: { in: [companyId, outCompanyId] } } });
@@ -157,6 +158,56 @@ describe("createInforme", () => {
     const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "y", archetype: "OWNER" }));
     expect(res).toMatchObject({ ok: false });
   });
+  it("success notifies the requester (informe.ready), failure notifies with the reason (informe.failed)", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nNotificado.");
+    const ok = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "notifica-ok", archetype: "OWNER" }));
+    expect(ok).toMatchObject({ ok: true, status: "READY" });
+    const ready = await prisma.notification.findFirst({ where: { companyId, userId: managerId, eventKey: "informe.ready" } });
+    expect(ready).toMatchObject({ severity: "SUCCESS", projectId });
+    expect(ready?.link).toContain("tab=informes");
+
+    generateMock.mockRejectedValue(new Error("api down"));
+    const bad = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "notifica-fail", archetype: "OWNER" }));
+    expect(bad).toMatchObject({ ok: false });
+    const failed = await prisma.notification.findFirst({ where: { companyId, userId: managerId, eventKey: "informe.failed" } });
+    expect(failed).toMatchObject({ severity: "IMPORTANT", projectId });
+  });
+  it("a fresh PENDING row dedupes: no second generation is started while one is running", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockClear();
+    const seeded = await prisma.informe.findFirstOrThrow({ where: { projectId, brief: "idempotente" }, select: { idempotencyKey: true, id: true } });
+    await prisma.informe.update({ where: { id: seeded.id }, data: { status: "PENDING", startedAt: new Date(), contentMd: "" } });
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "idempotente", archetype: "OWNER" }));
+    expect(res).toMatchObject({ ok: true, status: "PENDING", informeId: seeded.id });
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+  it("a stale PENDING row (orphaned invocation) is reclaimed and retried", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockClear();
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nRecuperado.");
+    const seeded = await prisma.informe.findFirstOrThrow({ where: { projectId, brief: "idempotente" }, select: { id: true } });
+    await prisma.informe.update({
+      where: { id: seeded.id },
+      data: { status: "PENDING", contentMd: "", startedAt: new Date(Date.now() - 10 * 60_000) },
+    });
+    const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "idempotente", archetype: "OWNER" }));
+    expect(res).toMatchObject({ ok: true, status: "READY", informeId: seeded.id });
+    expect(generateMock).toHaveBeenCalledTimes(1);
+    const row = await prisma.informe.findUniqueOrThrow({ where: { id: seeded.id } });
+    expect(row.status).toBe("READY");
+    expect(row.contentMd).toContain("Recuperado");
+  });
+  it("a FAILED row is retried on resubmission", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    generateMock.mockRejectedValueOnce(new Error("api down"));
+    const first = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "reintento", archetype: "OWNER" }));
+    expect(first).toMatchObject({ ok: false });
+    generateMock.mockResolvedValue("# Resumen Ejecutivo\nSegundo intento.");
+    const second = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "reintento", archetype: "OWNER" }));
+    expect(second).toMatchObject({ ok: true, status: "READY" });
+    expect(await prisma.informe.count({ where: { projectId, brief: "reintento" } })).toBe(1);
+  });
   it("maps an exhausted credit balance to a saldo message, not the generic retry advice", async () => {
     // Shape observed live from the real API: 400 invalid_request_error, which
     // is neither a 401 nor a 429, so it used to fall through to "Intentalo de
@@ -174,7 +225,12 @@ describe("createInforme", () => {
     expect(res).toMatchObject({ ok: false });
     expect((res as { error?: string }).error).toMatch(/saldo/i);
     expect((res as { error?: string }).error).not.toMatch(/Intentalo de nuevo/i);
-    expect(await prisma.informe.count({ where: { projectId, brief: "saldo" } })).toBe(0);
+    // Background lifecycle: the attempt leaves a FAILED row carrying the real
+    // reason — visible and retryable, never a downloadable/usable informe.
+    const failed = await prisma.informe.findFirst({ where: { projectId, brief: "saldo" } });
+    expect(failed).toMatchObject({ status: "FAILED" });
+    expect(failed?.errorMessage).toMatch(/saldo/i);
+    expect(await prisma.informe.count({ where: { projectId, brief: "saldo", status: "READY" } })).toBe(0);
   });
   it("returns a missing-key error immediately when ANTHROPIC_API_KEY is absent", async () => {
     const saved = process.env.ANTHROPIC_API_KEY;

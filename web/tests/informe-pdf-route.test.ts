@@ -85,6 +85,15 @@ describe("informe PDF route", () => {
     const res = await call(informeId);
     expect(res.headers.get(SEAL_WARNING_HEADER)).toBeNull();
   });
+  it("returns 404 for a PENDING (still generating) and a FAILED informe", async () => {
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    for (const status of ["PENDING", "FAILED"] as const) {
+      await prisma.informe.update({ where: { id: informeId }, data: { status } });
+      const res = await call(informeId);
+      expect(res.status).toBe(404);
+    }
+    await prisma.informe.update({ where: { id: informeId }, data: { status: "READY" } });
+  });
   it("blocks export when the company has no seal on file", async () => {
     authMock.mockResolvedValue({ user: { id: noSealManagerId, companyId: noSealCompanyId, role: "MANAGER" } });
     const res = await call(noSealInformeId);
