@@ -66,18 +66,18 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Link href="/app" className="kicker" style={{ textDecoration: "none" }}>&#8592; {D.backToDash}</Link>
         <h1 className="h-lg" style={{ margin: "10px 0 16px" }}>{tableView === "activas" ? D.tableTitleActive : D.tableTitleArchived}</h1>
         <div className="card" style={{ padding: 0, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
+          <table className="dash-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
             <thead><tr className="mono" style={{ fontSize: "0.7rem", borderBottom: "1px solid var(--line-strong)" }}>
               {th(D.colName, "name")}{th(D.colCode, "code")}{th(D.colProgress, "progress")}{th(D.colResident, "resident")}{th(D.colDate, "date")}
             </tr></thead>
             <tbody>
               {tableRows.map((r) => (
                 <tr key={r.id} style={{ borderBottom: "1px solid var(--line, #8884)" }}>
-                  <td style={{ padding: "8px 10px" }}><Link href={`/app/projects/${r.id}`} style={{ color: "inherit" }}>{r.name}</Link></td>
-                  <td className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{r.code}</td>
-                  <td style={{ padding: "8px 10px" }}>{r.progress}%</td>
-                  <td style={{ padding: "8px 10px" }}>{r.resident}</td>
-                  <td className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{formatTimestamp(r.createdAt, lang as Lang).slice(0, 10)}</td>
+                  <td data-label={D.colName} style={{ padding: "8px 10px" }}><Link href={`/app/projects/${r.id}`} style={{ color: "inherit" }}>{r.name}</Link></td>
+                  <td data-label={D.colCode} className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{r.code}</td>
+                  <td data-label={D.colProgress} style={{ padding: "8px 10px" }}>{r.progress}%</td>
+                  <td data-label={D.colResident} style={{ padding: "8px 10px" }}>{r.resident}</td>
+                  <td data-label={D.colDate} className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{formatTimestamp(r.createdAt, lang as Lang).slice(0, 10)}</td>
                 </tr>
               ))}
             </tbody>

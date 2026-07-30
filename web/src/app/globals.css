@@ -857,3 +857,17 @@ body {
 .skel-line.is-short { width: 28%; }
 .skel-block { height: 120px; border: 1px solid var(--line); }
 @keyframes skel-sweep { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Dashboard table: stacked labeled rows on phones (Phase 1). */
+@media (max-width: 640px) {
+  .dash-table thead { display: none; }
+  .dash-table, .dash-table tbody, .dash-table tr, .dash-table td { display: block; width: 100%; }
+  .dash-table tr { padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .dash-table td { border: none; padding: 3px 0; }
+  .dash-table td::before {
+    content: attr(data-label);
+    display: block; font-family: var(--font-mono), monospace;
+    font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--steel);
+  }
+}
