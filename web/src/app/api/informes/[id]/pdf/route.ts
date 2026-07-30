@@ -26,8 +26,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     const user = await requireFreshSession();
     const sessionUser = { id: user.id, companyId: user.companyId, role: user.role };
 
+    // status READY: a PENDING (still generating) or FAILED informe has no
+    // content to render — 404, same as not existing. Legacy rows default READY.
     const informe = await prisma.informe.findFirst({
-      where: { id, project: projectAccessWhere(sessionUser) },
+      where: { id, status: "READY", project: projectAccessWhere(sessionUser) },
       include: { project: { select: { id: true, name: true, registrationCode: true, company: { select: { name: true, sealKey: true } } } } },
     });
     if (!informe) return new Response("Not found", { status: 404 });

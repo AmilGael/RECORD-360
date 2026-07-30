@@ -5,7 +5,10 @@ import { createInforme, type InformeResult } from "@/app/actions/informes";
 import { SubmitButton } from "@/components/submit-button";
 import { FileText } from "@/components/icons";
 
-type InformeRow = { id: string; brief: string; createdAt: string; requesterName: string; scopeLabel: string; archetypeLabel: string };
+type InformeRow = {
+  id: string; brief: string; createdAt: string; requesterName: string; scopeLabel: string; archetypeLabel: string;
+  status: "PENDING" | "READY" | "FAILED"; errorMessage: string | null;
+};
 type Option = { id: string; name: string };
 type ArchetypeDict = { label: string; owner: string; senior: string; personal: string; legacy: string; required: string };
 
@@ -15,6 +18,7 @@ type T = {
   from: string; to: string; generate: string; generating: string;
   missingFirma: string; goToEquipo: string; empty: string; requestedBy: string; downloadPdf: string;
   reportSection: string; reportHint: string; downloadReport: string; noSealNotice: string;
+  backgroundNote: string; statusGenerating: string; statusFailed: string; alreadyGenerating: string;
 };
 
 const ARCHETYPE_OPTIONS = ["OWNER", "SENIOR_MANAGEMENT", "PERSONAL_FEEDBACK"] as const;
@@ -90,6 +94,14 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
           </label>
           <SubmitButton className="btn btn-accent" disabled={!hasCompanySeal}>{pending ? t.generating : t.generate}</SubmitButton>
         </div>
+        {/* While generating: reassure that leaving the page is safe — the
+            server finishes on its own and a notification announces the result. */}
+        {pending && (
+          <p role="status" className="mono text-steel" style={{ fontSize: "0.72rem", margin: 0 }}>{t.backgroundNote}</p>
+        )}
+        {!pending && state?.ok && state.status === "PENDING" && (
+          <p role="status" className="mono text-steel" style={{ fontSize: "0.72rem", margin: 0 }}>{t.alreadyGenerating}</p>
+        )}
         {state && !state.ok && (
           <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem" }}>
             {state.missingFirma ? (
@@ -109,10 +121,19 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
             <span className="cr-main">
               <span className="cr-title">{i.brief.length > 90 ? `${i.brief.slice(0, 90)}…` : i.brief}</span>
               <span className="cr-meta">{i.scopeLabel} · {i.archetypeLabel} · {t.requestedBy} {i.requesterName} · {i.createdAt}</span>
+              {i.status === "FAILED" && i.errorMessage && (
+                <span className="cr-meta" style={{ color: "var(--accent-deep)" }}>{i.errorMessage}</span>
+              )}
             </span>
-            <a href={`/api/informes/${i.id}/pdf`} className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
-              {t.downloadPdf}
-            </a>
+            {i.status === "READY" ? (
+              <a href={`/api/informes/${i.id}/pdf`} className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
+                {t.downloadPdf}
+              </a>
+            ) : (
+              <span className="mono text-steel" style={{ fontSize: 12, border: "1px dashed var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
+                {i.status === "PENDING" ? t.statusGenerating : t.statusFailed}
+              </span>
+            )}
           </div>
         ))}
       </div>

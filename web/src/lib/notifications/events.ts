@@ -19,6 +19,8 @@ export const EVENT_KEYS = [
   "request.rejected",
   "reminder.resolved",
   "user.archived",
+  "informe.ready",
+  "informe.failed",
 ] as const;
 
 export type EventKey = (typeof EVENT_KEYS)[number];
@@ -42,6 +44,11 @@ const DEFAULT_SEVERITY: Partial<Record<EventKey, NotificationSeverity>> = {
   "request.resolved": NotificationSeverity.SUCCESS,
   "request.rejected": NotificationSeverity.SUCCESS,
   "reminder.resolved": NotificationSeverity.SUCCESS,
+  // Background informe generation: the requester may have left the page, so
+  // these notifications ARE the completion signal. Failure is actionable
+  // (retry / fix the account), hence IMPORTANT rather than informational.
+  "informe.ready": NotificationSeverity.SUCCESS,
+  "informe.failed": NotificationSeverity.IMPORTANT,
 };
 
 export type DomainEvent = {
