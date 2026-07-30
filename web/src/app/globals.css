@@ -340,6 +340,16 @@ body {
 .tab.is-off { color: var(--steel); opacity: 0.55; cursor: default; }
 .tab .soon { font-family: var(--font-mono), monospace; font-size: 0.5rem; letter-spacing: 0.06em; border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 3px; }
 
+@media (max-width: 640px) {
+  .tabs {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* controlled scrolling, no visible bar */
+    margin-inline: calc(-1 * var(--safe-l, 0px)) 0;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { white-space: nowrap; flex: 0 0 auto; }
+}
+
 .workspace { display: grid; grid-template-columns: 240px 1fr; gap: 0; border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius); min-height: 360px; }
 @media (max-width: 760px) { .workspace { grid-template-columns: 1fr; } }
 .tree { border-right: 1px solid var(--line); padding: 10px 8px; }
