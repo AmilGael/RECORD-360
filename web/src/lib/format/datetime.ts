@@ -8,6 +8,19 @@ const MIN = 60_000;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
+/**
+ * Date without the time, for table columns and list metadata that only carry a
+ * day. Always absolute — unlike formatTimestamp, which goes relative for recent
+ * entries. Never slice formatTimestamp's output to drop the time: it returns a
+ * localized string whose length varies by locale, so a fixed cut truncates the
+ * year ("31 may 202", "May 31, 20").
+ */
+export function formatDate(date: Date, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang === "es" ? "es" : "en", {
+    dateStyle: "medium",
+  }).format(date);
+}
+
 export function formatTimestamp(date: Date, lang: Lang, now: Date = new Date()): string {
   const diff = now.getTime() - date.getTime();
 

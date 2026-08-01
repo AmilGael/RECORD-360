@@ -7,7 +7,7 @@ import { PurgeProjectButton } from "@/components/purge-project-button";
 import { SubmitButton } from "@/components/submit-button";
 import { ArchiveButton } from "@/components/archive-button";
 import { projectProgress } from "@/lib/project/progress";
-import { formatTimestamp } from "@/lib/format/datetime";
+import { formatDate, formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
 import { DashboardSearch } from "@/components/dashboard-search";
 import { Folder, Plus } from "@/components/icons";
@@ -77,7 +77,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   <td data-label={D.colCode} className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{r.code}</td>
                   <td data-label={D.colProgress} style={{ padding: "8px 10px" }}>{r.progress}%</td>
                   <td data-label={D.colResident} style={{ padding: "8px 10px" }}>{r.resident}</td>
-                  <td data-label={D.colDate} className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{formatTimestamp(r.createdAt, lang as Lang).slice(0, 10)}</td>
+                  <td data-label={D.colDate} className="mono" style={{ padding: "8px 10px", fontSize: "0.74rem" }}>{formatDate(r.createdAt, lang as Lang)}</td>
                 </tr>
               ))}
             </tbody>

@@ -9,7 +9,7 @@ import { PlanosTab } from "@/components/planos-tab";
 import { AnaliticaTab } from "@/components/analitica-tab";
 import { InformesTab } from "@/components/informes-tab";
 import { Layers, Branch, BarChart, Sliders, Folder, FileText } from "@/components/icons";
-import { formatTimestamp } from "@/lib/format/datetime";
+import { formatDate, formatTimestamp } from "@/lib/format/datetime";
 import { projectProgress } from "@/lib/project/progress";
 import { filterPartidaGroups } from "@/lib/project/partida-filter";
 import { PartidaRecycle } from "@/components/partida-recycle";
@@ -308,7 +308,7 @@ export default async function ProjectPage({
     mediaItems = atts.slice(0, MEDIA_PAGE).map((a) => ({
       id: a.id, url: a.url,
       label: a.registro.partida.name,
-      date: formatTimestamp(a.registro.serverCreatedAt, lang).slice(0, 10),
+      date: formatDate(a.registro.serverCreatedAt, lang),
       kind: mediaTab === "fotos" ? "image" : mediaTab === "videos" ? "video" : mediaTab === "audio" ? "audio" : "pdf",
     }));
     if (mediaTab === "documentos" && mediaPage === 1) {
@@ -320,7 +320,7 @@ export default async function ProjectPage({
         select: { id: true, url: true, title: true, kind: true, createdAt: true },
       });
       mediaItems = [
-        ...docs2.map((d) => ({ id: d.id, url: d.url, label: d.title ?? d.kind, date: formatTimestamp(d.createdAt, lang).slice(0, 10), kind: "doc" as const })),
+        ...docs2.map((d) => ({ id: d.id, url: d.url, label: d.title ?? d.kind, date: formatDate(d.createdAt, lang), kind: "doc" as const })),
         ...mediaItems,
       ].slice(0, MEDIA_PAGE * 2);
     }
