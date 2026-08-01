@@ -391,6 +391,13 @@ body {
 .inline-edit[open] form { animation: fade-rise 0.16s var(--ease); }
 .inline-edit .input { min-height: 30px; padding: 0.35rem 0.5rem; font-size: 0.76rem; width: min(220px, 100%); }
 .inline-edit .btn { padding: 0.35rem 0.62rem; font-size: 0.72rem; }
+@media (max-width: 640px) {
+  /* The profile form drops below its summary instead of beside it; file
+     inputs lose their ~293px intrinsic width so nothing exceeds 320px. */
+  .inline-edit { flex-wrap: wrap; max-width: 100%; }
+  .inline-edit > form { flex-basis: 100%; min-width: 0; max-width: 100%; }
+  .inline-edit input[type="file"] { width: 100%; min-width: 0; }
+}
 .tree-edit { font-size: 0.62rem; }
 
 .assignment-panel { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--paper-2); max-width: 720px; }

@@ -251,8 +251,8 @@ export default async function AdminPage() {
             ) : (
               <span className="mono text-steel" style={{ fontSize: "0.74rem" }}>{A.noSeal}</span>
             )}
-            <form action={updateCompanySeal} style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-              <input type="file" name="seal" required accept="image/png" style={{ fontSize: "0.78rem" }} />
+            <form action={updateCompanySeal} style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap", maxWidth: "100%" }}>
+              <input type="file" name="seal" required accept="image/png" style={{ fontSize: "0.78rem", maxWidth: "100%", minWidth: 0 }} />
               <SubmitButton className="btn btn-ghost"><Upload size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{A.sealUpload}</SubmitButton>
             </form>
           </div>
