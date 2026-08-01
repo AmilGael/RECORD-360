@@ -8,6 +8,7 @@ import { loadPendingItems, type PendingKind } from "@/lib/notifications/pending"
 import { resolveReminder } from "@/app/actions/reminders";
 import { SeverityMarker } from "@/components/severity-marker";
 import { SubmitButton } from "@/components/submit-button";
+import { FiltersSheet } from "@/components/filters-sheet";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { prisma } from "@/lib/db";
 
@@ -61,33 +62,35 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
       <p className="kicker">{P.title.toUpperCase()}</p>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 20px" }}>{P.title}</h1>
 
-      <form action="/app/pending" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
-        <select name="kind" defaultValue={sp.kind ?? ""} className="input" style={{ width: "auto" }} aria-label={P.filterTypeLabel}>
-          <option value="">{P.filterTypeAll}</option>
-          <option value="request">{P.typeRequest}</option>
-          <option value="alert">{P.typeAlert}</option>
-          <option value="reminder">{P.typeReminder}</option>
-        </select>
-        <select name="projectId" defaultValue={sp.projectId ?? ""} className="input" style={{ width: "auto" }} aria-label={P.filterProjectLabel}>
-          <option value="">{P.filterProjectAll}</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <select name="severity" defaultValue={sp.severity ?? ""} className="input" style={{ width: "auto" }} aria-label={P.filterSeverityLabel}>
-          <option value="">{P.filterSeverityAll}</option>
-          <option value="IMPORTANT">{t.severity.important}</option>
-          <option value="CRITICAL">{t.severity.critical}</option>
-        </select>
-        <select name="due" defaultValue={sp.due ?? ""} className="input" style={{ width: "auto" }} aria-label={P.filterDueLabel}>
-          <option value="">{P.filterDueAll}</option>
-          <option value="overdue">{P.filterDueOverdue}</option>
-        </select>
-        <button type="submit" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{P.apply}</button>
-        {hasActiveFilters && (
-          <Link href="/app/pending" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{P.clear}</Link>
-        )}
-      </form>
+      <FiltersSheet title={P.sheetTitle}>
+        <form action="/app/pending" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
+          <select name="kind" defaultValue={sp.kind ?? ""} className="input" aria-label={P.filterTypeLabel}>
+            <option value="">{P.filterTypeAll}</option>
+            <option value="request">{P.typeRequest}</option>
+            <option value="alert">{P.typeAlert}</option>
+            <option value="reminder">{P.typeReminder}</option>
+          </select>
+          <select name="projectId" defaultValue={sp.projectId ?? ""} className="input" aria-label={P.filterProjectLabel}>
+            <option value="">{P.filterProjectAll}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <select name="severity" defaultValue={sp.severity ?? ""} className="input" aria-label={P.filterSeverityLabel}>
+            <option value="">{P.filterSeverityAll}</option>
+            <option value="IMPORTANT">{t.severity.important}</option>
+            <option value="CRITICAL">{t.severity.critical}</option>
+          </select>
+          <select name="due" defaultValue={sp.due ?? ""} className="input" aria-label={P.filterDueLabel}>
+            <option value="">{P.filterDueAll}</option>
+            <option value="overdue">{P.filterDueOverdue}</option>
+          </select>
+          <button type="submit" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{P.apply}</button>
+          {hasActiveFilters && (
+            <Link href="/app/pending" className="btn btn-ghost" style={{ fontSize: "0.82rem" }}>{P.clear}</Link>
+          )}
+        </form>
+      </FiltersSheet>
 
       {pageItems.length === 0 && (
         <p className="text-steel">{hasActiveFilters ? P.noResults : P.empty}</p>

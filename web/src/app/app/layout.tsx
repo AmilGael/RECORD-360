@@ -7,6 +7,7 @@ import { requireFreshSession } from "@/lib/auth/session";
 import { OfflineProvider } from "@/components/offline-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarDrawer } from "@/components/sidebar-drawer";
 import { countPendingItems } from "@/lib/notifications/pending";
 import { cookies } from "next/headers";
 
@@ -44,28 +45,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
       <div className="app-shell">
-        <AppSidebar
-          isAdmin={isAdmin}
-          unread={unread}
-          pendingCount={pendingCount}
-          activeProjects={activeProjects}
-          archivedProjects={archivedProjects}
-          currentLang={lang}
-          theme={theme}
-          labels={{
-            nav: { sites: t.nav.sites, notifications: t.nav.notifications, team: t.nav.team, pending: t.pendingWork.navLabel },
-            navigation: t.sidebar.navigation,
-            status: t.sidebar.status,
-            preferences: t.sidebar.preferences,
-            activeProjects: t.sidebar.activeProjects,
-            archivedProjects: t.sidebar.archivedProjects,
-            unread: t.sidebar.unread,
-            signOut: t.sidebar.signOut,
-            theme: { light: t.sidebar.light, dark: t.sidebar.dark },
-            brandTagline: t.common.blackBox,
-          }}
-          onSignOut={signOutAction}
-        />
+        <SidebarDrawer labels={{ open: t.sidebar.openMenu, close: t.sidebar.closeMenu }}>
+          <AppSidebar
+            isAdmin={isAdmin}
+            unread={unread}
+            pendingCount={pendingCount}
+            activeProjects={activeProjects}
+            archivedProjects={archivedProjects}
+            currentLang={lang}
+            theme={theme}
+            labels={{
+              nav: { sites: t.nav.sites, notifications: t.nav.notifications, team: t.nav.team, pending: t.pendingWork.navLabel },
+              navigation: t.sidebar.navigation,
+              status: t.sidebar.status,
+              preferences: t.sidebar.preferences,
+              activeProjects: t.sidebar.activeProjects,
+              archivedProjects: t.sidebar.archivedProjects,
+              unread: t.sidebar.unread,
+              signOut: t.sidebar.signOut,
+              theme: { light: t.sidebar.light, dark: t.sidebar.dark },
+              brandTagline: t.common.blackBox,
+            }}
+            onSignOut={signOutAction}
+          />
+        </SidebarDrawer>
         <main className="app-shell-main">{children}</main>
       </div>
     </div>
