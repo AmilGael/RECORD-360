@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "src/app/globals.css"
+        ],
+        "createdAt": "2026-08-03T08:44:35.182Z",
+        "reason": "User-confirmed: blueprint grid is the product's core metaphor (construction obra/planos); reviewed rendered at 1440px"
+      }
+    ]
+  }
+}
