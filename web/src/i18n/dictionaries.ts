@@ -377,7 +377,7 @@ export const dictionaries = {
         OBSERVACIONES: "Observaciones", COSTOS: "Costos", PERSONAL: "Personal",
       },
     },
-    offlineCapture: { pending: "pendientes", pendingOne: "Pendiente de sincronizar", syncing: "Sincronizando…", retry: "Reintentar", capturado: "Capturado", sellado: "Sellado", errorTitle: "No se pudo sincronizar", blockedTitle: "Sesión expirada — se sincronizará al iniciar sesión" },
+    offlineCapture: { pending: "pendientes", pendingOne: "Pendiente de sincronizar", syncing: "Sincronizando…", retry: "Reintentar", discard: "Descartar", capturado: "Capturado", sellado: "Sellado", errorTitle: "No se pudo sincronizar", blockedTitle: "Sesión expirada — se sincronizará al iniciar sesión" },
     record: { noGps: "sin GPS", immutable: "inalterable", by: "por", document: "Ver documento" },
     admin: {
       title: "Control de Accesos y Roles",
@@ -897,7 +897,7 @@ export const dictionaries = {
         OBSERVACIONES: "Observations", COSTOS: "Costs", PERSONAL: "Labor",
       },
     },
-    offlineCapture: { pending: "pending", pendingOne: "Pending sync", syncing: "Syncing…", retry: "Retry", capturado: "Captured", sellado: "Sealed", errorTitle: "Could not sync", blockedTitle: "Session expired — will sync automatically on login" },
+    offlineCapture: { pending: "pending", pendingOne: "Pending sync", syncing: "Syncing…", retry: "Retry", discard: "Discard", capturado: "Captured", sellado: "Sealed", errorTitle: "Could not sync", blockedTitle: "Session expired — will sync automatically on login" },
     record: { noGps: "no GPS", immutable: "immutable", by: "by", document: "View document" },
     admin: {
       title: "Access Control & Roles",
