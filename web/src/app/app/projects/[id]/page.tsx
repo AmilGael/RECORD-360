@@ -28,16 +28,17 @@ import { BloqueCards } from "@/components/bloque-cards";
 import { ProjectSearchResultsPanel } from "@/components/project-search-results";
 import { MediaGalleries, isMediaTab, type MediaItem, type MediaTab } from "@/components/media-galleries";
 import { searchProject } from "@/lib/project/search";
+import { projectHrefWithParams } from "@/lib/project/space-links";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 
 export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; space?: string; media?: string; mpage?: string; tags?: string | string[]; pmin?: string; pmax?: string; cambios?: string; ffrom?: string; fto?: string }>;
+  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; space?: string; media?: string; mpage?: string; tags?: string | string[]; pmin?: string; pmax?: string; cambios?: string; ffrom?: string; fto?: string; rem?: string }>;
 }) {
   const { id } = await params;
-  const { p: selectedId, tab, q, block, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto } = await searchParams;
+  const { p: selectedId, tab, q, block, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto, rem } = await searchParams;
   const session = await auth();
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
@@ -114,12 +115,14 @@ export default async function ProjectPage({
   const activeSegment = inBloqueView && blockParam !== UNGROUPED_FILTER
     ? project.segments.find((s) => s.id === blockParam) ?? null
     : null;
-  const selectedSpace = (["cuaderno", "solicitudes", "planos", "levantamientos", "ideas", "media", "recordatorios"].includes(String(space))
+  // Unknown/retired space keys fall back to "cuaderno" rather than rendering an
+  // empty workspace — this is what keeps bookmarked ?space=planos and
+  // ?space=levantamientos links (both retired from the block workspace) landing
+  // somewhere useful instead of on a blank panel.
+  const selectedSpace = (["cuaderno", "solicitudes", "ideas", "media", "recordatorios"].includes(String(space))
     ? String(space)
     : "cuaderno") as SpaceKey;
   const spaceKind: Partial<Record<SpaceKey, DocumentKind>> = {
-    planos: "PLANO",
-    levantamientos: "LEVANTAMIENTO",
     ideas: "IDEA",
   };
   // Facet params — only meaningful in bloque view, but parsed unconditionally so
@@ -214,11 +217,11 @@ export default async function ProjectPage({
         where: {
           projectId: id,
           segmentId: selectedSpaceBlock,
-          // The Planos space lists revisions alongside originals; the other
-          // kind-backed spaces map 1:1 to a single DocumentKind.
-          kind: selectedSpace === "planos"
-            ? { in: ["PLANO", "PLANO_ACTUALIZADO"] }
-            : spaceKind[selectedSpace],
+          // Every remaining kind-backed space maps 1:1 to a single DocumentKind
+          // ("Ideas" → IDEA). The PLANO/PLANO_ACTUALIZADO revision pairing this
+          // used to special-case moved to the project-level Planos tab when the
+          // block-scoped Planos space was retired.
+          kind: spaceKind[selectedSpace],
         },
         orderBy: { createdAt: "desc" },
       })
@@ -255,19 +258,34 @@ export default async function ProjectPage({
     partidas: s.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct, completed: p.completedAt != null })),
   }));
   const analiticaUngrouped = project.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct, completed: p.completedAt != null }));
+  // Resolving a reminder used to make it disappear from every surface at once
+  // (it leaves both the pending queue and this space), so there was no way to
+  // confirm what had been dealt with. `?rem=resolved` is the history view of
+  // the same list.
+  const showResolvedReminders = String(rem ?? "") === "resolved";
   const reminderRows = activeTab === "code" && inBloqueView && selectedSpaceBlock
     ? await prisma.registro.findMany({
         where: {
           partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null },
           reminderDueAt: { not: null },
-          reminderResolvedAt: null,
+          reminderResolvedAt: showResolvedReminders ? { not: null } : null,
         },
-        orderBy: { reminderDueAt: "asc" },
+        // Open reminders are a queue (soonest due first); resolved ones are a
+        // log (most recently resolved first).
+        orderBy: showResolvedReminders ? { reminderResolvedAt: "desc" } : { reminderDueAt: "asc" },
         take: 20,
-        select: { id: true, partidaId: true, text: true, serverCreatedAt: true, hash: true, partida: { select: { name: true } } },
+        select: { id: true, partidaId: true, text: true, serverCreatedAt: true, hash: true, reminderResolvedAt: true, partida: { select: { name: true } } },
       })
     : [];
-  const spaceReminders = reminderRows.map((r) => ({ id: r.id, partidaId: r.partidaId, text: r.text, serverCreatedAt: r.serverCreatedAt, hash: r.hash, partidaName: r.partida.name }));
+  const spaceReminders = reminderRows.map((r) => ({ id: r.id, partidaId: r.partidaId, text: r.text, serverCreatedAt: r.serverCreatedAt, hash: r.hash, resolvedAt: r.reminderResolvedAt, partidaName: r.partida.name }));
+  // Shared by the panel's block/space links and the reminders open/resolved
+  // toggle, so switching reminder views never drops the selected partida or the
+  // active filters (the same invariant space-links.ts exists to protect).
+  const remindersPreserved = {
+    p: selectedId, q: partidaFilters.q, tags: tagsParam,
+    pmin: pmin ?? null, pmax: pmax ?? null, cambios: cambios ?? null,
+    ffrom: ffrom ?? null, fto: fto ?? null,
+  };
   // Overview data — only computed when NOT in the bloque workspace view.
   const searchResults = !inBloqueView && activeTab === "code" && partidaFilters.q
     ? await searchProject(sessionUser, id, partidaFilters.q)
@@ -572,6 +590,13 @@ export default async function ProjectPage({
             notes={spaceNotes}
             media={spaceMedia}
             reminders={spaceReminders}
+            remindersShowResolved={showResolvedReminders}
+            remindersOpenHref={projectHrefWithParams(project.id, {
+              ...remindersPreserved, tab: "code", block: blockParam, space: "recordatorios",
+            })}
+            remindersResolvedHref={projectHrefWithParams(project.id, {
+              ...remindersPreserved, tab: "code", block: blockParam, space: "recordatorios", rem: "resolved",
+            })}
             requestsContent={selectedSpaceBlock ? (
               <CambiosList
                 projectId={project.id}
@@ -588,11 +613,13 @@ export default async function ProjectPage({
             canUpload={canEditStructure}
             canResolve={canEditStructure}
             canManageLifecycle={canEditStructure}
-            preserved={{ p: selectedId, q: partidaFilters.q, tags: tagsParam, pmin: pmin ?? null, pmax: pmax ?? null, cambios: cambios ?? null, ffrom: ffrom ?? null, fto: fto ?? null }}
+            preserved={remindersPreserved}
             lang={lang}
             t={{
               emptyDocs: t.planos.empty, upload: t.planos.upload, uploadByKind: t.planos.uploadByKind, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder,
               blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
+              remindersOpen: P.remindersOpen, remindersResolved: P.remindersResolved,
+              remindersResolvedEmpty: P.remindersResolvedEmpty, reminderResolvedAt: P.reminderResolvedAt,
             }}
           />
           <PartidaRecycle

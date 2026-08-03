@@ -12,27 +12,32 @@ import { spaceHref, type PreservedParams } from "@/lib/project/space-links";
 type SegmentSummary = { id: string; name: string; progress: number; count: number; closedAt: Date | string | null };
 // "Indicadores" was removed in WS4F: its core numbers (progress %, partida
 // count) duplicated the Analítica tab's per-bloque breakdown, and the remaining
-// block-scoped extras were not worth a nav entry. "Planos" stays: unlike the
-// project-wide Planos tab (which always uploads with no segmentId), this space
-// is the only place a document can be attached to a specific bloque — not a
-// duplicate. "Solicitudes" is block-scoped here: requests created from this
-// space are locked to the selected bloque.
-export type SpaceKey = "cuaderno" | "solicitudes" | "planos" | "levantamientos" | "ideas" | "media" | "recordatorios";
+// block-scoped extras were not worth a nav entry. "Solicitudes" is
+// block-scoped here: requests created from this space are locked to the
+// selected bloque.
+//
+// "Planos" and "Levantamientos" were removed from the block workspace by
+// product decision. This reverses the earlier WS4F call to keep "Planos" here
+// as the only place to attach a document to a specific bloque — that upload
+// path is intentionally gone; project-wide plano uploads live on the project's
+// own Planos tab (?tab=planos). Documents already attached to a segment stay in
+// the database but are no longer surfaced here. The kind-backed rendering below
+// is still live: "Ideas" uses it.
+export type SpaceKey = "cuaderno" | "solicitudes" | "ideas" | "media" | "recordatorios";
 type MediaItem = { id: string; url: string; fileType: AttachmentType; text: string | null; createdAt: Date };
 type NoteItem = Pick<Registro, "id" | "text" | "serverCreatedAt" | "hash" | "partidaId"> & { partidaName: string };
+type ReminderItem = NoteItem & { resolvedAt: Date | null };
 
 const SPACES: { key: SpaceKey; label: string; kind?: DocumentKind }[] = [
   { key: "cuaderno", label: "Cuaderno" },
   { key: "solicitudes", label: "Solicitudes" },
-  { key: "planos", label: "Planos", kind: "PLANO" },
-  { key: "levantamientos", label: "Levantamientos", kind: "LEVANTAMIENTO" },
   { key: "ideas", label: "Ideas", kind: "IDEA" },
   { key: "media", label: "Media" },
   { key: "recordatorios", label: "Recordatorios" },
 ];
 
 export function BloqueSpacesPanel({
-  projectId, segments, selectedSegmentId, selectedSpace, docs, notes, media, reminders, requestsContent, canUpload, canResolve, canManageLifecycle, preserved, lang, t,
+  projectId, segments, selectedSegmentId, selectedSpace, docs, notes, media, reminders, remindersShowResolved, remindersOpenHref, remindersResolvedHref, requestsContent, canUpload, canResolve, canManageLifecycle, preserved, lang, t,
 }: {
   projectId: string;
   segments: SegmentSummary[];
@@ -41,7 +46,10 @@ export function BloqueSpacesPanel({
   docs: Document[];
   notes: NoteItem[];
   media: MediaItem[];
-  reminders: NoteItem[];
+  reminders: ReminderItem[];
+  remindersShowResolved: boolean;
+  remindersOpenHref: string;
+  remindersResolvedHref: string;
   requestsContent?: ReactNode;
   canUpload: boolean;
   canResolve: boolean;
@@ -51,6 +59,7 @@ export function BloqueSpacesPanel({
   t: {
     emptyDocs: string; upload: string; uploadByKind: Record<DocumentKind, string>; title: string; error: string; uploadedBy: string; view: string; resolve: string;
     blockClosed: string; closeBlock: string; reopenBlock: string;
+    remindersOpen: string; remindersResolved: string; remindersResolvedEmpty: string; reminderResolvedAt: string;
   };
 }) {
   if (segments.length === 0 || !selectedSegmentId) return null;
@@ -109,7 +118,23 @@ export function BloqueSpacesPanel({
         {space.key === "cuaderno" && <NotesList notes={notes} lang={lang} />}
         {space.key === "solicitudes" && requestsContent}
         {space.key === "media" && <MediaGroups grouped={grouped} />}
-        {space.key === "recordatorios" && <RemindersList reminders={reminders} lang={lang} canResolve={canResolve} resolveLabel={t.resolve} />}
+        {space.key === "recordatorios" && (
+          <RemindersList
+            reminders={reminders}
+            lang={lang}
+            canResolve={canResolve}
+            showingResolved={remindersShowResolved}
+            openHref={remindersOpenHref}
+            resolvedHref={remindersResolvedHref}
+            t={{
+              resolve: t.resolve,
+              open: t.remindersOpen,
+              resolved: t.remindersResolved,
+              resolvedEmpty: t.remindersResolvedEmpty,
+              resolvedAt: t.reminderResolvedAt,
+            }}
+          />
+        )}
       </div>
     </section>
   );
@@ -151,26 +176,55 @@ function NotesList({ notes, lang, empty = "Sin registros en este bloque." }: { n
   );
 }
 
-function RemindersList({ reminders, lang, canResolve, resolveLabel }: { reminders: NoteItem[]; lang: Lang; canResolve: boolean; resolveLabel: string }) {
+function RemindersList({
+  reminders, lang, canResolve, showingResolved, openHref, resolvedHref, t,
+}: {
+  reminders: ReminderItem[];
+  lang: Lang;
+  canResolve: boolean;
+  showingResolved: boolean;
+  openHref: string;
+  resolvedHref: string;
+  t: { resolve: string; open: string; resolved: string; resolvedEmpty: string; resolvedAt: string };
+}) {
   return (
-    <div className="repo-list">
-      {reminders.length === 0 && <div className="repo-list-empty">Sin recordatorios vencidos o próximos.</div>}
-      {reminders.map((n) => (
-        <div key={n.id} className="cr-row" style={{ justifyContent: "space-between" }}>
-          <Link href={`/app/partidas/${n.partidaId}`} className="cr-main">
-            <span className="cr-title">{n.partidaName}</span>
-            <span className="cr-meta">{formatTimestamp(n.serverCreatedAt, lang)} · HASH {n.hash.slice(0, 8)}…</span>
-            <span style={{ display: "block", marginTop: 5 }}>{n.text ?? "Registro sin texto"}</span>
-          </Link>
-          {canResolve && (
-            <form action={resolveReminder}>
-              <input type="hidden" name="registroId" value={n.id} />
-              <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.74rem" }}>{resolveLabel}</SubmitButton>
-            </form>
-          )}
-        </div>
-      ))}
-    </div>
+    <>
+      {/* Open/Resolved is a view switch over one list, not two features — a
+          segmented control keeps that relationship legible and makes the
+          resolved history discoverable from the place items disappear from. */}
+      <div className="seg-toggle" role="group" aria-label={t.open + " / " + t.resolved}>
+        <Link href={openHref} className={`seg-toggle-item${showingResolved ? "" : " is-on"}`} aria-current={showingResolved ? undefined : "true"}>{t.open}</Link>
+        <Link href={resolvedHref} className={`seg-toggle-item${showingResolved ? " is-on" : ""}`} aria-current={showingResolved ? "true" : undefined}>{t.resolved}</Link>
+      </div>
+      <div className="repo-list">
+        {reminders.length === 0 && (
+          <div className="repo-list-empty">
+            {showingResolved ? t.resolvedEmpty : "Sin recordatorios vencidos o próximos."}
+          </div>
+        )}
+        {reminders.map((n) => (
+          <div key={n.id} className="cr-row" style={{ justifyContent: "space-between" }}>
+            <Link href={`/app/partidas/${n.partidaId}`} className="cr-main">
+              <span className="cr-title">{n.partidaName}</span>
+              <span className="cr-meta">{formatTimestamp(n.serverCreatedAt, lang)} · HASH {n.hash.slice(0, 8)}…</span>
+              <span style={{ display: "block", marginTop: 5 }}>{n.text ?? "Registro sin texto"}</span>
+            </Link>
+            {/* Resolved rows show WHEN they were resolved instead of an action:
+                the state is terminal, so offering the button would be a no-op. */}
+            {n.resolvedAt ? (
+              <span className="state-badge is-active">
+                {t.resolvedAt} {formatTimestamp(n.resolvedAt, lang)}
+              </span>
+            ) : canResolve ? (
+              <form action={resolveReminder}>
+                <input type="hidden" name="registroId" value={n.id} />
+                <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.74rem" }}>{t.resolve}</SubmitButton>
+              </form>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 

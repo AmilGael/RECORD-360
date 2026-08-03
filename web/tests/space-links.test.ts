@@ -10,7 +10,7 @@ import { projectHrefWithParams, spaceHref } from "@/lib/project/space-links";
 
 describe("spaceHref", () => {
   it("always carries the canonical block= param", () => {
-    const href = spaceHref("proj1", {}, "seg-42", "planos");
+    const href = spaceHref("proj1", {}, "seg-42", "ideas");
     expect(href).toContain("block=seg-42");
     expect(href).not.toContain("spaceBlock=");
   });
