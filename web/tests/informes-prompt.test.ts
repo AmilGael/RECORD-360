@@ -96,4 +96,26 @@ describe("buildInformeSystem — archetype branching (R3 WS7)", () => {
       expect(s).toMatch(/900 palabras/);
     }
   });
+
+  // Sparse data must degrade to a partial report, never to a refusal or a
+  // request for more input. An obra with no registros at all still gets every
+  // section, with the absence itself called out as a finding — a report of
+  // "here is what we have" is always more useful than an error.
+  //
+  // This was already the observed behaviour (verified live against an empty
+  // obra), but it was emergent from the model rather than stated. Pinning it in
+  // the prompt makes it a contract that survives a model change.
+  it("all archetypes forbid refusing to write when data is missing", () => {
+    for (const a of ["OWNER", "SENIOR_MANAGEMENT", "PERSONAL_FEEDBACK"] as const) {
+      const s = buildInformeSystem(a);
+      expect(s).toMatch(/NUNCA te niegues a redactar/i);
+      expect(s).toMatch(/informe parcial/i);
+    }
+  });
+
+  it("still tells every archetype how to fill an empty section", () => {
+    for (const a of ["OWNER", "SENIOR_MANAGEMENT", "PERSONAL_FEEDBACK"] as const) {
+      expect(buildInformeSystem(a)).toMatch(/Sin novedades en el periodo/);
+    }
+  });
 });

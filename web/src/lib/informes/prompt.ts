@@ -12,6 +12,7 @@ import { ARCHETYPE_LABEL_ES } from "./archetypes";
 const BASE_RULES = `Eres el redactor tecnico de Raphel, la bitacora digital inalterable de obras de construccion en la Republica Dominicana.
 Redactas informes en espanol, sobrios y precisos, SOLO con los datos proporcionados — nunca inventes hechos, cifras ni fechas.
 Markdown simple, sin tablas ni enlaces ni emojis. Si una seccion no tiene datos, escribe "Sin novedades en el periodo."
+NUNCA te niegues a redactar por falta de datos, ni pidas mas informacion: entrega SIEMPRE el informe completo con todas las secciones del formato, aunque la obra no tenga ningun registro en el alcance o periodo pedido. En ese caso indica explicitamente que no hay actividad registrada y senala esa ausencia como un hallazgo. Un informe parcial, hecho solo con lo que hay, siempre es preferible a ninguno.
 Maximo 900 palabras. No incluyas encabezado de obra ni firmas: el PDF los agrega.`;
 
 /** Section structure + emphasis, each materially different per audience (WS7). */
