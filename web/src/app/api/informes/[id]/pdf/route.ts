@@ -72,11 +72,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     });
 
     const filename = `${sanitizeFilename(informe.project.name)}-informe-${informe.createdAt.toISOString().slice(0, 10)}.pdf`;
+    // `inline` so the browser renders the informe in a tab instead of forcing a
+    // download; the filename still names the file when the user saves from the
+    // viewer. Safe to serve inline: the PDF is generated server-side by pdfkit
+    // from sanitized text (never a user-uploaded file), the Content-Type is
+    // fixed, nosniff blocks type-sniffing, and sanitizeFilename whitelists
+    // [a-zA-Z0-9._-] so the header cannot be broken out of.
     return new Response(new Uint8Array(pdf), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": `inline; filename="${filename}"`,
         "X-Content-Type-Options": "nosniff",
       },
     });

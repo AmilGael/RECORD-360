@@ -68,11 +68,17 @@ function call(id: string) {
 }
 
 describe("informe PDF route", () => {
-  it("company member downloads the informe as PDF (firma + seal embedded)", async () => {
+  it("company member opens the informe as PDF (firma + seal embedded)", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
     const res = await call(informeId);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/pdf");
+    // `inline` is the contract: the browser renders the informe in a tab
+    // instead of forcing a download. The filename must survive so saving from
+    // the viewer still names the file — and sanitizeFilename's [a-zA-Z0-9._-]
+    // whitelist is what keeps this header unbreakable from a project name.
+    expect(res.headers.get("Content-Disposition")).toMatch(/^inline; filename=".+\.pdf"$/);
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
   });
