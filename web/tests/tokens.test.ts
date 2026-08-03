@@ -32,10 +32,17 @@ describe("access-request schema", () => {
   });
 });
 
+// Everything this helper creates carries the file-level `tag` prefix so the
+// single afterAll `startsWith: tag` sweep covers it. It used to name companies
+// `tok-co-<suffix>` and users `tok-<suffix>@...`, which afterAll never matched
+// — leaking 3 companies + 3 users into the dev DB on EVERY run of this file
+// (257 accumulated before the 2026-08-03 cleanup; see
+// scripts/cleanup-orphan-tenants.mjs for the sweep that removes strays from
+// crashed runs, which no afterAll can prevent).
 async function makeUser(suffix: string) {
-  const company = await prisma.company.create({ data: { name: `tok-co-${suffix}` } });
+  const company = await prisma.company.create({ data: { name: `${tag}-co-${suffix}` } });
   const user = await prisma.user.create({
-    data: { email: `tok-${suffix}@example.com`, name: "Tok", role: Role.ADMIN, companyId: company.id },
+    data: { email: `${tag}-${suffix}@example.com`, name: "Tok", role: Role.ADMIN, companyId: company.id },
   });
   return { user, company };
 }
