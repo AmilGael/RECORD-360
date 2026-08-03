@@ -153,7 +153,7 @@ export default async function PartidaPage({
       <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
       <PendingEntries
         partidaId={partida.id}
-        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle }}
+        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, discard: t.offlineCapture.discard, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle }}
       />
       {registros.map((r) => (
         <RecordCard

@@ -7,7 +7,7 @@ import type { QueuedRegistro } from "@/lib/offline/types";
 let _queue: IndexedDbQueue | null = null;
 function getQueue(): IndexedDbQueue { if (!_queue) _queue = new IndexedDbQueue(); return _queue; }
 
-type T = { syncTitle: string; pendingOne: string; syncing: string; retry: string; errorTitle: string; blockedTitle: string };
+type T = { syncTitle: string; pendingOne: string; syncing: string; retry: string; discard: string; errorTitle: string; blockedTitle: string };
 
 // This list is ONLY the device's local offline-capture queue (this partida's
 // unsent registros) — never the operational "pendientes por resolver" queue
@@ -35,6 +35,13 @@ export function PendingEntries({ partidaId, t }: { partidaId: string; t: T }) {
     });
   }
 
+  function discard(id: string) {
+    void getQueue().remove(id).then(() => {
+      reload();
+      window.dispatchEvent(new Event("raphl:sync-progress"));
+    });
+  }
+
   if (items.length === 0) return null;
 
   function statusLine(i: QueuedRegistro): string {
@@ -56,9 +63,14 @@ export function PendingEntries({ partidaId, t }: { partidaId: string; t: T }) {
           </div>
           {/* Only a terminal error (400/403) is fixable by a manual retry:
               "pending" already auto-retries in the background, and "blocked"
-              (401) needs the user to log back in, not another attempt. */}
+              (401) needs the user to log back in, not another attempt. Discard
+              is the only other exit for a terminal item — the sync loop never
+              picks "error" up again on its own. */}
           {i.status === "error" && (
-            <button type="button" className="btn btn-ghost" style={{ marginTop: 6 }} onClick={() => retry(i.id)}>{t.retry}</button>
+            <div style={{ marginTop: 6, display: "flex", gap: 8 }}>
+              <button type="button" className="btn btn-ghost" onClick={() => retry(i.id)}>{t.retry}</button>
+              <button type="button" className="btn btn-ghost" onClick={() => discard(i.id)}>{t.discard}</button>
+            </div>
           )}
         </div>
       ))}

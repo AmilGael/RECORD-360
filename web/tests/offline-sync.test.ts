@@ -62,4 +62,49 @@ describe("syncQueue", () => {
     await syncQueue({ queue: q, fetchFn: ok, isOnline: () => false });
     expect(await q.all()).toHaveLength(1);
   });
+  it("never re-sends items already in terminal 'error' state", async () => {
+    await q.enqueue({ ...item("a"), status: "error", error: "Sin acceso al proyecto." });
+    let calls = 0;
+    const spy = () => { calls++; return ok(); };
+    await syncQueue({ queue: q, fetchFn: spy, isOnline: () => true });
+    expect(calls).toBe(0);
+    const [it0] = await q.all();
+    expect(it0.status).toBe("error");
+    expect(it0.error).toBe("Sin acceso al proyecto.");
+  });
+  it("does not re-send 'blocked' items on an ordinary sync pass", async () => {
+    await q.enqueue({ ...item("a"), status: "blocked", error: "Sesión expirada." });
+    let calls = 0;
+    const spy = () => { calls++; return ok(); };
+    await syncQueue({ queue: q, fetchFn: spy, isOnline: () => true });
+    expect(calls).toBe(0);
+    expect((await q.all())[0].status).toBe("blocked");
+  });
+  it("re-sends 'blocked' items when retryBlocked is set (post-login kick)", async () => {
+    await q.enqueue({ ...item("a"), status: "blocked", error: "Sesión expirada." });
+    await syncQueue({ queue: q, fetchFn: ok, isOnline: () => true, retryBlocked: true });
+    expect(await q.all()).toHaveLength(0);
+  });
+  it("leaves 'error' items alone even when retryBlocked is set", async () => {
+    await q.enqueue({ ...item("a"), status: "error", error: "malo" });
+    let calls = 0;
+    const spy = () => { calls++; return ok(); };
+    await syncQueue({ queue: q, fetchFn: spy, isOnline: () => true, retryBlocked: true });
+    expect(calls).toBe(0);
+    expect((await q.all())[0].status).toBe("error");
+  });
+  it("still re-sends mixed queue: pending yes, error no", async () => {
+    await q.enqueue({ ...item("dead"), status: "error", error: "malo" });
+    await q.enqueue(item("live"));
+    const urls: string[] = [];
+    const spy = (_: RequestInfo | URL, init?: RequestInit) => {
+      urls.push(String((init?.body as FormData).get("idempotencyKey")));
+      return ok();
+    };
+    await syncQueue({ queue: q, fetchFn: spy as typeof fetch, isOnline: () => true });
+    expect(urls).toEqual(["live"]);
+    const rest = await q.all();
+    expect(rest).toHaveLength(1);
+    expect(rest[0].id).toBe("dead");
+  });
 });

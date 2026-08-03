@@ -7,6 +7,10 @@ export interface SyncDeps {
   isOnline?: () => boolean;
   endpoint?: string;
   onChange?: () => void;
+  // "blocked" (401) items are only worth retrying once the session may have
+  // changed — pass true on the app-load kick (which follows a login), never on
+  // online/queue-changed kicks. "error" items are terminal regardless.
+  retryBlocked?: boolean;
 }
 
 let running = false;
@@ -19,7 +23,7 @@ export async function syncQueue(deps: SyncDeps): Promise<void> {
   running = true;
   try {
     const items = (await deps.queue.all())
-      .filter((i) => i.status !== "syncing")
+      .filter((i) => i.status === "pending" || (i.status === "blocked" && deps.retryBlocked === true))
       .sort((a, b) => a.clientCapturedAt.localeCompare(b.clientCapturedAt));
     for (const item of items) {
       await deps.queue.update(item.id, { status: "syncing" });

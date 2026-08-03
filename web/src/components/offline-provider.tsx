@@ -12,15 +12,18 @@ export function OfflineProvider() {
   const router = useRouter();
   useEffect(() => {
     const onProgress = () => window.dispatchEvent(new Event("raphl:sync-progress"));
-    const kick = () => {
-      void syncQueue({ queue: getQueue(), onChange: onProgress }).then(() => { onProgress(); router.refresh(); });
+    const kick = (retryBlocked = false) => {
+      void syncQueue({ queue: getQueue(), onChange: onProgress, retryBlocked }).then(() => { onProgress(); router.refresh(); });
     };
-    kick();
-    window.addEventListener("online", kick);
-    window.addEventListener("raphl:queue-changed", kick);
+    // Mount follows a fresh page load (and therefore any login), so this is
+    // the one kick where retrying "blocked" (session-expired) items makes sense.
+    kick(true);
+    const onKick = () => kick();
+    window.addEventListener("online", onKick);
+    window.addEventListener("raphl:queue-changed", onKick);
     return () => {
-      window.removeEventListener("online", kick);
-      window.removeEventListener("raphl:queue-changed", kick);
+      window.removeEventListener("online", onKick);
+      window.removeEventListener("raphl:queue-changed", onKick);
     };
   }, [router]);
   return null;
