@@ -168,4 +168,9 @@ export async function resolveChangeRequest(formData: FormData) {
   });
   revalidatePath(`/app/projects/${cr.projectId}`);
   revalidatePath(`/app/projects/${cr.projectId}/cambios/${cr.id}`);
+  // Resolving/rejecting closes an OPEN request, which is one of the two sources
+  // behind countPendingItems — refresh the queue and the layout-hosted sidebar
+  // badge (layout scope; see revalidateAppShell in app/actions/lifecycle.ts).
+  revalidatePath("/app/pending");
+  revalidatePath("/app", "layout");
 }

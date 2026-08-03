@@ -50,6 +50,30 @@ describe("resolveReminder", () => {
     expect(after.reminderResolvedAt).not.toBeNull();
   });
 
+  // Regression: resolving drops the item from countPendingItems, which feeds
+  // the sidebar badge rendered by app/app/layout.tsx. The action revalidated
+  // only the project/partida/pending PAGES, so the badge stayed stale — and
+  // even revalidatePath("/app") would not have fixed it, because the default
+  // "page" scope leaves the layout instance under /app/partidas/[id] untouched.
+  it("revalidates the app shell at layout scope so the pending badge updates", async () => {
+    const id = await makeReminder();
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    await resolveReminder(fd(id));
+    expect(revalidatePathMock).toHaveBeenCalledWith("/app", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/app/pending");
+  });
+
+  it("notifies the author even when the author is the one resolving", async () => {
+    const id = await makeReminder(); // authored by managerId
+    authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
+    await resolveReminder(fd(id));
+    const notes = await prisma.notification.findMany({
+      where: { companyId, eventKey: "reminder.resolved", userId: managerId },
+      select: { id: true },
+    });
+    expect(notes.length).toBeGreaterThan(0);
+  });
+
   it("rejects a user from another company", async () => {
     const id = await makeReminder();
     authMock.mockResolvedValue({ user: { id: otherManagerId, companyId: otherCompanyId, role: "MANAGER" } });

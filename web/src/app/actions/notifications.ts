@@ -12,7 +12,9 @@ export async function markNotificationRead(formData: FormData): Promise<void> {
     data: { readAt: new Date() },
   });
   revalidatePath("/app/notifications");
-  revalidatePath("/app");
+  // Layout scope: the unread badge lives in app/app/layout.tsx, shared by every
+  // /app route (see revalidateAppShell in app/actions/lifecycle.ts).
+  revalidatePath("/app", "layout");
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
@@ -23,5 +25,7 @@ export async function markAllNotificationsRead(): Promise<void> {
     data: { readAt: new Date() },
   });
   revalidatePath("/app/notifications");
-  revalidatePath("/app");
+  // Layout scope: the unread badge lives in app/app/layout.tsx, shared by every
+  // /app route (see revalidateAppShell in app/actions/lifecycle.ts).
+  revalidatePath("/app", "layout");
 }

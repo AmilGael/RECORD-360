@@ -75,4 +75,9 @@ export async function resolveReminder(formData: FormData) {
   revalidatePath(`/app/projects/${reg.partida.projectId}`);
   revalidatePath(`/app/partidas/${reg.partida.id}`);
   revalidatePath("/app/pending");
+  // Resolving drops the item from countPendingItems, which feeds the sidebar
+  // badge in app/app/layout.tsx. Layout scope (not the default "page" scope) is
+  // required for that badge to refresh on the route the user is actually on —
+  // see revalidateAppShell in app/actions/lifecycle.ts.
+  revalidatePath("/app", "layout");
 }
