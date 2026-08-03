@@ -212,11 +212,29 @@ export async function buildReportPdf(opts: {
   }
 
   // ── Page numbers ───────────────────────────────────────────────────────────
-  const pages = doc.bufferedPageRange().count;
-  for (let i = 0; i < pages; i++) {
+  // The number is painted INTO the reserved bottom band (height - 40), which is
+  // deliberately below margins.bottom = PAGE_BOTTOM_RESERVED. pdfkit's text()
+  // auto-paginates whenever a write would cross maxY() = height - margins.bottom
+  // (A4: 841.89 - 140 = 701.89), so writing at 801.89 appended a brand-new page
+  // on EVERY iteration: a 2-page report shipped as 4, the two real pages left
+  // unnumbered, and two otherwise-blank pages carrying "Pagina 1 / 2" and
+  // "Pagina 2 / 2" — plus a seal each, via the pageAdded hook.
+  //
+  // Dropping the bottom margin for the duration of the write keeps the number on
+  // the page it belongs to. lineBreak:false stops a long label from wrapping
+  // into a second line that would overflow again.
+  const range = doc.bufferedPageRange();
+  for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
+    const reserved = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
     doc.font(FONT_SMALL).fontSize(8).fillColor(MUTED)
-      .text(`Pagina ${i + 1} / ${pages}`, 50, doc.page.height - 40, { align: "center", width: doc.page.width - 100 });
+      .text(`Pagina ${i + 1 - range.start} / ${range.count}`, 50, doc.page.height - 40, {
+        align: "center",
+        width: doc.page.width - 100,
+        lineBreak: false,
+      });
+    doc.page.margins.bottom = reserved;
   }
 
   doc.end();
