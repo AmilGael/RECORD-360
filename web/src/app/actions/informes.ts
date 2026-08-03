@@ -21,7 +21,13 @@ export type InformeResult =
 // without flipping it): generation is bounded at 50s + one retry, so nothing
 // legitimate is still running at 3 minutes. The next identical submission
 // reclaims and retries it.
-export const PENDING_STALE_MS = 3 * 60_000;
+// NOT exported: a "use server" module may only export async functions. Exporting
+// this number made Next.js reject the whole module at load time with
+// `A "use server" file can only export async functions, found number`, which
+// surfaces in production as a bare "Application error: a server-side exception
+// has occurred" and took down the entire informes flow — no report could ever
+// be generated. Nothing outside this file uses it; keep it module-private.
+const PENDING_STALE_MS = 3 * 60_000;
 
 function mapGenerationError(e: unknown): string {
   if (e instanceof Anthropic.AuthenticationError) {
