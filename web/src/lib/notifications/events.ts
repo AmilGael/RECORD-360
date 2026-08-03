@@ -74,14 +74,24 @@ export type DomainEvent = {
 // explicitly requested, and always excludes disabled users.
 // Never crosses companyId. Deduplicated.
 export async function resolveRecipients(ev: DomainEvent): Promise<string[]> {
-  const actorFilter = ev.includeActor ? {} : { NOT: { id: ev.actorId } };
+  // An explicit recipientIds list is a deliberate decision by the caller ("the
+  // registro's author must always hear this"), so it is honored as given. The
+  // anti-noise actor filter applies ONLY to the default stakeholder policy
+  // below.
+  //
+  // Applying it here too was a bug: resolveReminder and resolveChangeRequest
+  // both union the author into recipientIds precisely so they can never miss
+  // the resolution, and that union was silently stripped whenever the author
+  // was also the actor — the normal case for a single-admin company, where it
+  // meant NO notification was produced at all.
   if (ev.recipientIds) {
     const users = await prisma.user.findMany({
-      where: { id: { in: ev.recipientIds }, companyId: ev.companyId, disabledAt: null, ...actorFilter },
+      where: { id: { in: ev.recipientIds }, companyId: ev.companyId, disabledAt: null },
       select: { id: true },
     });
-    return users.map((u) => u.id);
+    return [...new Set(users.map((u) => u.id))];
   }
+  const actorFilter = ev.includeActor ? {} : { NOT: { id: ev.actorId } };
   const users = await prisma.user.findMany({
     where: {
       companyId: ev.companyId,

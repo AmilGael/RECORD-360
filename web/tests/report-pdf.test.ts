@@ -50,6 +50,40 @@ function manyRegistrosData(count: number): ReportData {
   };
 }
 
+// Regression: the page-number footer is painted into the reserved bottom band
+// (height - 40), below margins.bottom = PAGE_BOTTOM_RESERVED. pdfkit's text()
+// auto-paginates on any write that crosses maxY() = height - margins.bottom, so
+// the numbering loop appended a fresh page on EVERY iteration — exactly doubling
+// the document. A real 2-page informe shipped as 4 pages: the two real ones
+// unnumbered, plus two near-blank pages carrying "Pagina 1 / 2" and
+// "Pagina 2 / 2" (each with a seal, via the pageAdded hook).
+//
+// These assert EXACT page counts, because the failure mode is a clean doubling.
+// The pre-existing seal tests missed it: the seal is stamped on the spurious
+// pages too, so image-count-scales-with-page-count still held at 2x.
+describe("buildReportPdf page numbering does not append pages", () => {
+  const informe = { requesterName: "Tester", firmaPng: null, archetypeLabel: "Propietario" };
+
+  it("keeps a short informe on exactly one page", async () => {
+    const buf = await buildReportPdf({
+      data, generatedBy: "Tester",
+      informe: { ...informe, contentMd: "# Resumen\nTexto corto." },
+    });
+    expect(countPdfPageObjects(buf)).toBe(1); // was 2
+  });
+
+  it("produces no seal-bearing blank pages when a seal is present", async () => {
+    const contentMd = "# Resumen\nTexto corto.";
+    const withSeal = await buildReportPdf({ data, generatedBy: "Tester", sealPng: PNG_1PX, informe: { ...informe, contentMd } });
+    const without = await buildReportPdf({ data, generatedBy: "Tester", informe: { ...informe, contentMd } });
+
+    // The spurious pages each carried a seal via the pageAdded hook, so the
+    // seal path is where a regression would show up as extra blank pages.
+    expect(countPdfPageObjects(withSeal)).toBe(1); // was 2
+    expect(countPdfPageObjects(withSeal)).toBe(countPdfPageObjects(without));
+  });
+});
+
 describe("buildReportPdf", () => {
   it("produces a real PDF with the registration code embedded", async () => {
     const buf = await buildReportPdf({ data, generatedBy: "Gerente Test" });

@@ -125,8 +125,11 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
                 <span className="cr-meta" style={{ color: "var(--accent-deep)" }}>{i.errorMessage}</span>
               )}
             </span>
+            {/* target=_blank pairs with the PDF route's `inline` disposition:
+                the informe opens in its own tab and the informes list stays
+                put. Same-origin link, but rel=noopener stays as belt-and-braces. */}
             {i.status === "READY" ? (
-              <a href={`/api/informes/${i.id}/pdf`} className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
+              <a href={`/api/informes/${i.id}/pdf`} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
                 {t.downloadPdf}
               </a>
             ) : (

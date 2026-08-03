@@ -14,17 +14,28 @@ import { requireProjectStructureAccess, projectAccessWhere } from "@/lib/authz/p
 import { writeAudit } from "@/lib/audit/log";
 import { notifyEvent } from "@/lib/notifications/events";
 
+// The sidebar's pending/unread badges are rendered by app/app/layout.tsx, which
+// is shared by every /app route. revalidatePath("/app") defaults to type
+// "page" and only invalidates the /app *page* — the layout instance rendered
+// under /app/partidas/[id] keeps its stale count, which is exactly where the
+// user is standing when they conclude a partida. Type "layout" invalidates the
+// layout and the whole nested subtree, so the badge is recomputed wherever the
+// action was fired from.
+function revalidateAppShell() {
+  revalidatePath("/app", "layout");
+}
+
 function revalidatePartidaPaths(projectId: string, partidaId: string) {
   revalidatePath(`/app/projects/${projectId}`);
   revalidatePath(`/app/partidas/${partidaId}`);
-  revalidatePath("/app");
   revalidatePath("/app/pending");
+  revalidateAppShell();
 }
 
 function revalidateSegmentPaths(projectId: string) {
   revalidatePath(`/app/projects/${projectId}`);
-  revalidatePath("/app");
   revalidatePath("/app/pending");
+  revalidateAppShell();
 }
 
 async function loadOwnedPartida(user: FreshSessionUser, partidaId: string) {
@@ -85,6 +96,10 @@ export async function concludePartida(formData: FormData) {
     key: "partida.completed",
     companyId: user.companyId,
     actorId: user.id,
+    // Lifecycle transitions are confirmations the actor should see in their own
+    // inbox (same policy as partida.created / block.created), not just an
+    // announcement to other stakeholders.
+    includeActor: true,
     projectId: partida.projectId,
     title: `Partida concluida: ${partida.name}`,
     link: `/app/partidas/${partida.id}`,
@@ -139,6 +154,7 @@ export async function reopenPartida(formData: FormData) {
     key: "partida.reopened",
     companyId: user.companyId,
     actorId: user.id,
+    includeActor: true,
     projectId: partida.projectId,
     title: `Partida reabierta: ${partida.name}`,
     link: `/app/partidas/${partida.id}`,
@@ -223,6 +239,7 @@ export async function closeSegment(formData: FormData) {
     key: "block.closed",
     companyId: user.companyId,
     actorId: user.id,
+    includeActor: true,
     projectId: segment.projectId,
     title: `Bloque cerrado: ${segment.name}`,
     link: `/app/projects/${segment.projectId}`,
@@ -263,6 +280,7 @@ export async function reopenSegment(formData: FormData) {
     key: "block.reopened",
     companyId: user.companyId,
     actorId: user.id,
+    includeActor: true,
     projectId: segment.projectId,
     title: `Bloque reabierto: ${segment.name}`,
     link: `/app/projects/${segment.projectId}`,

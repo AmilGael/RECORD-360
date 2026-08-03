@@ -44,7 +44,10 @@ describe("markNotificationRead", () => {
     const after = await prisma.notification.findUniqueOrThrow({ where: { id: n.id } });
     expect(after.readAt).not.toBeNull();
     expect(revalidatePathMock).toHaveBeenCalledWith("/app/notifications");
-    expect(revalidatePathMock).toHaveBeenCalledWith("/app");
+    // Layout scope, not the default "page" scope: the unread badge is rendered
+    // by app/app/layout.tsx, so a page-scoped revalidation leaves it stale on
+    // every /app route except /app itself.
+    expect(revalidatePathMock).toHaveBeenCalledWith("/app", "layout");
   });
 
   it("does NOT affect another user's notification (cross-user no-op)", async () => {
@@ -86,7 +89,10 @@ describe("markAllNotificationsRead", () => {
     expect(afterB.readAt).toBeNull(); // userB unaffected
 
     expect(revalidatePathMock).toHaveBeenCalledWith("/app/notifications");
-    expect(revalidatePathMock).toHaveBeenCalledWith("/app");
+    // Layout scope, not the default "page" scope: the unread badge is rendered
+    // by app/app/layout.tsx, so a page-scoped revalidation leaves it stale on
+    // every /app route except /app itself.
+    expect(revalidatePathMock).toHaveBeenCalledWith("/app", "layout");
   });
 
   it("throws Unauthorized when not logged in", async () => {
