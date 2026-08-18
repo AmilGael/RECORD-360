@@ -130,6 +130,35 @@ body {
 .btn-accent:hover { background: var(--accent-deep); transform: translateY(-1px); }
 .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
 .btn-ghost:hover { border-color: var(--ink); transform: translateY(-1px); }
+
+/* File pickers: the app renders native <input type="file"> in 8 places (covers,
+   seal, planos, evidencia, firma/foto, adjuntos). Styling the native control
+   via ::file-selector-button keeps the zero-JS behavior while making the picker
+   read as one of our ghost buttons instead of browser chrome. The filename text
+   inherits the mono/steel meta voice used for other file metadata. */
+input[type="file"] {
+  font-family: var(--font-mono), monospace; font-size: 0.74rem; color: var(--steel);
+}
+input[type="file"]::file-selector-button {
+  font-family: inherit; font-size: 0.72rem; font-weight: 700; color: var(--ink);
+  background: transparent; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  padding: 0.3rem 0.7rem; margin-right: 10px; cursor: pointer;
+  transition: border-color 0.18s var(--ease), background 0.18s var(--ease);
+}
+input[type="file"]::file-selector-button:hover { border-color: var(--ink); background: var(--paper-2); }
+
+/* Quiet icon+label actions (Archivar, Restaurar, Borrar). inline-flex + nowrap
+   makes icon/label stacking impossible: the shared .mono class carries
+   overflow-wrap:anywhere and the global button{min-width:0} lets flex parents
+   crush these to min-content, which stranded the icon on its own line. */
+.icon-action {
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-family: var(--font-mono), monospace; font-size: 0.7rem; letter-spacing: 0.08em;
+  color: var(--steel); transition: color 0.18s var(--ease);
+}
+.icon-action:hover { color: var(--ink); }
+.icon-action.is-danger:hover { color: var(--accent-deep); }
 .btn-danger-soft { background: rgba(168, 67, 47, 0.12); color: var(--state-blocked); border-color: rgba(168, 67, 47, 0.34); }
 .btn-danger-soft:hover { background: rgba(168, 67, 47, 0.18); border-color: var(--state-blocked); color: var(--state-blocked); }
 .btn .arrow { transition: transform 0.18s var(--ease); }
@@ -202,7 +231,16 @@ body {
 .brand { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--ink); }
 .brand b { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; letter-spacing: -0.01em; font-size: 1.25rem; }
 .brand .dot { color: var(--accent); }
-.brand .tag { font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.18em; border: 1px solid var(--line-strong); padding: 2px 5px; border-radius: 2px; color: var(--steel); }
+/* nowrap: the tag is a two-word brand device — split across lines it reads as
+   two stacked words colliding with whatever sits beside it (seen live at 375px
+   on /login, where "BLACK BOX" wrapped into the language switcher). */
+.brand .tag { font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.18em; border: 1px solid var(--line-strong); padding: 2px 5px; border-radius: 2px; color: var(--steel); white-space: nowrap; }
+@media (max-width: 480px) {
+  /* The 28px gutters + 0.18em tracking don't fit brand + language switcher on a
+     phone; trim both instead of letting the row collide. */
+  .appbar-inner { padding: 0 16px; gap: 12px; }
+  .brand .tag { letter-spacing: 0.12em; }
+}
 
 /* ---------- app shell ---------- */
 .app-shell {
@@ -241,8 +279,11 @@ body {
   .app-shell { grid-template-columns: 1fr; }
   /* Reserve space so the fixed drawer-toggle (top-right, ~150px incl.
      label + padding + border) never underlaps the brand or the
-     SyncIndicator chip, both of which live in .appbar-inner. */
-  .appbar-inner { padding-right: 160px; }
+     SyncIndicator chip, both of which live in .appbar-inner. Scoped to the
+     app shell's appbar: auth pages have no drawer, and the unscoped reserve
+     was squeezing the /login header into 375-28-160 = 187px — the direct
+     cause of the brand tag wrapping into the language switcher. */
+  .appbar--app .appbar-inner { padding-right: 160px; }
   .drawer-toggle {
     position: fixed; top: calc(14px + var(--safe-t)); right: calc(16px + var(--safe-r));
     z-index: 60; display: inline-flex; align-items: center; gap: 7px;
@@ -268,6 +309,11 @@ body {
   .drawer-panel .app-sidebar { position: static; border: none; box-shadow: none; border-radius: 0; }
 }
 .sidebar-brand { display: flex; flex-direction: column; gap: 2px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+/* On the desktop rail the sticky appbar already says "Raphel. BLACK BOX" 60px
+   above this block — showing it twice, stacked, is pure duplication. The brand
+   header stays for the mobile drawer (≤1040px), where it serves as the panel's
+   own masthead. */
+@media (min-width: 1041px) { .sidebar-brand { display: none; } }
 .sidebar-brand strong { font-family: var(--font-fraunces), Georgia, serif; font-size: 1.45rem; letter-spacing: -0.02em; line-height: 1; }
 .sidebar-brand span { font-size: 0.84rem; line-height: 1.35; }
 .sidebar-section { display: flex; flex-direction: column; gap: 10px; }
@@ -347,7 +393,10 @@ body {
   font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.08em;
   text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 999px;
   display: inline-flex; align-items: center; max-width: 100%; white-space: normal;
-  line-height: 1.25; text-align: center; overflow-wrap: anywhere;
+  /* Word-boundary wrapping only: overflow-wrap:anywhere broke one-word badges
+     mid-word ("ACT/IVO" seen live at 375px). A badge that can't fit moves whole
+     to the next line of its wrapping flex row instead. */
+  line-height: 1.25; text-align: center;
 }
 .state-badge.is-active { color: var(--state-active); background: var(--state-active-bg); border: 1px solid rgba(47,125,91,0.35); }
 .state-badge.is-archived { color: var(--steel); background: var(--paper-2); border: 1px solid var(--line-strong); }
@@ -542,7 +591,10 @@ body {
 .progress-track {
   flex: 1; height: 6px; background: var(--paper-3); border-radius: 3px; overflow: hidden; min-width: 60px;
 }
-.progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s var(--ease); transform-origin: left; animation: bar-grow 0.55s var(--ease) backwards; animation-delay: 0.15s; }
+/* Entrance only (transform-scaleX bar-grow), same as .dash-health-fill. The old
+   width transition never fired — RSC re-renders remount the element rather than
+   mutating its width — and animating width is layout work besides. */
+.progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transform-origin: left; animation: bar-grow 0.55s var(--ease) backwards; animation-delay: 0.15s; }
 .progress-fill.is-done { background: var(--state-active); }
 .progress-label {
   font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel);
@@ -659,7 +711,10 @@ body {
   font-family: var(--font-mono), monospace; font-size: 0.58rem; letter-spacing: 0.08em;
   text-transform: uppercase; font-weight: 700; padding: 3px 10px; border-radius: 999px;
   display: inline-flex; align-items: center; max-width: 100%; white-space: normal;
-  line-height: 1.25; text-align: center; overflow-wrap: anywhere;
+  /* Word-boundary wrapping only: overflow-wrap:anywhere broke one-word badges
+     mid-word ("ACT/IVO" seen live at 375px). A badge that can't fit moves whole
+     to the next line of its wrapping flex row instead. */
+  line-height: 1.25; text-align: center;
 }
 .role-badge.is-admin { color: var(--accent-deep); background: rgba(225,74,31,0.1); border: 1px solid rgba(225,74,31,0.3); }
 .role-badge.is-manager { color: var(--state-active); background: var(--state-active-bg); border: 1px solid rgba(47,125,91,0.35); }
