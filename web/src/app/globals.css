@@ -140,7 +140,7 @@ body {
   border: 1px solid transparent; border-radius: 0; padding: 0.72rem 1.2rem;
   clip-path: polygon(0 0, 100% 0, 100% 100%, var(--chamfer) 100%, 0 calc(100% - var(--chamfer)));
   text-decoration: none; white-space: normal; line-height: 1.25; text-align: center;
-  min-width: 0; max-width: 100%; overflow-wrap: anywhere;
+  min-width: 0; max-width: 100%;
   transition: transform 0.18s var(--ease), background 0.18s var(--ease), border-color 0.18s var(--ease), color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 .btn > svg { flex: 0 0 auto; }
@@ -923,15 +923,24 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 
 /* ---------- public landing ---------- */
 .lp-nav-links { display: flex; align-items: center; gap: 22px; }
+/* Phone appbar: anchors yield to the two commitments (enter / request access),
+   which compact instead of wrapping. */
+@media (max-width: 700px) {
+  .lp-nav-links { gap: 10px; }
+  .lp-nav-links .lp-anchor { display: none; }
+  .lp-nav-links .btn { padding: 0.42rem 0.7rem !important; font-size: 0.68rem !important; white-space: nowrap; }
+  /* The landing appbar's min-content (brand + tag + lang + two commitments)
+     exceeds a phone viewport on one row; it becomes two — brand row, action
+     row — instead of forcing the whole page into horizontal scroll. */
+  .lp-night .appbar-inner { height: auto; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; row-gap: 8px; }
+}
+/* Plates never widen the page: values wrap inside their own cell. */
+.lp-plate dl div { min-width: 0; }
+.lp-plate dd { min-width: 0; }
 .lp-nav-links > a:not(.btn) { text-decoration: none; color: var(--ink-soft); font-size: 0.84rem; font-weight: 600; transition: color 0.18s var(--ease); }
 .lp-nav-links > a:not(.btn):hover { color: var(--accent); }
 @media (max-width: 820px) { .lp-nav-links > a.lp-anchor { display: none; } }
 
-.lp-hero-split {
-  margin-top: 48px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 56px; align-items: end; border-top: 1px solid var(--line); padding-top: 34px;
-}
-@media (max-width: 900px) { .lp-hero-split { grid-template-columns: 1fr; gap: 40px; } }
 
 .lp-sec-head {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
@@ -939,21 +948,6 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 }
 .lp-sec-index { font-family: var(--font-mono), monospace; font-size: 0.72rem; letter-spacing: 0.14em; color: var(--steel); white-space: nowrap; }
 @media (max-width: 640px) { .lp-sec-index { display: none; } }
-
-/* the record writes itself, then the seal stamps */
-.lp-record .lp-rrow { opacity: 0; animation: lp-write 0.4s ease forwards; }
-.lp-record .lp-rrow:nth-child(1) { animation-delay: 0.50s; }
-.lp-record .lp-rrow:nth-child(2) { animation-delay: 0.65s; }
-.lp-record .lp-rrow:nth-child(3) { animation-delay: 0.80s; }
-.lp-record .lp-rrow:nth-child(4) { animation-delay: 0.95s; }
-.lp-record .lp-rrow:nth-child(5) { animation-delay: 1.10s; }
-@keyframes lp-write { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
-.lp-record .lp-seal { opacity: 0; animation: lp-stamp 0.38s cubic-bezier(0.16, 1, 0.3, 1) 1.5s forwards; }
-@keyframes lp-stamp {
-  0% { opacity: 0; transform: scale(1.18); }
-  62% { opacity: 1; transform: scale(0.97); }
-  100% { opacity: 1; transform: none; }
-}
 
 .lp-flow { background: var(--ink); color: var(--paper); border-radius: var(--radius); padding: clamp(36px, 5vw, 64px); margin-top: 40px; }
 .lp-flow .lp-flow-kicker {
@@ -1055,4 +1049,94 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   .filters-sheet > .filters-sheet-body.is-open { display: block; padding: 0 14px 14px; }
   .filters-sheet > .filters-sheet-body > form { flex-direction: column; align-items: stretch; }
   .filters-sheet > .filters-sheet-body > form .input { width: 100%; }
+}
+
+/* ---------- landing: Registro Strip (surface seed da5cc0ba) ---------- */
+/* The landing commits to night regardless of the visitor's theme cookie: it is
+   the brand surface and the black box's native state is night. Scoped token
+   override — keep in sync with body[data-theme="dark"] above. */
+.lp-night {
+  --paper: #1E2328; --paper-2: #2A3138; --paper-3: #343C44;
+  --ink: #F2F1EC; --ink-soft: #C9CCC9; --steel: #8D979E;
+  --accent: #C9502E; --accent-deep: #C24A2A;
+  --line: rgba(242, 241, 236, 0.14); --line-strong: rgba(242, 241, 236, 0.30);
+  --grid: rgba(242, 241, 236, 0.035);
+  --shadow-soft: 2px 2px 0 rgba(0, 0, 0, 0.30);
+  --shadow-card: 6px 7px 0 rgba(0, 0, 0, 0.38);
+  background-color: var(--paper);
+  color: var(--ink);
+  color-scheme: dark;
+}
+
+/* One registro travels three plates; each plate wears the app's own state
+   mark — chalk outline (being captured), rust edge (being stamped), full
+   chalk plane (sealed). The strip IS the product demo. */
+.lp-strip {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1.1fr;
+  align-items: stretch; gap: 14px; margin-top: 54px;
+}
+.lp-plate { padding: 18px 20px 20px; position: relative; box-shadow: var(--shadow-card); }
+.lp-plate-step {
+  font-family: var(--font-mono), monospace; font-size: 0.66rem; letter-spacing: 0.14em;
+  text-transform: uppercase; display: block; margin-bottom: 14px;
+}
+.lp-plate dl { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.lp-plate dl div { display: flex; justify-content: space-between; gap: 12px; }
+.lp-plate dt {
+  font-family: var(--font-mono), monospace; font-size: 0.64rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--steel); flex-shrink: 0;
+}
+.lp-plate dd { margin: 0; font-family: var(--font-mono), monospace; font-size: 0.78rem; text-align: right; overflow-wrap: anywhere; }
+/* 01 — being captured: the chalk-outline (pending) mark. */
+.lp-plate--outline { border: 1px dashed var(--line-strong); background: transparent; box-shadow: none; }
+.lp-plate--outline .lp-plate-step { color: var(--ink-soft); }
+/* 02 — being stamped: the rust band, painted along the plate's bottom edge —
+   the same mark the app uses for progress/commitment on its plates. */
+.lp-plate--stamp { border: 1px solid var(--line-strong); border-bottom: 6px solid var(--accent); background: var(--paper-2); }
+.lp-plate--stamp .lp-plate-step { color: var(--accent); }
+.lp-plate--stamp .lp-hash { color: var(--accent); }
+/* 03 — sealed: the full chalk plane (concluded) mark. The record takes the light. */
+.lp-plate--sealed { background: var(--ink); color: var(--paper); border: 1px solid var(--ink); }
+.lp-plate--sealed .lp-plate-step { color: color-mix(in srgb, var(--paper) 72%, var(--ink)); }
+.lp-plate--sealed dt { color: color-mix(in srgb, var(--paper) 55%, var(--ink)); }
+.lp-plate--sealed .lp-hash { color: var(--accent-deep); }
+.lp-seal-mark {
+  display: inline-block; margin-top: 16px; padding: 4px 10px;
+  border: 1px solid var(--accent-deep); color: var(--accent-deep);
+  font-family: var(--font-mono), monospace; font-size: 0.62rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.lp-strip-joint { align-self: center; color: var(--steel); font-size: 1.3rem; user-select: none; }
+@media (max-width: 900px) {
+  .lp-strip { grid-template-columns: 1fr; }
+  .lp-strip-joint { transform: rotate(90deg); justify-self: center; }
+}
+
+/* The painted yard: comp-B's elevation as a full-bleed atmosphere band. */
+.lp-yard {
+  height: clamp(220px, 34vw, 420px);
+  background-image: url("/landing/yard-night.webp");
+  background-size: cover; background-position: center 30%;
+  border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong);
+}
+
+/* Capabilities as numbered planes. */
+.lp-caps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.lp-cap { background: var(--paper-2); border: 1px solid var(--line); box-shadow: var(--shadow-soft); padding: 26px 24px 28px; }
+.lp-cap-num { font-family: var(--font-stencil), var(--font-archivo), sans-serif; font-size: 1.5rem; color: var(--steel); }
+.lp-cap h3 { font-family: var(--font-archivo), sans-serif; font-stretch: 86%; text-transform: uppercase; font-weight: 800; font-size: 1.1rem; letter-spacing: 0.02em; margin: 14px 0 8px; }
+.lp-cap p { color: var(--ink-soft); font-size: 0.94rem; line-height: 1.55; margin: 0; max-width: 34ch; }
+
+/* The page's one authored moment: the registro writes, stamps, and seals.
+   Plates enter in narrative order; the seal mark lands last with the stamp
+   ease. Reduced-motion visitors see everything already sealed. */
+.lp-strip .lp-plate { opacity: 0; animation: lp-write 0.5s var(--ease) forwards; }
+.lp-strip .lp-plate--outline { animation-delay: 0.35s; }
+.lp-strip .lp-plate--stamp { animation-delay: 0.75s; }
+.lp-strip .lp-plate--sealed { animation-delay: 1.15s; }
+.lp-seal-mark { opacity: 0; animation: lp-stamp 0.38s cubic-bezier(0.16, 1, 0.3, 1) 1.7s forwards; }
+@keyframes lp-write { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes lp-stamp { from { opacity: 0; transform: scale(1.5); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .lp-strip .lp-plate, .lp-seal-mark { animation: none; opacity: 1; }
 }
