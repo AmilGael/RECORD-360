@@ -30,7 +30,9 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const lang = await getLang();
-  const theme = (await cookies()).get("r360_theme")?.value === "dark" ? "dark" : "light";
+  // Night is the world's native state (direction contract + confirmed
+  // dark-first): first run lands on night shift; day is the chosen derivation.
+  const theme = (await cookies()).get("r360_theme")?.value === "light" ? "light" : "dark";
   return (
     <html lang={lang}>
       <body className={`${archivo.variable} ${mono.variable} ${stencil.variable}`} data-theme={theme}>

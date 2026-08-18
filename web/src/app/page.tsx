@@ -52,6 +52,7 @@ export default async function Landing() {
 
           {/* the registro strip: capture → stamp → sealed, in the app's own state marks */}
           <div className="lp-strip reveal reveal-4" role="img" aria-label={`${L.flow[0].t} → ${L.flow[1].t} → ${L.rec.verified}`}>
+            <span className="lp-sample" aria-hidden="true">{L.sampleTag}</span>
             <div className="lp-plate lp-plate--outline">
               <span className="lp-plate-step">01 · {L.flow[0].t}</span>
               <dl>
@@ -89,7 +90,7 @@ export default async function Landing() {
         <section id="caps" style={{ padding: "70px 0", scrollMarginTop: 72 }}>
           <div className="lp-sec-head reveal">
             <h2 className="h-md" style={{ fontSize: "clamp(1.6rem, 3.4vw, 2.5rem)", maxWidth: "22ch" }}>{L.capsTitle}</h2>
-            <span className="lp-sec-index">{L.secCaps}</span>
+            <span className="lp-sec-num" aria-hidden="true">01</span>
           </div>
           <div className="lp-caps-grid">
             {L.caps.map((c, i) => (
@@ -106,7 +107,7 @@ export default async function Landing() {
         <section id="flujo" style={{ padding: "70px 0", scrollMarginTop: 72 }}>
           <div className="lp-sec-head reveal">
             <h2 className="h-md" style={{ fontSize: "clamp(1.6rem, 3.4vw, 2.5rem)", maxWidth: "22ch" }}>{L.flowSecTitle}</h2>
-            <span className="lp-sec-index">{L.secFlow}</span>
+            <span className="lp-sec-num" aria-hidden="true">02</span>
           </div>
 
           <div className="lp-flow reveal">
@@ -131,6 +132,14 @@ export default async function Landing() {
                 <p className="lp-label">{s.label}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* advisor credit — the authorized proof asset (PRODUCT.md Evidence) */}
+        <section aria-label={L.advisorKicker} style={{ padding: "8px 0 0" }}>
+          <div className="lp-advisor reveal">
+            <span className="kicker">{L.advisorKicker}</span>
+            <p>{L.advisorLine}</p>
           </div>
         </section>
 

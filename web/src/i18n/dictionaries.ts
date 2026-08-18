@@ -81,7 +81,7 @@ export const dictionaries = {
     landing: {
       eyebrow: "Gestión de obra · República Dominicana",
       heroLead:
-        "La caja negra de tu obra. Cada nota, foto y decisión del campo queda registrada para siempre — del andamio a la oficina, incluso sin señal.",
+        "Cada nota, foto y decisión del campo queda registrada para siempre — del andamio a la oficina, incluso sin señal.",
       heroPre: "La caja negra",
       heroMid: "de tu",
       heroAccent: "obra",
@@ -90,8 +90,9 @@ export const dictionaries = {
       ctaAccess: "Solicitar acceso",
       navCaps: "Capacidades",
       navHow: "Cómo funciona",
-      secCaps: "[ 01 / CAPACIDADES ]",
-      secFlow: "[ 02 / FLUJO ]",
+      advisorKicker: "Asesoría técnica",
+      advisorLine: "Desarrollado con la asesoría del Arq. Víctor Manuel Acevedo.",
+      sampleTag: "Ejemplo",
       flowSecTitle: "Del andamio al archivo, en cuatro pasos.",
       flowKicker: "El camino de cada registro",
       flowTitle: "Lo que pasa en la obra queda escrito en piedra digital.",
@@ -602,7 +603,7 @@ export const dictionaries = {
     landing: {
       eyebrow: "Construction management · Dominican Republic",
       heroLead:
-        "The black box for your site. Every note, photo and decision from the field, recorded forever — from the scaffold to the office, even with no signal.",
+        "Every note, photo and decision from the field, recorded forever — from the scaffold to the office, even with no signal.",
       heroPre: "The black box",
       heroMid: "for your",
       heroAccent: "site",
@@ -611,8 +612,9 @@ export const dictionaries = {
       ctaAccess: "Request access",
       navCaps: "Capabilities",
       navHow: "How it works",
-      secCaps: "[ 01 / CAPABILITIES ]",
-      secFlow: "[ 02 / FLOW ]",
+      advisorKicker: "Technical advisor",
+      advisorLine: "Developed with the guidance of architect Víctor Manuel Acevedo.",
+      sampleTag: "Sample",
       flowSecTitle: "From the scaffold to the archive, in four steps.",
       flowKicker: "The path of every entry",
       flowTitle: "What happens on site is written in digital stone.",

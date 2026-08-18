@@ -272,7 +272,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 /* nowrap: the tag is a two-word brand device — split across lines it reads as
    two stacked words colliding with whatever sits beside it (seen live at 375px
    on /login, where "BLACK BOX" wrapped into the language switcher). */
-.brand .tag { font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.18em; border: 1px solid var(--line-strong); padding: 2px 5px; border-radius: 2px; color: var(--steel); white-space: nowrap; }
+.brand .tag { font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.18em; border: 1px solid var(--line-strong); padding: 2px 5px; border-radius: 0; color: var(--steel); white-space: nowrap; }
 @media (max-width: 480px) {
   /* The 28px gutters + 0.18em tracking don't fit brand + language switcher on a
      phone; trim both instead of letting the row collide. */
@@ -535,8 +535,14 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 
 .dash-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
 .dash-header .counter {
-  font-family: var(--font-mono), monospace; font-size: 0.78rem; letter-spacing: 0.06em;
-  color: var(--ink-soft); border: 1px solid var(--line-strong); padding: 5px 11px; border-radius: 0;
+  font-family: var(--font-mono), monospace; font-size: 0.72rem; letter-spacing: 0.06em;
+  color: var(--ink-soft); display: inline-flex; align-items: center; gap: 12px;
+}
+/* The yard's count as the world's signature device: a display-scale stencil
+   numeral (comp A's "02"), not a bordered mono pill. */
+.counter-stencil {
+  font-family: var(--font-stencil), var(--font-archivo), sans-serif;
+  font-size: clamp(2.4rem, 5vw, 3.4rem); line-height: 1; color: var(--steel);
 }
 
 .dash-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
@@ -1140,3 +1146,22 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 @media (prefers-reduced-motion: reduce) {
   .lp-strip .lp-plate, .lp-seal-mark { animation: none; opacity: 1; }
 }
+
+/* Section indices as the world's signature device: display-scale stencil
+   numerals (the card's giant "03"), replacing the bracketed mono strings. */
+.lp-sec-num {
+  font-family: var(--font-stencil), var(--font-archivo), sans-serif;
+  font-size: clamp(2.6rem, 6vw, 4rem); line-height: 0.9; color: var(--steel);
+  user-select: none;
+}
+/* The hero registro is authored demonstration data; the mark says so without
+   diluting the strip (reviewer: keep the strip undiluted). */
+.lp-strip { position: relative; }
+.lp-sample {
+  position: absolute; top: -22px; right: 0;
+  font-family: var(--font-mono), monospace; font-size: 0.6rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--steel); border: 1px solid var(--line); padding: 2px 7px;
+}
+/* Advisor credit: one quiet plate, name as proof, no invented quote. */
+.lp-advisor { border-top: 1px solid var(--line); padding-top: 26px; text-align: center; }
+.lp-advisor p { margin: 8px 0 0; color: var(--ink-soft); font-size: 1rem; }

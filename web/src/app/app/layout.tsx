@@ -19,7 +19,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { id: userId, companyId, role } = user;
   const isAdmin = role === "ADMIN" || role === "MANAGER";
   const { lang, t } = await getDict();
-  const theme = (await cookies()).get("r360_theme")?.value === "dark" ? "dark" : "light";
+  // Night is the world's native state (direction contract + confirmed
+  // dark-first): first run lands on night shift; day is the chosen derivation.
+  const theme = (await cookies()).get("r360_theme")?.value === "light" ? "light" : "dark";
 
   const [unread, activeProjects, archivedProjects, pendingCount] = await Promise.all([
     prisma.notification.count({ where: { userId, readAt: null } }),
