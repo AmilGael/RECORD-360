@@ -11,7 +11,7 @@ export function DeleteSegmentButton({ segmentId, t }: { segmentId: string; t: T 
   if (!confirming) {
     return (
       <button type="button" onClick={() => setConfirming(true)} className="btn btn-danger-soft mono" style={{ padding: "0.22rem 0.6rem", fontSize: "0.64rem", letterSpacing: "0.08em" }}>
-        <Trash size={10} style={{ verticalAlign: -1, marginRight: 4 }} />{t.deleteBloque}
+        <Trash size={10} />{t.deleteBloque}
       </button>
     );
   }

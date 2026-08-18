@@ -449,7 +449,7 @@ export default async function ProjectPage({
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
           <form action={updateProjectCover} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <input type="hidden" name="projectId" value={project.id} />
-            <input type="file" name="cover" required accept="image/jpeg,image/png,image/webp" style={{ fontSize: "0.72rem", maxWidth: 180 }} />
+            <input type="file" name="cover" required accept="image/jpeg,image/png,image/webp" style={{ maxWidth: 220 }} />
             <SubmitButton className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{P.changeCover}</SubmitButton>
           </form>
           {project.archivedAt ? (

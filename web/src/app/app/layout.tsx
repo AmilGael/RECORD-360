@@ -38,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="grid-bg" style={{ minHeight: "100vh" }}>
       <OfflineProvider />
-      <header className="appbar">
+      <header className="appbar appbar--app">
         <div className="appbar-inner">
           <Link href="/app" className="brand"><b>Raphel<span className="dot" aria-hidden="true">.</span></b><span className="tag">{t.common.blackBox}</span></Link>
           <SyncIndicator t={{ pending: t.offlineCapture.pending }} />

@@ -313,7 +313,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="dash-cover">{D.cover}</label>
-                <input id="dash-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" className="input" style={{ padding: 6 }} />
+                {/* No .input frame: file pickers get the global ::file-selector-button
+                    treatment; boxing that button inside a text-field border reads
+                    as a control within a control. */}
+                <input id="dash-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" />
               </div>
               <SubmitButton className="btn btn-accent" style={{ width: "100%", marginTop: 4 }}>
                 {D.create} <span className="arrow">→</span>

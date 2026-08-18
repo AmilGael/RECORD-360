@@ -79,7 +79,7 @@ function FilePreviewField({
   return (
     <label className="form-label">
       {label}
-      <input name={name} type="file" accept={accept} onChange={onChange} style={{ display: "block", marginTop: 4, fontSize: "0.78rem" }} />
+      <input name={name} type="file" accept={accept} onChange={onChange} style={{ display: "block", marginTop: 4 }} />
       <span className="mono text-steel" style={{ display: "block", fontSize: "0.62rem", marginTop: 2 }}>{hint}</span>
       {localError && (
         <span role="alert" className="mono" style={{ display: "block", fontSize: "0.68rem", color: "var(--accent-deep)", marginTop: 3 }}>{localError}</span>
