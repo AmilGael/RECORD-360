@@ -133,7 +133,7 @@ export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
         style={{ marginBottom: 10 }}
       />
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <input type="file" name="evidence" multiple accept="image/jpeg,image/png,image/webp,image/gif" style={{ fontSize: "0.8rem", maxWidth: 200 }} />
+        <input type="file" name="evidence" multiple accept="image/jpeg,image/png,image/webp,image/gif" style={{ maxWidth: 220 }} />
         <span className="mono text-steel" style={{ fontSize: "0.72rem" }}>{gpsMessage[gpsState]}</span>
         {canRetryGps && (
           <button type="button" className="btn btn-ghost" style={{ padding: "0.4rem 0.75rem", fontSize: "0.76rem" }} onClick={acquireGps}>

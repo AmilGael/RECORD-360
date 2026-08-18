@@ -25,7 +25,7 @@ export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { proj
         </p>
       )}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <input type="file" name="file" required accept="application/pdf,image/jpeg,image/png,image/webp" style={{ fontSize: "0.8rem" }} />
+        <input type="file" name="file" required accept="application/pdf,image/jpeg,image/png,image/webp" />
         <SubmitButton className="btn btn-accent" style={{ marginLeft: "auto" }}><Upload size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{t.upload}</SubmitButton>
       </div>
     </form>

@@ -281,7 +281,7 @@ export function LogComposer({
         {!speechSupported && (
           <span className="mono text-steel" style={{ fontSize: "0.66rem" }}>{t.dictateUnsupported ?? "Dictation not supported"}</span>
         )}
-        <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/webm" style={{ fontSize: "0.8rem", maxWidth: 220 }} />
+        <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/webm" style={{ maxWidth: 220 }} />
         <span className="mono text-steel" style={{ fontSize: "0.72rem" }}>{coords ? t.gpsOk : t.gps}</span>
         <button type="submit" disabled={pending} aria-busy={pending} className="btn btn-ink" style={{ marginLeft: "auto" }}>
           {pending ? t.sending : <>{t.submit} <span className="arrow">→</span></>}
