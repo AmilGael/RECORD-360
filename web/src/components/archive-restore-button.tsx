@@ -19,12 +19,7 @@ export function ArchiveRestoreButton({ userId, mode, t }: { userId: string; mode
 
   if (!confirming) {
     return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="mono"
-        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--steel)", fontSize: "0.7rem", letterSpacing: "0.08em" }}
-      >
+      <button type="button" onClick={() => setConfirming(true)} className="icon-action">
         {label}
       </button>
     );

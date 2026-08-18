@@ -21,7 +21,7 @@ export function PurgeProjectButton({ projectId, t }: { projectId: string; t: T }
           letterSpacing: "0.08em",
         }}
       >
-        <Trash size={11} style={{ verticalAlign: -1, marginRight: 4 }} />{t.purge}
+        <Trash size={11} />{t.purge}
       </button>
     );
   }

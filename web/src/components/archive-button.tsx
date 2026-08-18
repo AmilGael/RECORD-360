@@ -11,13 +11,8 @@ export function ArchiveButton({ projectId, t }: { projectId: string; t: T }) {
 
   if (!confirming) {
     return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="mono"
-        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--steel)", fontSize: "0.7rem", letterSpacing: "0.08em", transition: "color 0.18s var(--ease)" }}
-      >
-        <Archive size={11} style={{ verticalAlign: -1, marginRight: 4 }} />{t.archive}
+      <button type="button" onClick={() => setConfirming(true)} className="icon-action">
+        <Archive size={11} />{t.archive}
       </button>
     );
   }
