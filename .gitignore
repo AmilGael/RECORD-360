@@ -4,3 +4,14 @@ node_modules/
 
 # Local Netlify folder
 .netlify
+
+# macOS Finder metadata (web/.gitignore already covers web/; this covers the rest)
+.DS_Store
+
+# Claude Code: launch.json is shared (dev-server preview config); everything
+# machine-local stays out. Previously these were only invisible via one
+# machine's global-ignore / .git/info/exclude — shared-ignore them so every
+# clone agrees.
+.claude/*
+!.claude/launch.json
+web/.impeccable/hook.cache.json
