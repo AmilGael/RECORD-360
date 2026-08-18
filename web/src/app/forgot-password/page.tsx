@@ -14,12 +14,12 @@ export default function ForgotPasswordPage() {
         <div className="kicker">Raphel</div>
         <h1 className="h-md" style={{ margin: "6px 0 18px" }}>Restablecer contraseña</h1>
         {state.status === "sent" && (
-          <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", padding: "9px 11px", borderRadius: 3, fontSize: "0.84rem", marginBottom: 14 }}>
+          <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>
             Si existe una cuenta con ese correo, enviaremos un enlace para restablecer la contraseña.
           </p>
         )}
         {state.status === "error" && (
-          <p style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 3, fontSize: "0.84rem", marginBottom: 14 }}>
+          <p style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>
             {state.message}
           </p>
         )}

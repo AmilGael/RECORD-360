@@ -20,7 +20,7 @@ export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { proj
       {segmentId && <input type="hidden" name="segmentId" value={segmentId} />}
       <input name="title" placeholder={t.title} className="input" style={{ marginBottom: 10 }} />
       {state && !state.ok && (
-        <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
           {state.error || t.error}
         </p>
       )}

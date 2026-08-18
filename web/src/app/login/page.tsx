@@ -42,7 +42,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div style={{ padding: "26px 22px 24px" }}>
             <h1 className="h-md" style={{ fontSize: "1.7rem", marginBottom: 20 }}>{T.title}</h1>
             {error && (
-              <p style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.error}</p>
+              <p style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.error}</p>
             )}
             {activated && (
               <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.activated}</p>

@@ -215,7 +215,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 .input::placeholder { color: var(--steel); }
-.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(225, 74, 31, 0.12); }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
 
 /* ---------- language switch ---------- */
 .lang-switch { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono), monospace; font-size: 0.72rem; letter-spacing: 0.08em; }
@@ -597,7 +597,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   border-radius: var(--radius-sm); transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 .search-input::placeholder { color: var(--steel); font-size: 0.84rem; }
-.search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(225,74,31,0.12); }
+.search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
 
 /* mini tabs (active/archived) */
 .mini-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
@@ -675,7 +675,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   border: 1px solid var(--line-strong); border-radius: calc(var(--radius) + 2px); background: var(--paper-2);
   box-shadow: var(--shadow-card); overflow: hidden; transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
-.panel-create[open] { border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong)); box-shadow: 0 16px 38px -24px color-mix(in srgb, var(--accent) 42%, transparent); }
+.panel-create[open] { border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong)); box-shadow: var(--shadow-card); }
 .panel-create-summary {
   list-style: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center; gap: 12px; padding: 16px; cursor: pointer; background: var(--paper-2);
@@ -687,7 +687,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .panel-create-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
 .panel-create-icon {
   width: 36px; height: 36px; border-radius: 0; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--accent); color: #fff; box-shadow: 0 8px 18px -10px var(--accent-deep);
+  background: var(--accent); color: #fff; box-shadow: 2px 2px 0 var(--accent-deep);
 }
 .panel-create-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .panel-create-copy strong { color: var(--ink); font-size: 0.98rem; line-height: 1.25; }
@@ -776,7 +776,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
      to the next line of its wrapping flex row instead. */
   line-height: 1.25; text-align: center;
 }
-.role-badge.is-admin { color: var(--accent-deep); background: rgba(225,74,31,0.1); border: 1px solid rgba(225,74,31,0.3); }
+.role-badge.is-admin { color: var(--accent-deep); background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
 .role-badge.is-manager { color: var(--state-active); background: var(--state-active-bg); border: 1px solid rgba(47,125,91,0.35); }
 .role-badge.is-supervisor { color: #8a6c1a; background: rgba(176,138,46,0.12); border: 1px solid rgba(176,138,46,0.35); }
 .role-badge.is-resident { color: var(--steel); background: var(--paper-3); border: 1px solid var(--line-strong); }
