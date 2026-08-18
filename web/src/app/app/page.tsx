@@ -211,15 +211,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   <div className="repo-meta">
                     <span>{p.partidas} {D.partidas}</span>
                     <span className="sep">·</span>
-                    <div className="progress-bar">
-                      <div className="progress-track">
-                        <div
-                          className={`progress-fill${p.progress >= 100 ? " is-done" : ""}`}
-                          style={{ width: `${p.progress}%` }}
-                        />
-                      </div>
-                      <span className="progress-label">{p.progress}%</span>
-                    </div>
+                    {/* The plate band (bottom edge) is the progress visualization
+                        now — a second track widget here would say it twice. The
+                        number stays as data in the meta voice. */}
+                    <span className="progress-label">{p.progress}%</span>
                     {p.latestTime && (
                       <>
                         <span className="sep">·</span>

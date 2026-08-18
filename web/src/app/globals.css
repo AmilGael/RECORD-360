@@ -383,7 +383,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 /* Counts are display numerals: the stencil face, per the direction contract. */
 .sidebar-stat strong { font-family: var(--font-stencil), var(--font-archivo), sans-serif; font-size: 1.25rem; line-height: 1; }
 .sidebar-stat span { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--steel); font-family: var(--font-mono), monospace; }
-.sidebar-stat span { overflow-wrap: anywhere; line-height: 1.25; }
+.sidebar-stat span { line-height: 1.25; }
 .sidebar-controls { display: flex; flex-direction: column; gap: 8px; }
 .sidebar-icon-button,
 .sidebar-signout {
