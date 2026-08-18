@@ -1,50 +1,75 @@
 @import "tailwindcss";
 
+/*!
+DIRECTION CONTRACT — Plancha Industrial (seed d81dddab, approved comp: .impeccable/mocks/comp-a-planar-ledger.png)
+THESIS: The obra's record rendered as a precisionist industrial plate — flat
+hard-edged planes under one raking light — refusing the white-card/blue-accent
+SaaS dashboard and the blueprint-blue cliché alike.
+OWN-WORLD: Deep-slate ground, slate planes, chalk type, ash secondaries, rust
+#C24A2A as painted bands; hard offset shadows (the raking light), zero border
+radius with one chamfered corner on actions; Archivo condensed caps for labels,
+Chivo Mono for data, Saira Stencil One for display numerals only. Recognizable
+with all content removed.
+STORY: The owner opens the app at night and reads their works like painted
+steel sheets in a yard; the active plane takes the light; nothing glows,
+nothing floats — the record is machinery, and it holds.
+FIRST VIEWPORT: Appbar plane, slim stenciled nav rail, 'TUS OBRAS' with stencil
+count; obra rows as full-width planes, rust progress band inset, primary action
+chamfered rust.
+FORM: Planar Ledger (comp A of 3), user-approved; light mode = day shift on the
+same site. State grammar: marks not hues (active takes light, pending = chalk
+outline, concluded = chalk plane, danger = rust band).
+*/
 :root {
-  --paper: #ECE7DD;
-  --paper-2: #E3DDD0;
-  --paper-3: #DBD4C5;
-  --ink: #19140F;
-  --ink-soft: #4A433A;
-  --steel: #5A5348;
-  --accent: #E14A1F;
-  --accent-deep: #B83814;
-  --state-active: #2f7d5b;
-  --state-active-bg: rgba(47, 125, 91, 0.12);
-  --state-merged: #6b4fa0;
-  --state-merged-bg: rgba(107, 79, 160, 0.12);
+  /* Day shift: the same site under daylight — concrete and chalk, slate ink. */
+  --paper: #E9E7E0;
+  --paper-2: #F2F1EC;
+  --paper-3: #DDDAD1;
+  --ink: #1E2328;
+  --ink-soft: #3C444C;
+  --steel: #5C666D;
+  --accent: #C24A2A;
+  --accent-deep: #A83D20;
+  --state-active: #2f6d52;
+  --state-active-bg: rgba(47, 109, 82, 0.12);
+  --state-merged: #4d5a8a;
+  --state-merged-bg: rgba(77, 90, 138, 0.12);
   --state-blocked: #a8432f;
   --state-blocked-bg: rgba(168, 67, 47, 0.10);
-  --line: rgba(25, 20, 15, 0.14);
-  --line-strong: rgba(25, 20, 15, 0.26);
-  --grid: rgba(25, 20, 15, 0.045);
-  --radius: 10px;
-  --radius-sm: 6px;
-  --shadow-soft: 0 1px 2px rgba(25, 20, 15, 0.04);
-  --shadow-card: 0 1px 2px rgba(25, 20, 15, 0.04), 0 12px 30px -14px rgba(25, 20, 15, 0.12);
+  --line: rgba(30, 35, 40, 0.16);
+  --line-strong: rgba(30, 35, 40, 0.32);
+  --grid: rgba(30, 35, 40, 0.045);
+  /* Planes have machined edges: no radius anywhere; actions carry one chamfer. */
+  --radius: 0px;
+  --radius-sm: 0px;
+  --chamfer: 10px;
+  /* The raking light: shadows are hard offset planes, never soft halos. */
+  --shadow-soft: 2px 2px 0 rgba(30, 35, 40, 0.10);
+  --shadow-card: 5px 6px 0 rgba(30, 35, 40, 0.14);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 body[data-theme="dark"] {
-  --paper: #171412;
-  --paper-2: #1f1b18;
-  --paper-3: #292420;
-  --ink: #f1e7d8;
-  --ink-soft: #d4c7b7;
-  --steel: #b5a998;
-  --accent: #ff6f43;
-  --accent-deep: #e85a2c;
-  --state-active: #5bbd8d;
-  --state-active-bg: rgba(91, 189, 141, 0.12);
-  --state-merged: #a388e4;
-  --state-merged-bg: rgba(163, 136, 228, 0.12);
-  --state-blocked: #e06a54;
-  --state-blocked-bg: rgba(224, 106, 84, 0.12);
-  --line: rgba(241, 231, 216, 0.12);
-  --line-strong: rgba(241, 231, 216, 0.22);
-  --grid: rgba(241, 231, 216, 0.03);
-  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.22);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.22), 0 16px 34px -20px rgba(0, 0, 0, 0.5);
+  /* Night shift — the world's native state (client reviews at night). */
+  --paper: #1E2328;
+  --paper-2: #2A3138;
+  --paper-3: #343C44;
+  --ink: #F2F1EC;
+  --ink-soft: #C9CCC9;
+  --steel: #8D979E;
+  --accent: #C9502E;
+  --accent-deep: #C24A2A;
+  --state-active: #7fae90;
+  --state-active-bg: rgba(127, 174, 144, 0.14);
+  --state-merged: #8d9ac4;
+  --state-merged-bg: rgba(141, 154, 196, 0.14);
+  --state-blocked: #d0674d;
+  --state-blocked-bg: rgba(208, 103, 77, 0.14);
+  --line: rgba(242, 241, 236, 0.14);
+  --line-strong: rgba(242, 241, 236, 0.30);
+  --grid: rgba(242, 241, 236, 0.035);
+  --shadow-soft: 2px 2px 0 rgba(0, 0, 0, 0.30);
+  --shadow-card: 6px 7px 0 rgba(0, 0, 0, 0.38);
   color-scheme: dark;
 }
 
@@ -53,7 +78,6 @@ body[data-theme="dark"] {
   --color-foreground: var(--ink);
   --font-sans: var(--font-archivo);
   --font-mono: var(--font-mono);
-  --font-serif: var(--font-fraunces);
 }
 
 * { box-sizing: border-box; }
@@ -98,17 +122,23 @@ body {
   font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--steel);
   max-width: 100%; overflow-wrap: anywhere;
 }
-.h-xl { font-family: var(--font-fraunces), Georgia, serif; font-size: 2.8rem; font-weight: 600; letter-spacing: -0.02em; line-height: 0.96; }
-.h-lg { font-family: var(--font-fraunces), Georgia, serif; font-size: 2.1rem; font-weight: 600; letter-spacing: -0.018em; line-height: 1.0; }
-.h-md { font-family: var(--font-fraunces), Georgia, serif; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.012em; line-height: 1.06; }
+/* Display voice: condensed Archivo caps — painted-steel signage, not serif prose. */
+.h-xl { font-family: var(--font-archivo), sans-serif; font-stretch: 82%; text-transform: uppercase; font-size: 2.7rem; font-weight: 800; letter-spacing: 0.01em; line-height: 0.94; }
+.h-lg { font-family: var(--font-archivo), sans-serif; font-stretch: 84%; text-transform: uppercase; font-size: 2rem; font-weight: 800; letter-spacing: 0.012em; line-height: 0.98; }
+.h-md { font-family: var(--font-archivo), sans-serif; font-stretch: 86%; text-transform: uppercase; font-size: 1.3rem; font-weight: 800; letter-spacing: 0.015em; line-height: 1.04; }
 .text-soft { color: var(--ink-soft); }
 .text-steel { color: var(--steel); }
 
 /* ---------- buttons ---------- */
+/* Actions are cut steel: condensed caps, square edges, one chamfered corner
+   (bottom-left, like a plate with the corner sheared). The chamfer is the
+   world's signature on every commitment the user makes. */
 .btn {
-  font-weight: 700; font-size: 0.9rem; font-family: inherit;
+  font-weight: 700; font-size: 0.82rem; font-family: var(--font-archivo), sans-serif;
+  font-stretch: 88%; text-transform: uppercase; letter-spacing: 0.06em;
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;
-  border: 1px solid transparent; border-radius: var(--radius); padding: 0.72rem 1.2rem;
+  border: 1px solid transparent; border-radius: 0; padding: 0.72rem 1.2rem;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, var(--chamfer) 100%, 0 calc(100% - var(--chamfer)));
   text-decoration: none; white-space: normal; line-height: 1.25; text-align: center;
   min-width: 0; max-width: 100%; overflow-wrap: anywhere;
   transition: transform 0.18s var(--ease), background 0.18s var(--ease), border-color 0.18s var(--ease), color 0.18s var(--ease), box-shadow 0.18s var(--ease);
@@ -218,10 +248,18 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
-/* ---------- grid background ---------- */
+/* ---------- ground ---------- */
+/* The blueprint grid belonged to the retired world. The plancha ground is
+   painted canvas: flat color with a whisper of tooth (SVG turbulence at ~4%),
+   plus one immense raking-light diagonal — a single hard-edged shadow plane
+   crossing the surface, the world's one light source made visible. */
 .grid-bg {
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 64px 64px;
+  position: relative;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(117deg, transparent 0 38%, rgba(0, 0, 0, 0.05) 38.2% 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-attachment: fixed, fixed;
 }
 
 /* ---------- app shell ---------- */
@@ -229,7 +267,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .appbar { padding-top: var(--safe-t); padding-left: var(--safe-l); padding-right: var(--safe-r); }
 .appbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .brand { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--ink); }
-.brand b { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; letter-spacing: -0.01em; font-size: 1.25rem; }
+.brand b { font-family: var(--font-archivo), sans-serif; font-stretch: 110%; font-weight: 800; letter-spacing: 0.01em; font-size: 1.15rem; text-transform: uppercase; }
 .brand .dot { color: var(--accent); }
 /* nowrap: the tag is a two-word brand device — split across lines it reads as
    two stacked words colliding with whatever sits beside it (seen live at 375px
@@ -314,7 +352,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
    header stays for the mobile drawer (≤1040px), where it serves as the panel's
    own masthead. */
 @media (min-width: 1041px) { .sidebar-brand { display: none; } }
-.sidebar-brand strong { font-family: var(--font-fraunces), Georgia, serif; font-size: 1.45rem; letter-spacing: -0.02em; line-height: 1; }
+.sidebar-brand strong { font-family: var(--font-archivo), sans-serif; font-stretch: 84%; text-transform: uppercase; font-weight: 800; font-size: 1.35rem; letter-spacing: 0.02em; line-height: 1; }
 .sidebar-brand span { font-size: 0.84rem; line-height: 1.35; }
 .sidebar-section { display: flex; flex-direction: column; gap: 10px; }
 .sidebar-heading {
@@ -340,7 +378,8 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 }
 .sidebar-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .sidebar-stat { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); padding: 10px; display: flex; flex-direction: column; gap: 2px; }
-.sidebar-stat strong { font-family: var(--font-fraunces), Georgia, serif; font-size: 1.2rem; line-height: 1; }
+/* Counts are display numerals: the stencil face, per the direction contract. */
+.sidebar-stat strong { font-family: var(--font-stencil), var(--font-archivo), sans-serif; font-size: 1.25rem; line-height: 1; }
 .sidebar-stat span { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--steel); font-family: var(--font-mono), monospace; }
 .sidebar-stat span { overflow-wrap: anywhere; line-height: 1.25; }
 .sidebar-controls { display: flex; flex-direction: column; gap: 8px; }
@@ -423,7 +462,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .tab { font-size: 0.86rem; font-weight: 600; padding: 9px 12px; border-bottom: 2px solid transparent; color: var(--ink-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; white-space: normal; line-height: 1.25; overflow-wrap: anywhere; transition: color 0.15s var(--ease), border-bottom-color 0.15s var(--ease); }
 .tab > svg { flex: 0 0 auto; }
 .tab:hover:not(.is-on):not(.is-off) { color: var(--ink); border-bottom-color: var(--line-strong); }
-.tab.is-on { color: var(--ink); border-bottom-color: var(--accent); }
+.tab.is-on { color: var(--ink); border-bottom-color: var(--accent); border-bottom-width: 3px; }
 .tab.is-off { color: var(--steel); opacity: 0.55; cursor: default; }
 .tab .soon { font-family: var(--font-mono), monospace; font-size: 0.5rem; letter-spacing: 0.06em; border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 3px; }
 
@@ -574,7 +613,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .repo-card > * { transition: transform 0.18s var(--ease); }
 .repo-card:first-child { border-top: none; }
 .repo-card:last-child { border-bottom: none; }
-.repo-card:hover { background: var(--paper-2); box-shadow: inset 2px 0 0 var(--accent); }
+.repo-card:hover { background: var(--paper-3); box-shadow: inset 3px 0 0 var(--accent), var(--shadow-soft); }
 .repo-card:hover > * { transform: translateX(6px); }
 .repo-card .repo-title { font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
 .repo-card .repo-title .folder-icon { color: var(--accent); font-size: 0.9rem; }
@@ -861,7 +900,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .analitica-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .analitica-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
 .analitica-card .health-dot { margin-bottom: 4px; }
-.analitica-card strong { font-family: var(--font-fraunces), Georgia, serif; font-size: 1.5rem; }
+.analitica-card strong { font-family: var(--font-stencil), var(--font-archivo), sans-serif; font-size: 1.55rem; }
 .analitica-card span { font-family: var(--font-mono), monospace; font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--steel); }
 .analitica-row { display: flex; align-items: center; gap: 10px; }
 .analitica-row-name { font-size: 0.88rem; min-width: 0; flex: 1 1 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -34,21 +34,21 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       </header>
 
       <main style={{ flex: 1, display: "grid", placeItems: "center", padding: 24 }}>
-        <form action={doLogin} className="reveal reveal-2 card" style={{ width: "100%", maxWidth: 360, borderColor: "var(--line-strong)", borderRadius: 6, overflow: "hidden", boxShadow: "8px 8px 0 rgba(25,20,15,0.07)" }}>
+        <form action={doLogin} className="reveal reveal-2 card" style={{ width: "100%", maxWidth: 360, borderColor: "var(--line-strong)", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 16px", background: "var(--ink)", color: "var(--paper)" }}>
             <span className="mono" style={{ fontSize: "0.62rem", letterSpacing: "0.16em" }}>{T.kicker}</span>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)" }} />
+            <span style={{ width: 9, height: 9, background: "var(--accent)" }} />
           </div>
           <div style={{ padding: "26px 22px 24px" }}>
             <h1 className="h-md" style={{ fontSize: "1.7rem", marginBottom: 20 }}>{T.title}</h1>
             {error && (
-              <p style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 3, fontSize: "0.84rem", marginBottom: 14 }}>{T.error}</p>
+              <p style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.error}</p>
             )}
             {activated && (
-              <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 3, fontSize: "0.84rem", marginBottom: 14 }}>{T.activated}</p>
+              <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.activated}</p>
             )}
             {reset && (
-              <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 3, fontSize: "0.84rem", marginBottom: 14 }}>{T.resetDone}</p>
+              <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.resetDone}</p>
             )}
             <input name="email" type="email" placeholder={T.email} required className="input" style={{ marginBottom: 10 }} autoComplete="email" autoFocus />
             <input name="password" type="password" placeholder={T.password} required className="input" style={{ marginBottom: 8 }} autoComplete="current-password" />
