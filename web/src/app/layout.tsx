@@ -1,13 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Space_Mono, Fraunces } from "next/font/google";
+// Plancha Industrial world: all three faces are Omnibus-Type (Latin American
+// foundry) — Archivo carries UI + condensed-caps labels via its width axis,
+// Chivo Mono carries data (timestamps, hashes, codes), Saira Stencil One is
+// display numerals ONLY. Fraunces (the old serif brand voice) retires with the
+// old world.
+import { Archivo, Chivo_Mono, Saira_Stencil_One } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { getLang } from "@/i18n/server";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 
-const archivo = Archivo({ subsets: ["latin"], variable: "--font-archivo" });
-const mono = Space_Mono({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-mono" });
-const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
+const archivo = Archivo({ subsets: ["latin"], variable: "--font-archivo", axes: ["wdth"] });
+const mono = Chivo_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const stencil = Saira_Stencil_One({ subsets: ["latin"], weight: "400", variable: "--font-stencil" });
 
 export const metadata: Metadata = {
   title: "Raphel — La caja negra de tu obra",
@@ -28,7 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const theme = (await cookies()).get("r360_theme")?.value === "dark" ? "dark" : "light";
   return (
     <html lang={lang}>
-      <body className={`${archivo.variable} ${mono.variable} ${fraunces.variable}`} data-theme={theme}>
+      <body className={`${archivo.variable} ${mono.variable} ${stencil.variable}`} data-theme={theme}>
         {children}
         <ServiceWorkerRegister />
       </body>
