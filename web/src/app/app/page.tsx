@@ -191,9 +191,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             {projectRows.length === 0 && (
               <div className="repo-list-empty">{D.empty}</div>
             )}
-            {projectRows.map((p) => (
+            {projectRows.map((p, i) => (
               <div key={p.id} className="repo-card" data-name={p.name.toLowerCase()}>
-                <Link href={`/app/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                {/* The plate's painted index — position in the yard, not an id. */}
+                <span className="plate-index" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+                <Link href={`/app/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit", minWidth: 0 }}>
                   <div className="repo-title">
                     {p.coverImageKey ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -239,10 +241,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   </div>
                 </Link>
                 {isOwner && (
-                  <div style={{ marginTop: 8 }}>
+                  <div style={{ marginTop: 8, gridColumn: 2 }}>
                     <ArchiveButton projectId={p.id} t={{ archive: D.archive, confirm: D.confirm, yes: D.yes, no: D.no }} />
                   </div>
                 )}
+                {/* Progress as paint on the plate's bottom edge (comp A). */}
+                <span className="plate-band-track" aria-hidden="true" />
+                <span className={`plate-band${p.progress >= 100 ? " is-done" : ""}`} style={{ width: `${p.progress}%` }} aria-hidden="true" />
               </div>
             ))}
           </div>
