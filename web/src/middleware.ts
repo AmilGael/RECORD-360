@@ -7,6 +7,9 @@ export const config = {
   matcher: [
     // Exclude API, Next internals, and public PWA assets (manifest, service
     // worker, icons, offline fallback) so they're reachable without a session.
-    "/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icon-192.png|icon-512.png|apple-touch-icon.png|offline).*)",
+    // `landing/` is the public marketing-asset folder (hero art etc.) — without
+    // this exclusion the auth middleware intercepts the files and serves the
+    // login page HTML in their place.
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icon-192.png|icon-512.png|apple-touch-icon.png|offline|landing/).*)",
   ],
 };

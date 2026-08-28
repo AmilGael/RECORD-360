@@ -82,7 +82,7 @@ export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
       <input type="hidden" name="gpsLng" value={coords?.lng ?? ""} />
 
       {state.status === "error" && (
-        <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
           {state.message}
         </p>
       )}

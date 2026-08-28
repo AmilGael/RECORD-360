@@ -155,8 +155,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <div className="kicker">{D.kicker}</div>
           <h1 className="h-lg" style={{ fontSize: "clamp(2rem, 4.5vw, 2.8rem)", margin: "6px 0 0" }}>{D.title}</h1>
         </div>
+        {/* The comp's promise: the yard's count as a display-scale stencil
+            numeral, with the breakdown in the meta voice beneath it. */}
         <span className="counter">
-          {projectRows.length} {D.tabActive.toLowerCase()} · {archived.length} {D.tabArchived.toLowerCase()}
+          <span className="counter-stencil" aria-hidden="true">{String(projectRows.length).padStart(2, "0")}</span>
+          <span>{projectRows.length} {D.tabActive.toLowerCase()} · {archived.length} {D.tabArchived.toLowerCase()}</span>
         </span>
       </div>
 
@@ -204,9 +207,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                       <span className="folder-icon"><Folder size={14} /></span>
                     )}
                     {p.name}
-                    <span className="state-badge is-active" style={{ marginLeft: 4 }}>
-                      {t.project.statusActive}
-                    </span>
                   </div>
                   <div className="repo-meta">
                     <span>{p.partidas} {D.partidas}</span>

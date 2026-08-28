@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "title": "Design System: Raphel",
+  "extensions": {
+    "colorMeta": {
+      "slate-ground": { "role": "neutral", "displayName": "Slate Ground", "canonical": "#1E2328", "dayShift": "#E9E7E0", "tonalRamp": ["oklch(15% 0.012 240)", "oklch(24% 0.012 240)", "oklch(34% 0.012 240)", "oklch(45% 0.012 240)", "oklch(56% 0.012 240)", "oklch(68% 0.012 240)", "oklch(82% 0.012 240)", "oklch(95% 0.012 240)"] },
+      "slate-plane": { "role": "neutral", "displayName": "Slate Plane", "canonical": "#2A3138", "dayShift": "#F2F1EC", "tonalRamp": ["oklch(15% 0.014 245)", "oklch(28% 0.014 245)", "oklch(38% 0.014 245)", "oklch(49% 0.014 245)", "oklch(60% 0.014 245)", "oklch(72% 0.014 245)", "oklch(84% 0.014 245)", "oklch(95% 0.014 245)"] },
+      "slate-plane-raised": { "role": "neutral", "displayName": "Slate Plane Raised", "canonical": "#343C44", "dayShift": "#DDDAD1", "tonalRamp": ["oklch(15% 0.015 245)", "oklch(32% 0.015 245)", "oklch(42% 0.015 245)", "oklch(52% 0.015 245)", "oklch(63% 0.015 245)", "oklch(74% 0.015 245)", "oklch(85% 0.015 245)", "oklch(95% 0.015 245)"] },
+      "chalk": { "role": "neutral", "displayName": "Chalk", "canonical": "#F2F1EC", "dayShift": "#1E2328", "tonalRamp": ["oklch(15% 0.005 95)", "oklch(30% 0.005 95)", "oklch(45% 0.005 95)", "oklch(58% 0.005 95)", "oklch(70% 0.005 95)", "oklch(80% 0.005 95)", "oklch(89% 0.005 95)", "oklch(96% 0.005 95)"] },
+      "chalk-soft": { "role": "neutral", "displayName": "Chalk Soft", "canonical": "#C9CCC9", "dayShift": "#3C444C", "tonalRamp": ["oklch(15% 0.004 150)", "oklch(28% 0.004 150)", "oklch(42% 0.004 150)", "oklch(55% 0.004 150)", "oklch(67% 0.004 150)", "oklch(78% 0.004 150)", "oklch(85% 0.004 150)", "oklch(95% 0.004 150)"] },
+      "steel": { "role": "neutral", "displayName": "Steel", "canonical": "#8D979E", "dayShift": "#5C666D", "tonalRamp": ["oklch(15% 0.012 230)", "oklch(28% 0.012 230)", "oklch(40% 0.012 230)", "oklch(52% 0.012 230)", "oklch(66% 0.012 230)", "oklch(76% 0.012 230)", "oklch(86% 0.012 230)", "oklch(95% 0.012 230)"] },
+      "rust": { "role": "primary", "displayName": "Rust", "canonical": "#C9502E", "dayShift": "#C24A2A", "tonalRamp": ["oklch(20% 0.09 35)", "oklch(30% 0.12 35)", "oklch(40% 0.14 35)", "oklch(50% 0.155 35)", "oklch(58% 0.155 35)", "oklch(68% 0.13 35)", "oklch(80% 0.09 35)", "oklch(93% 0.03 35)"] },
+      "rust-deep": { "role": "primary", "displayName": "Rust Deep", "canonical": "#C24A2A", "dayShift": "#A83D20", "tonalRamp": ["oklch(18% 0.09 35)", "oklch(28% 0.12 35)", "oklch(38% 0.14 35)", "oklch(48% 0.155 35)", "oklch(56% 0.155 35)", "oklch(66% 0.13 35)", "oklch(78% 0.09 35)", "oklch(92% 0.03 35)"] },
+      "mark-active": { "role": "tertiary", "displayName": "Mark Active", "canonical": "#7fae90", "dayShift": "#2f6d52", "tonalRamp": ["oklch(18% 0.05 155)", "oklch(30% 0.07 155)", "oklch(42% 0.08 155)", "oklch(54% 0.08 155)", "oklch(66% 0.07 155)", "oklch(76% 0.06 155)", "oklch(86% 0.05 155)", "oklch(95% 0.02 155)"] },
+      "mark-merged": { "role": "tertiary", "displayName": "Mark Merged", "canonical": "#8d9ac4", "dayShift": "#4d5a8a", "tonalRamp": ["oklch(18% 0.05 275)", "oklch(30% 0.07 275)", "oklch(42% 0.08 275)", "oklch(54% 0.08 275)", "oklch(68% 0.07 275)", "oklch(78% 0.06 275)", "oklch(87% 0.04 275)", "oklch(95% 0.02 275)"] },
+      "mark-blocked": { "role": "tertiary", "displayName": "Mark Blocked", "canonical": "#d0674d", "dayShift": "#a8432f", "tonalRamp": ["oklch(18% 0.07 30)", "oklch(30% 0.10 30)", "oklch(42% 0.12 30)", "oklch(54% 0.13 30)", "oklch(65% 0.12 30)", "oklch(75% 0.10 30)", "oklch(85% 0.07 30)", "oklch(94% 0.03 30)"] },
+      "brass": { "role": "tertiary", "displayName": "Brass", "canonical": "#b08a2e", "tonalRamp": ["oklch(18% 0.06 85)", "oklch(30% 0.09 85)", "oklch(42% 0.11 85)", "oklch(54% 0.12 85)", "oklch(66% 0.13 85)", "oklch(76% 0.12 85)", "oklch(86% 0.09 85)", "oklch(95% 0.04 85)"] },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "rgba(242, 241, 236, 0.14)", "dayShift": "rgba(30, 35, 40, 0.16)", "tonalRamp": ["rgba(242,241,236,0.06)", "rgba(242,241,236,0.10)", "rgba(242,241,236,0.14)", "rgba(242,241,236,0.20)", "rgba(242,241,236,0.30)", "rgba(242,241,236,0.45)", "rgba(242,241,236,0.65)", "rgba(242,241,236,0.85)"] },
+      "hairline-strong": { "role": "neutral", "displayName": "Hairline Strong", "canonical": "rgba(242, 241, 236, 0.30)", "dayShift": "rgba(30, 35, 40, 0.32)", "tonalRamp": ["rgba(242,241,236,0.10)", "rgba(242,241,236,0.16)", "rgba(242,241,236,0.22)", "rgba(242,241,236,0.30)", "rgba(242,241,236,0.42)", "rgba(242,241,236,0.56)", "rgba(242,241,236,0.72)", "rgba(242,241,236,0.88)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Stencil Numerals", "purpose": "Saira Stencil One — counts and section indices only, never words. Steel at rest, ink when the plane takes the light." },
+      "headline": { "displayName": "Signage Headline", "purpose": "Archivo 800 caps compressed to 82-84% width, line-height under 1. Page and section titles." },
+      "title": { "displayName": "Plate Title", "purpose": "Archivo 800 caps at 86-88% width for panel and plate headings." },
+      "body": { "displayName": "Body", "purpose": "Archivo at natural width, sentence case, for anything addressed to the human." },
+      "label": { "displayName": "Data / Kicker", "purpose": "Chivo Mono, small, tracked, uppercase — the machine's voice: timestamps, hashes, kickers, badges, filenames." }
+    },
+    "shadows": [
+      { "name": "shadow-soft", "value": "2px 2px 0 rgba(0, 0, 0, 0.30)", "purpose": "Night shift: plates at rest in a list. Hard offset, zero blur. Day shift value: 2px 2px 0 rgba(30, 35, 40, 0.10)." },
+      { "name": "shadow-card", "value": "6px 7px 0 rgba(0, 0, 0, 0.38)", "purpose": "Night shift: standing planes (sidebar, containers) and hover lift. Day shift value: 5px 6px 0 rgba(30, 35, 40, 0.14)." },
+      { "name": "inset-accent-bar", "value": "inset 2px 0 0 var(--accent)", "purpose": "Active row's painted left edge (tree rows, reply quotes)." },
+      { "name": "focus-ring-input", "value": "0 0 0 3px rgba(225, 74, 31, 0.12)", "purpose": "Input focus tint ring paired with a rust border." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(0.2, 0.7, 0.2, 1)", "purpose": "The one easing. State transitions at 0.15-0.18s." },
+      { "name": "rise", "value": "rise 0.45s var(--ease) forwards", "purpose": "Page-entrance reveal; .reveal-1..6 stagger at ~50ms steps." },
+      { "name": "bar-grow", "value": "bar-grow 0.55s var(--ease) backwards, delay 0.15s", "purpose": "Progress/health fills draw once via transform: scaleX. Never animate width." },
+      { "name": "lp-stamp", "value": "lp-stamp 0.38s cubic-bezier(0.16, 1, 0.3, 1) 1.7s forwards", "purpose": "Landing seal mark snap — the page's one authored moment." },
+      { "name": "working", "value": "working 1.1s ease-in-out infinite", "purpose": "Busy-button opacity pulse; sync lamp pulses the same keyframe at 1.4s." }
+    ],
+    "breakpoints": [
+      { "name": "phone-trim", "value": "480px" },
+      { "name": "stack", "value": "640px" },
+      { "name": "workspace-stack", "value": "760px" },
+      { "name": "dash-stack", "value": "860px" },
+      { "name": "drawer", "value": "1040px" },
+      { "name": "container-max", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (Chamfered Rust)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The commitment action: cut steel with the world's signature sheared bottom-left corner.",
+      "html": "<button class=\"ds-btn ds-btn-accent\">CREAR OBRA</button>",
+      "css": ".ds-btn { font-weight: 700; font-size: 0.82rem; font-family: var(--font-archivo, 'Archivo'), sans-serif; font-stretch: 88%; text-transform: uppercase; letter-spacing: 0.06em; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; border: 1px solid transparent; border-radius: 0; padding: 0.72rem 1.2rem; clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px)); line-height: 1.25; transition: transform 0.18s cubic-bezier(0.2,0.7,0.2,1), background 0.18s cubic-bezier(0.2,0.7,0.2,1); } .ds-btn-accent { background: var(--accent, #C9502E); color: #fff; } .ds-btn-accent:hover { background: var(--accent-deep, #C24A2A); transform: translateY(-1px); } .ds-btn:active { transform: translateY(1px) scale(0.99); } .ds-btn:focus-visible { outline: 2px solid var(--accent, #C9502E); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action: transparent plate with a strong hairline border, same chamfer.",
+      "html": "<button class=\"ds-btn2 ds-btn-ghost\">VER ARCHIVO</button>",
+      "css": ".ds-btn2 { font-weight: 700; font-size: 0.82rem; font-family: var(--font-archivo, 'Archivo'), sans-serif; font-stretch: 88%; text-transform: uppercase; letter-spacing: 0.06em; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 0; padding: 0.72rem 1.2rem; clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px)); line-height: 1.25; transition: transform 0.18s cubic-bezier(0.2,0.7,0.2,1), border-color 0.18s cubic-bezier(0.2,0.7,0.2,1); } .ds-btn-ghost { background: transparent; color: var(--ink, #F2F1EC); border: 1px solid var(--line-strong, rgba(242,241,236,0.30)); } .ds-btn-ghost:hover { border-color: var(--ink, #F2F1EC); transform: translateY(-1px); } .ds-btn2:focus-visible { outline: 2px solid var(--accent, #C9502E); outline-offset: 2px; }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Square well on the page ground; rust border plus tinted ring on focus.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Nombre de la obra\" />",
+      "css": ".ds-input { width: 100%; padding: 0.7rem 0.8rem; font-size: 0.95rem; font-family: var(--font-archivo, 'Archivo'), sans-serif; background: var(--paper, #1E2328); color: var(--ink, #F2F1EC); border: 1px solid var(--line-strong, rgba(242,241,236,0.30)); border-radius: 0; line-height: 1.35; transition: border-color 0.18s cubic-bezier(0.2,0.7,0.2,1), box-shadow 0.18s cubic-bezier(0.2,0.7,0.2,1); } .ds-input::placeholder { color: var(--steel, #8D979E); } .ds-input:focus { outline: none; border-color: var(--accent, #C9502E); box-shadow: 0 0 0 3px rgba(225, 74, 31, 0.12); }"
+    },
+    {
+      "name": "Obra Plate",
+      "kind": "card",
+      "description": "Signature component: a painted-steel plate with stencil index, mono meta line, and a rust progress band inset along the bottom edge. Hover: the plane takes the raking light.",
+      "html": "<a class=\"ds-plate\" href=\"#\"><span class=\"ds-plate-index\">02</span><span class=\"ds-plate-body\"><span class=\"ds-plate-title\">CASA MADERO</span><span class=\"ds-plate-meta\">ACTUALIZADO 2026-08-12 <span class=\"ds-sep\">/</span> 14 REGISTROS <span class=\"ds-sep\">/</span> 62%</span></span><span class=\"ds-plate-track\"></span><span class=\"ds-plate-band\" style=\"width:62%\"></span></a>",
+      "css": ".ds-plate { display: grid; grid-template-columns: auto 1fr; column-gap: 18px; align-items: center; text-decoration: none; color: var(--ink, #F2F1EC); padding: 16px 18px 20px; background: var(--paper-2, #2A3138); border: 1px solid var(--line, rgba(242,241,236,0.14)); box-shadow: var(--shadow-soft, 2px 2px 0 rgba(0,0,0,0.30)); position: relative; overflow: hidden; transition: background 0.18s cubic-bezier(0.2,0.7,0.2,1), box-shadow 0.18s cubic-bezier(0.2,0.7,0.2,1); } .ds-plate:hover { background: var(--paper-3, #343C44); box-shadow: var(--shadow-card, 6px 7px 0 rgba(0,0,0,0.38)); } .ds-plate-index { font-family: var(--font-stencil, 'Saira Stencil One'), sans-serif; font-size: 2.1rem; line-height: 1; color: var(--steel, #8D979E); min-width: 2ch; text-align: center; user-select: none; transition: color 0.18s cubic-bezier(0.2,0.7,0.2,1); } .ds-plate:hover .ds-plate-index { color: var(--ink, #F2F1EC); } .ds-plate-title { display: block; font-family: var(--font-archivo, 'Archivo'), sans-serif; font-weight: 700; font-size: 1.05rem; font-stretch: 88%; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.3; } .ds-plate-meta { display: block; font-family: var(--font-mono, 'Chivo Mono'), monospace; font-size: 0.74rem; letter-spacing: 0.025em; color: var(--ink-soft, #C9CCC9); margin-top: 7px; } .ds-sep { opacity: 0.4; } .ds-plate-track { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: color-mix(in srgb, var(--ink, #F2F1EC) 12%, transparent); } .ds-plate-band { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--accent, #C9502E); }"
+    },
+    {
+      "name": "State Badge",
+      "kind": "chip",
+      "description": "Mono uppercase state mark: tinted plane, tinted border, text label always present. Square.",
+      "html": "<span class=\"ds-badge ds-badge-active\">ACTIVO</span> <span class=\"ds-badge ds-badge-archived\">ARCHIVADO</span>",
+      "css": ".ds-badge { font-family: var(--font-mono, 'Chivo Mono'), monospace; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 0; display: inline-flex; align-items: center; line-height: 1.25; } .ds-badge-active { color: var(--state-active, #7fae90); background: var(--state-active-bg, rgba(127,174,144,0.14)); border: 1px solid rgba(47,125,91,0.35); } .ds-badge-archived { color: var(--steel, #8D979E); background: var(--paper-2, #2A3138); border: 1px solid var(--line-strong, rgba(242,241,236,0.30)); }"
+    },
+    {
+      "name": "Segmented Toggle",
+      "kind": "nav",
+      "description": "Panel-scoped view switch (open/resolved); the active segment inverts to ink-on-paper. Deliberately not the page-level tab grammar.",
+      "html": "<div class=\"ds-seg\"><a class=\"ds-seg-item ds-is-on\" href=\"#\">ABIERTOS</a><a class=\"ds-seg-item\" href=\"#\">RESUELTOS</a></div>",
+      "css": ".ds-seg { display: inline-flex; border: 1px solid var(--line-strong, rgba(242,241,236,0.30)); border-radius: 0; overflow: hidden; } .ds-seg-item { font-family: var(--font-mono, 'Chivo Mono'), monospace; font-size: 0.66rem; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 700; padding: 5px 12px; line-height: 1.3; color: var(--steel, #8D979E); text-decoration: none; background: transparent; transition: background 0.15s cubic-bezier(0.2,0.7,0.2,1), color 0.15s cubic-bezier(0.2,0.7,0.2,1); } .ds-seg-item + .ds-seg-item { border-left: 1px solid var(--line-strong, rgba(242,241,236,0.30)); } .ds-seg-item:hover:not(.ds-is-on) { color: var(--ink, #F2F1EC); background: var(--paper-2, #2A3138); } .ds-seg-item.ds-is-on { color: var(--paper, #1E2328); background: var(--ink, #F2F1EC); }"
+    },
+    {
+      "name": "Sync Chip",
+      "kind": "custom",
+      "description": "Offline-queue indicator: bordered mono chip with a 6px round pulsing rust lamp — the sanctioned round exception.",
+      "html": "<span class=\"ds-sync\">SINCRONIZANDO 3</span>",
+      "css": ".ds-sync { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong, rgba(242,241,236,0.30)); border-radius: 0; padding: 3px 10px; font-family: var(--font-mono, 'Chivo Mono'), monospace; font-size: 0.68rem; letter-spacing: 0.08em; color: var(--ink-soft, #C9CCC9); } .ds-sync::before { content: \"\"; width: 6px; height: 6px; border-radius: 50%; background: var(--accent, #C9502E); animation: ds-working 1.4s ease-in-out infinite; } @keyframes ds-working { 50% { opacity: 0.4; } }"
+    },
+    {
+      "name": "Quiet Action",
+      "kind": "button",
+      "description": "Borderless mono icon+label action (Archivar / Restaurar / Borrar); icon and label never stack.",
+      "html": "<button class=\"ds-icon-action\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 8v13H3V8M1 3h22v5H1zM10 12h4\"/></svg>ARCHIVAR</button>",
+      "css": ".ds-icon-action { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; background: none; border: none; cursor: pointer; padding: 0; font-family: var(--font-mono, 'Chivo Mono'), monospace; font-size: 0.7rem; letter-spacing: 0.08em; color: var(--steel, #8D979E); transition: color 0.18s cubic-bezier(0.2,0.7,0.2,1); } .ds-icon-action:hover { color: var(--ink, #F2F1EC); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Plancha Industrial",
+    "overview": "The obra's record rendered as a precisionist industrial plate: flat, hard-edged planes under one raking light. The world refuses both the white-card/blue-accent SaaS dashboard and the blueprint-blue cliché. Every surface is painted steel — deep-slate ground, slate planes, chalk type, ash secondaries, rust paint. Nothing glows, nothing floats; the record is machinery, and it holds.\n\nThe system is theme-dual but night-native. Night shift (deep slate) is the first-run default — the client reviews the record at night — and day shift is the same site under daylight: concrete and chalk with slate ink, derived by re-aiming the identical token set. The public landing commits to night unconditionally via a scoped .lp-night token override: it is the brand surface, and the black box's native state is night.\n\nState is carried by marks, not hues: the active plane takes the light, pending is a chalk outline, concluded is a full chalk plane, danger and progress are painted rust bands, archived is an unlit plane. The ground itself is painted canvas — flat color with a ~4% SVG-turbulence tooth and one immense hard-edged raking-light diagonal, the world's single light source made visible.",
+    "keyCharacteristics": [
+      "Flat hard-edged planes; zero border radius everywhere; one chamfered corner on actions",
+      "Hard offset shadows only (the raking light) — never blurred halos",
+      "Night-native, day-derived; both shifts share one token vocabulary",
+      "Rust #C24A2A/#C9502E used as painted bands and commitments, never as ambient wash",
+      "Stencil numerals as the display device; condensed Archivo caps as signage; mono as the data voice",
+      "State grammar of marks (outline / plane / band / unlit), not color-coding alone",
+      "No emoji anywhere in the UI — monochrome SVG line icons or text only (owner rule, PRODUCT.md)"
+    ],
+    "rules": [
+      { "name": "The Marks-Not-Hues Rule", "body": "State is a mark before it is a color: pending = chalk outline (dashed border, transparent fill, no shadow), concluded = full chalk plane, danger/progress = rust band, archived = unlit steel. A color chip alone never carries state; severity chips and badges always contain their text label.", "section": "colors" },
+      { "name": "The Paint Ration Rule", "body": "Rust is paint, applied in bands, edges, and stamps on commitments. It never fills a region larger than a button, and never appears as an ambient background wash.", "section": "colors" },
+      { "name": "The Signage Compression Rule", "body": "The bigger the type, the narrower the width: display headlines compress to 82% width, titles to 86-88%, all uppercase with tight line-height (≤1.05). Body text stays at natural width and sentence case.", "section": "typography" },
+      { "name": "The Stencil-Is-Numerals Rule", "body": "Saira Stencil One sets numerals only — counts, indices, section numbers — never words, never body copy.", "section": "typography" },
+      { "name": "The Two-Voices Rule", "body": "Anything the machine recorded (timestamps, hashes, percentages, codes, filenames, metadata) speaks in Chivo Mono at small sizes with tracking; anything addressed to the human speaks in Archivo.", "section": "typography" },
+      { "name": "The Raking Light Rule", "body": "Shadows are hard offset planes, never soft halos. box-shadow values carry no blur radius. Depth changes are shadow-offset changes plus one slate step — nothing floats, and nothing glows.", "section": "elevation" },
+      { "name": "The One Chamfer Rule", "body": "Zero radius everywhere; actions alone carry one 10px chamfered corner (bottom-left). Do not chamfer non-interactive planes, and do not round anything.", "section": "shapes" },
+      { "name": "The Round Exception Rule", "body": "Circles are reserved for period-correct hardware: indicator lamps (.pdot, .health-dot, 8-10px, border-radius: 50%) and the sync-chip's 6px pulsing lamp. These are the only curved shapes in the world, and they never grow beyond lamp scale.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do keep every surface at radius 0 and reserve the 10px bottom-left chamfer for .btn commitments only.",
+      "Do cast hard offset shadows only (2px 2px 0 at rest, 6px 7px 0 standing/hover in night) and express lift as one slate step up plus a deeper offset.",
+      "Do carry state as marks — chalk outline (pending), chalk plane (concluded), rust band (danger/progress), unlit steel (archived) — with the text label always present.",
+      "Do set all machine data (timestamps, hashes, counts, filenames, badges) in Chivo Mono at small sizes with tracking, and all display/headline type in condensed Archivo caps.",
+      "Do use Saira Stencil One for numerals only, in steel at rest, brightening to ink when its plane takes the light.",
+      "Do style native controls into the world (file pickers via ::file-selector-button, radios via accent-color) rather than replacing them with JS widgets.",
+      "Do honor both shifts: express every color through the theme tokens so day shift derives automatically; never hardcode a night hex into a component."
+    ],
+    "donts": [
+      "Don't use blurred or spread shadows, glows, or halos — the raking light casts hard planes. (The appbar's backdrop blur is the one sanctioned translucency.)",
+      "Don't round anything except indicator lamps and the sync pulse; no pills, no rounded avatars, no rounded bars.",
+      "Don't let rust fill regions larger than a button or read as ambient background; it is paint on edges, bands, and stamps.",
+      "Don't use emoji anywhere in the UI — monochrome SVG line icons or text only (owner rule).",
+      "Don't carry state by hue alone; a colored dot or tint without a mark and label is not a state.",
+      "Don't revert to the retired world: no blueprint grid ground, no serif (Fraunces) voice, no white-card/blue-accent grammar.",
+      "Don't animate layout properties (width, padding); entrances use transform/opacity, hover nudges translate content."
+    ]
+  }
+}

@@ -103,7 +103,7 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
           <p role="status" className="mono text-steel" style={{ fontSize: "0.72rem", margin: 0 }}>{t.alreadyGenerating}</p>
         )}
         {state && !state.ok && (
-          <p role="alert" style={{ background: "rgba(225,74,31,0.08)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem" }}>
+          <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem" }}>
             {state.missingFirma ? (
               <>{t.missingFirma} <Link href="/app/admin" style={{ color: "var(--accent-deep)" }}>{t.goToEquipo}</Link></>
             ) : state.missingSeal ? (

@@ -140,7 +140,7 @@ body {
   border: 1px solid transparent; border-radius: 0; padding: 0.72rem 1.2rem;
   clip-path: polygon(0 0, 100% 0, 100% 100%, var(--chamfer) 100%, 0 calc(100% - var(--chamfer)));
   text-decoration: none; white-space: normal; line-height: 1.25; text-align: center;
-  min-width: 0; max-width: 100%; overflow-wrap: anywhere;
+  min-width: 0; max-width: 100%;
   transition: transform 0.18s var(--ease), background 0.18s var(--ease), border-color 0.18s var(--ease), color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 .btn > svg { flex: 0 0 auto; }
@@ -215,7 +215,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 .input::placeholder { color: var(--steel); }
-.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(225, 74, 31, 0.12); }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
 
 /* ---------- language switch ---------- */
 .lang-switch { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono), monospace; font-size: 0.72rem; letter-spacing: 0.08em; }
@@ -272,7 +272,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 /* nowrap: the tag is a two-word brand device — split across lines it reads as
    two stacked words colliding with whatever sits beside it (seen live at 375px
    on /login, where "BLACK BOX" wrapped into the language switcher). */
-.brand .tag { font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.18em; border: 1px solid var(--line-strong); padding: 2px 5px; border-radius: 2px; color: var(--steel); white-space: nowrap; }
+.brand .tag { font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.18em; border: 1px solid var(--line-strong); padding: 2px 5px; border-radius: 0; color: var(--steel); white-space: nowrap; }
 @media (max-width: 480px) {
   /* The 28px gutters + 0.18em tracking don't fit brand + language switcher on a
      phone; trim both instead of letting the row collide. */
@@ -535,8 +535,14 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 
 .dash-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
 .dash-header .counter {
-  font-family: var(--font-mono), monospace; font-size: 0.78rem; letter-spacing: 0.06em;
-  color: var(--ink-soft); border: 1px solid var(--line-strong); padding: 5px 11px; border-radius: 0;
+  font-family: var(--font-mono), monospace; font-size: 0.72rem; letter-spacing: 0.06em;
+  color: var(--ink-soft); display: inline-flex; align-items: center; gap: 12px;
+}
+/* The yard's count as the world's signature device: a display-scale stencil
+   numeral (comp A's "02"), not a bordered mono pill. */
+.counter-stencil {
+  font-family: var(--font-stencil), var(--font-archivo), sans-serif;
+  font-size: clamp(2.4rem, 5vw, 3.4rem); line-height: 1; color: var(--steel);
 }
 
 .dash-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
@@ -591,7 +597,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   border-radius: var(--radius-sm); transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 .search-input::placeholder { color: var(--steel); font-size: 0.84rem; }
-.search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(225,74,31,0.12); }
+.search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
 
 /* mini tabs (active/archived) */
 .mini-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
@@ -669,7 +675,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   border: 1px solid var(--line-strong); border-radius: calc(var(--radius) + 2px); background: var(--paper-2);
   box-shadow: var(--shadow-card); overflow: hidden; transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
-.panel-create[open] { border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong)); box-shadow: 0 16px 38px -24px color-mix(in srgb, var(--accent) 42%, transparent); }
+.panel-create[open] { border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong)); box-shadow: var(--shadow-card); }
 .panel-create-summary {
   list-style: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center; gap: 12px; padding: 16px; cursor: pointer; background: var(--paper-2);
@@ -681,7 +687,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .panel-create-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
 .panel-create-icon {
   width: 36px; height: 36px; border-radius: 0; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--accent); color: #fff; box-shadow: 0 8px 18px -10px var(--accent-deep);
+  background: var(--accent); color: #fff; box-shadow: 2px 2px 0 var(--accent-deep);
 }
 .panel-create-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .panel-create-copy strong { color: var(--ink); font-size: 0.98rem; line-height: 1.25; }
@@ -770,7 +776,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
      to the next line of its wrapping flex row instead. */
   line-height: 1.25; text-align: center;
 }
-.role-badge.is-admin { color: var(--accent-deep); background: rgba(225,74,31,0.1); border: 1px solid rgba(225,74,31,0.3); }
+.role-badge.is-admin { color: var(--accent-deep); background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
 .role-badge.is-manager { color: var(--state-active); background: var(--state-active-bg); border: 1px solid rgba(47,125,91,0.35); }
 .role-badge.is-supervisor { color: #8a6c1a; background: rgba(176,138,46,0.12); border: 1px solid rgba(176,138,46,0.35); }
 .role-badge.is-resident { color: var(--steel); background: var(--paper-3); border: 1px solid var(--line-strong); }
@@ -923,15 +929,24 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 
 /* ---------- public landing ---------- */
 .lp-nav-links { display: flex; align-items: center; gap: 22px; }
+/* Phone appbar: anchors yield to the two commitments (enter / request access),
+   which compact instead of wrapping. */
+@media (max-width: 700px) {
+  .lp-nav-links { gap: 10px; }
+  .lp-nav-links .lp-anchor { display: none; }
+  .lp-nav-links .btn { padding: 0.42rem 0.7rem !important; font-size: 0.68rem !important; white-space: nowrap; }
+  /* The landing appbar's min-content (brand + tag + lang + two commitments)
+     exceeds a phone viewport on one row; it becomes two — brand row, action
+     row — instead of forcing the whole page into horizontal scroll. */
+  .lp-night .appbar-inner { height: auto; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; row-gap: 8px; }
+}
+/* Plates never widen the page: values wrap inside their own cell. */
+.lp-plate dl div { min-width: 0; }
+.lp-plate dd { min-width: 0; }
 .lp-nav-links > a:not(.btn) { text-decoration: none; color: var(--ink-soft); font-size: 0.84rem; font-weight: 600; transition: color 0.18s var(--ease); }
 .lp-nav-links > a:not(.btn):hover { color: var(--accent); }
 @media (max-width: 820px) { .lp-nav-links > a.lp-anchor { display: none; } }
 
-.lp-hero-split {
-  margin-top: 48px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 56px; align-items: end; border-top: 1px solid var(--line); padding-top: 34px;
-}
-@media (max-width: 900px) { .lp-hero-split { grid-template-columns: 1fr; gap: 40px; } }
 
 .lp-sec-head {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
@@ -939,21 +954,6 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 }
 .lp-sec-index { font-family: var(--font-mono), monospace; font-size: 0.72rem; letter-spacing: 0.14em; color: var(--steel); white-space: nowrap; }
 @media (max-width: 640px) { .lp-sec-index { display: none; } }
-
-/* the record writes itself, then the seal stamps */
-.lp-record .lp-rrow { opacity: 0; animation: lp-write 0.4s ease forwards; }
-.lp-record .lp-rrow:nth-child(1) { animation-delay: 0.50s; }
-.lp-record .lp-rrow:nth-child(2) { animation-delay: 0.65s; }
-.lp-record .lp-rrow:nth-child(3) { animation-delay: 0.80s; }
-.lp-record .lp-rrow:nth-child(4) { animation-delay: 0.95s; }
-.lp-record .lp-rrow:nth-child(5) { animation-delay: 1.10s; }
-@keyframes lp-write { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
-.lp-record .lp-seal { opacity: 0; animation: lp-stamp 0.38s cubic-bezier(0.16, 1, 0.3, 1) 1.5s forwards; }
-@keyframes lp-stamp {
-  0% { opacity: 0; transform: scale(1.18); }
-  62% { opacity: 1; transform: scale(0.97); }
-  100% { opacity: 1; transform: none; }
-}
 
 .lp-flow { background: var(--ink); color: var(--paper); border-radius: var(--radius); padding: clamp(36px, 5vw, 64px); margin-top: 40px; }
 .lp-flow .lp-flow-kicker {
@@ -1056,3 +1056,112 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   .filters-sheet > .filters-sheet-body > form { flex-direction: column; align-items: stretch; }
   .filters-sheet > .filters-sheet-body > form .input { width: 100%; }
 }
+
+/* ---------- landing: Registro Strip (surface seed da5cc0ba) ---------- */
+/* The landing commits to night regardless of the visitor's theme cookie: it is
+   the brand surface and the black box's native state is night. Scoped token
+   override — keep in sync with body[data-theme="dark"] above. */
+.lp-night {
+  --paper: #1E2328; --paper-2: #2A3138; --paper-3: #343C44;
+  --ink: #F2F1EC; --ink-soft: #C9CCC9; --steel: #8D979E;
+  --accent: #C9502E; --accent-deep: #C24A2A;
+  --line: rgba(242, 241, 236, 0.14); --line-strong: rgba(242, 241, 236, 0.30);
+  --grid: rgba(242, 241, 236, 0.035);
+  --shadow-soft: 2px 2px 0 rgba(0, 0, 0, 0.30);
+  --shadow-card: 6px 7px 0 rgba(0, 0, 0, 0.38);
+  background-color: var(--paper);
+  color: var(--ink);
+  color-scheme: dark;
+}
+
+/* One registro travels three plates; each plate wears the app's own state
+   mark — chalk outline (being captured), rust edge (being stamped), full
+   chalk plane (sealed). The strip IS the product demo. */
+.lp-strip {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1.1fr;
+  align-items: stretch; gap: 14px; margin-top: 54px;
+}
+.lp-plate { padding: 18px 20px 20px; position: relative; box-shadow: var(--shadow-card); }
+.lp-plate-step {
+  font-family: var(--font-mono), monospace; font-size: 0.66rem; letter-spacing: 0.14em;
+  text-transform: uppercase; display: block; margin-bottom: 14px;
+}
+.lp-plate dl { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.lp-plate dl div { display: flex; justify-content: space-between; gap: 12px; }
+.lp-plate dt {
+  font-family: var(--font-mono), monospace; font-size: 0.64rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--steel); flex-shrink: 0;
+}
+.lp-plate dd { margin: 0; font-family: var(--font-mono), monospace; font-size: 0.78rem; text-align: right; overflow-wrap: anywhere; }
+/* 01 — being captured: the chalk-outline (pending) mark. */
+.lp-plate--outline { border: 1px dashed var(--line-strong); background: transparent; box-shadow: none; }
+.lp-plate--outline .lp-plate-step { color: var(--ink-soft); }
+/* 02 — being stamped: the rust band, painted along the plate's bottom edge —
+   the same mark the app uses for progress/commitment on its plates. */
+.lp-plate--stamp { border: 1px solid var(--line-strong); border-bottom: 6px solid var(--accent); background: var(--paper-2); }
+.lp-plate--stamp .lp-plate-step { color: var(--accent); }
+.lp-plate--stamp .lp-hash { color: var(--accent); }
+/* 03 — sealed: the full chalk plane (concluded) mark. The record takes the light. */
+.lp-plate--sealed { background: var(--ink); color: var(--paper); border: 1px solid var(--ink); }
+.lp-plate--sealed .lp-plate-step { color: color-mix(in srgb, var(--paper) 72%, var(--ink)); }
+.lp-plate--sealed dt { color: color-mix(in srgb, var(--paper) 55%, var(--ink)); }
+.lp-plate--sealed .lp-hash { color: var(--accent-deep); }
+.lp-seal-mark {
+  display: inline-block; margin-top: 16px; padding: 4px 10px;
+  border: 1px solid var(--accent-deep); color: var(--accent-deep);
+  font-family: var(--font-mono), monospace; font-size: 0.62rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.lp-strip-joint { align-self: center; color: var(--steel); font-size: 1.3rem; user-select: none; }
+@media (max-width: 900px) {
+  .lp-strip { grid-template-columns: 1fr; }
+  .lp-strip-joint { transform: rotate(90deg); justify-self: center; }
+}
+
+/* The painted yard: comp-B's elevation as a full-bleed atmosphere band. */
+.lp-yard {
+  height: clamp(220px, 34vw, 420px);
+  background-image: url("/landing/yard-night.webp");
+  background-size: cover; background-position: center 30%;
+  border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong);
+}
+
+/* Capabilities as numbered planes. */
+.lp-caps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.lp-cap { background: var(--paper-2); border: 1px solid var(--line); box-shadow: var(--shadow-soft); padding: 26px 24px 28px; }
+.lp-cap-num { font-family: var(--font-stencil), var(--font-archivo), sans-serif; font-size: 1.5rem; color: var(--steel); }
+.lp-cap h3 { font-family: var(--font-archivo), sans-serif; font-stretch: 86%; text-transform: uppercase; font-weight: 800; font-size: 1.1rem; letter-spacing: 0.02em; margin: 14px 0 8px; }
+.lp-cap p { color: var(--ink-soft); font-size: 0.94rem; line-height: 1.55; margin: 0; max-width: 34ch; }
+
+/* The page's one authored moment: the registro writes, stamps, and seals.
+   Plates enter in narrative order; the seal mark lands last with the stamp
+   ease. Reduced-motion visitors see everything already sealed. */
+.lp-strip .lp-plate { opacity: 0; animation: lp-write 0.5s var(--ease) forwards; }
+.lp-strip .lp-plate--outline { animation-delay: 0.35s; }
+.lp-strip .lp-plate--stamp { animation-delay: 0.75s; }
+.lp-strip .lp-plate--sealed { animation-delay: 1.15s; }
+.lp-seal-mark { opacity: 0; animation: lp-stamp 0.38s cubic-bezier(0.16, 1, 0.3, 1) 1.7s forwards; }
+@keyframes lp-write { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes lp-stamp { from { opacity: 0; transform: scale(1.5); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .lp-strip .lp-plate, .lp-seal-mark { animation: none; opacity: 1; }
+}
+
+/* Section indices as the world's signature device: display-scale stencil
+   numerals (the card's giant "03"), replacing the bracketed mono strings. */
+.lp-sec-num {
+  font-family: var(--font-stencil), var(--font-archivo), sans-serif;
+  font-size: clamp(2.6rem, 6vw, 4rem); line-height: 0.9; color: var(--steel);
+  user-select: none;
+}
+/* The hero registro is authored demonstration data; the mark says so without
+   diluting the strip (reviewer: keep the strip undiluted). */
+.lp-strip { position: relative; }
+.lp-sample {
+  position: absolute; top: -22px; right: 0;
+  font-family: var(--font-mono), monospace; font-size: 0.6rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--steel); border: 1px solid var(--line); padding: 2px 7px;
+}
+/* Advisor credit: one quiet plate, name as proof, no invented quote. */
+.lp-advisor { border-top: 1px solid var(--line); padding-top: 26px; text-align: center; }
+.lp-advisor p { margin: 8px 0 0; color: var(--ink-soft); font-size: 1rem; }
