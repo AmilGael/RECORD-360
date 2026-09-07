@@ -24,3 +24,30 @@ One-time production setup. Order matters: email DNS can verify before the app mo
    activation email arrives FROM no-reply@raphel360.com with an https://raphel360.com/activate/… link.
 3. On `/login`, use "¿Olvidaste tu contraseña?" and confirm the reset email + link work.
 4. DevTools → Network on any page: confirm HSTS, CSP, and X-Frame-Options response headers.
+
+## 5. R2 bucket CORS — required for direct uploads
+
+Plano/document uploads over ~4.4 MB bypass the server (Netlify buffers
+function bodies at 6 MB) and PUT straight to R2 with a presigned URL
+(`/api/uploads/presign`). The browser preflights that PUT, so the bucket
+needs a CORS rule — without it the client silently falls back to the
+server-action path, which still 413s on large files.
+
+Cloudflare dashboard → R2 → the bucket → Settings → CORS policy:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://www.raphel360.com", "https://raphel360.com"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["content-type", "content-length"],
+    "MaxAgeSeconds": 86400
+  }
+]
+```
+
+No `AllowedOrigins` wildcard: the presigned URL already scopes who can
+write, but there is no reason to let other origins burn upload quota.
+Verify after deploy: upload a >5 MB PDF on the Planos tab; the network
+panel should show `PUT` to the R2 endpoint (not a POST to the page) and
+the plano should list.

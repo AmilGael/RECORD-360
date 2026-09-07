@@ -29,8 +29,17 @@ describe("security headers", () => {
     expect(byKey["Content-Security-Policy"]).not.toContain("unsafe-eval");
   });
 
-  it("next.config applies the full set to every route", async () => {
+  it("next.config applies the full set everywhere except /api/media", async () => {
+    // /api/media is carved out because config-level headers override the ones
+    // a route handler sets, and the media route owns its per-content-type CSP
+    // (sandbox for images/video, a viewer-compatible CSP for PDFs).
     const rules = await nextConfig.headers!();
-    expect(rules).toEqual([{ source: "/:path*", headers: SECURITY_HEADERS }]);
+    expect(rules).toEqual([{ source: "/((?!api/media/).*)", headers: SECURITY_HEADERS }]);
+    const [, pattern] = rules[0].source.match(/^\/\((.*)\)$/)!;
+    const re = new RegExp(`^(${pattern})$`);
+    expect(re.test("app/projects/x")).toBe(true);
+    expect(re.test("")).toBe(true); // the root path
+    expect(re.test("api/uploads/presign")).toBe(true);
+    expect(re.test("api/media/abc.pdf")).toBe(false);
   });
 });

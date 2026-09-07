@@ -15,6 +15,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
     "@aws-sdk/client-s3": "^3.1063.0",
+    "@aws-sdk/s3-request-presigner": "^3.1127.0",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "idb": "^8.0.3",

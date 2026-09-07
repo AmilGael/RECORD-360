@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Readable } from "node:stream";
 import { randomUUID } from "node:crypto";
 import type { Storage } from "./types";
@@ -63,6 +64,23 @@ export class S3Storage implements Storage {
       }),
     );
     return { key, url: `/api/media/${key}` };
+  }
+
+  /** Presigned browser PUT (15 min). Content-Type and Content-Length are part
+   *  of the signature, so the client can only upload the exact file it declared
+   *  at presign time. Requires a CORS rule on the bucket allowing PUT from the
+   *  app origin (see docs/deploy notes) — without it the browser preflight fails
+   *  and the client falls back to the (size-limited) server-action path. */
+  async presignPut(opts: { contentType: string; size: number }) {
+    const ext = extensionForType(opts.contentType);
+    if (!ext) throw new Error(`Unsupported file type: ${opts.contentType}`);
+    const key = `${randomUUID()}${ext}`;
+    const url = await getSignedUrl(
+      this.client,
+      new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: opts.contentType, ContentLength: opts.size }),
+      { expiresIn: 15 * 60, signableHeaders: new Set(["content-type", "content-length"]) },
+    );
+    return { url, key };
   }
 
   async get(key: string): Promise<NodeJS.ReadableStream> {

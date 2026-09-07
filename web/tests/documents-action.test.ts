@@ -9,7 +9,8 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/lib/storage", () => ({ storage: { put: storagePut, get: vi.fn() } }));
 
-import { createDocument } from "@/app/actions/documents";
+import { createDocument, registerDocument } from "@/app/actions/documents";
+import { issueUploadGrant } from "@/lib/uploads/grant";
 
 let companyId = "", adminId = "", residentId = "", projectId = "", segmentId = "";
 
@@ -89,6 +90,59 @@ describe("createDocument", () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
     const fd = new FormData(); fd.set("projectId", projectId);
     const res = await createDocument(null, fd);
+    expect(res.ok).toBe(false);
+  });
+});
+
+function fdForRegister(grant: { key: string; fileType: string; exp: number; token: string }) {
+  const fd = new FormData();
+  fd.set("projectId", projectId);
+  fd.set("title", "Plano directo");
+  fd.set("kind", "PLANO");
+  fd.set("key", grant.key);
+  fd.set("fileType", grant.fileType);
+  fd.set("exp", String(grant.exp));
+  fd.set("token", grant.token);
+  fd.set("sha256", "f".repeat(64));
+  return fd;
+}
+
+describe("registerDocument", () => {
+  const key = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.pdf";
+  it("records a directly-uploaded PLANO for an admin holding a valid grant", async () => {
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    const grant = issueUploadGrant(adminId, key, "PDF");
+    const res = await registerDocument(null, fdForRegister(grant));
+    expect(res.ok).toBe(true);
+    const doc = await prisma.document.findFirstOrThrow({ where: { projectId, title: "Plano directo" } });
+    expect(doc.url).toBe(`/api/media/${key}`);
+    expect(doc.fileType).toBe("PDF");
+    expect(doc.sha256).toBe("f".repeat(64));
+    expect(storagePut).not.toHaveBeenCalled();
+  });
+  it("rejects a grant issued to a different user", async () => {
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    const grant = issueUploadGrant(residentId, key, "PDF");
+    const res = await registerDocument(null, fdForRegister(grant));
+    expect(res.ok).toBe(false);
+  });
+  it("rejects a tampered key even with an otherwise valid grant", async () => {
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    const grant = issueUploadGrant(adminId, key, "PDF");
+    const res = await registerDocument(null, fdForRegister({ ...grant, key: "11111111-2222-3333-4444-555555555555.pdf" }));
+    expect(res.ok).toBe(false);
+  });
+  it("rejects a key that is not a generated object name", async () => {
+    authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
+    const grant = issueUploadGrant(adminId, "../../etc/passwd", "PDF");
+    const res = await registerDocument(null, fdForRegister(grant));
+    expect(res.ok).toBe(false);
+  });
+  it("rejects an unassigned resident even with a valid grant", async () => {
+    await prisma.projectAssignment.deleteMany({ where: { projectId, userId: residentId } });
+    authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
+    const grant = issueUploadGrant(residentId, key, "PDF");
+    const res = await registerDocument(null, fdForRegister(grant));
     expect(res.ok).toBe(false);
   });
 });

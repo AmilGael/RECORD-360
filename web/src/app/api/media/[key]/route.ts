@@ -57,7 +57,20 @@ export async function GET(_req: Request, ctx: { params: Promise<{ key: string }>
         "Content-Type": contentType,
         "X-Content-Type-Options": "nosniff",
         "Content-Disposition": `inline; filename="${safeKey}"`,
-        "Content-Security-Policy": "default-src 'none'; sandbox",
+        // Chrome renders a PDF by wrapping its viewer in a synthetic HTML page;
+        // the `sandbox` directive blocks that viewer outright (crbug 413851), so
+        // "Ver plano" downloaded or blanked instead of rendering. PDFs get a CSP
+        // without sandbox — object-src 'self' + inline styles are what the
+        // synthetic viewer page needs; script stays blocked and the MIME
+        // allowlist already excludes every markup type (SVG/HTML), so the
+        // stored-XSS posture is unchanged. Everything else keeps full lockdown.
+        "Content-Security-Policy":
+          contentType === "application/pdf"
+            ? "default-src 'none'; object-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'"
+            : "default-src 'none'; sandbox",
+        // Re-sent here because /api/media is excluded from the global header
+        // rule in next.config.ts (see the comment there).
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
         "Cache-Control": "private, max-age=3600",
       },
     });
