@@ -65,6 +65,7 @@ function FileRow({
         href={projectHref(projectId, { p: pa.id, q: filters.q, block: filters.block })}
         className="tree-file"
         aria-label={`${pa.name} — ${pa.progressPct}%`}
+        title={pa.name}
       >
         <span className="tree-file-name">{pa.name}</span>
         <span className="pct">{pa.progressPct}%</span>
@@ -157,7 +158,7 @@ export function ProjectFileTree({
       {segments.map((s) => (
         <div key={s.id}>
           <div className="tree-folder">
-            <span className="tree-folder-name"><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</span>
+            <span className="tree-folder-name" title={s.name}><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</span>
             <span className="pct">{projectProgress(s.partidas)}%</span>
             {isAdmin && <RenameSegmentForm segmentId={s.id} currentName={s.name} t={t} />}
           </div>

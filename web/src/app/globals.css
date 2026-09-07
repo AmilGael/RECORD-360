@@ -494,6 +494,10 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .tree-row.is-active { background: var(--paper-3); box-shadow: inset 2px 0 0 var(--accent); }
 .tree-file { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 22px; color: var(--ink); text-decoration: none; font-size: 0.9rem; min-width: 0; }
 .tree-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The selected partida drops the ellipsis and wraps: long names are the map of
+   the obra, and the row you are standing on should never hide its full name
+   (architect feedback). Unselected rows keep one line + a title tooltip. */
+.tree-row.is-active .tree-file-name { white-space: normal; overflow-wrap: anywhere; }
 .tree-file .pct { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); flex-shrink: 0; }
 .tree-row-actions { display: flex; gap: 8px; padding: 0 8px 7px 22px; flex-wrap: wrap; }
 .tree-actions { margin-top: 12px; padding: 10px 8px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
