@@ -6,7 +6,14 @@ const nextConfig: NextConfig = {
   // runtime serves responses through Next and ignores netlify.toml headers, so
   // next.config's headers() is the only place that reliably reaches every route.
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    // /api/media is excluded: config-level headers OVERRIDE headers a route
+    // handler sets on its response (verified against the running server), and
+    // the media route needs per-content-type CSPs — a locked-down sandbox for
+    // images/video, a viewer-compatible CSP for PDFs (Chrome's PDF viewer
+    // cannot render under `sandbox`, crbug 413851). With the blanket rule in
+    // place, the global CSP silently replaced the media route's hardened one.
+    // The route re-sends the transport headers (nosniff, HSTS) itself.
+    return [{ source: "/((?!api/media/).*)", headers: SECURITY_HEADERS }];
   },
   // Dev-only opt-in: let the Next dev server accept requests proxied through a
   // Cloudflare quick tunnel during external testing. Off by default (production

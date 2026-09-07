@@ -11,7 +11,7 @@ const MAX_TOTAL_BYTES = 55 * 1024 * 1024;
 // currently 60mb) so an oversize file is rejected here with a graceful message instead
 // of the opaque framework body-limit error. Larger media (esp. video) needs the
 // dedicated upload route / cloud storage planned in a later phase.
-const SIZE_CAP: Record<AttachmentType, number> = {
+export const SIZE_CAP: Record<AttachmentType, number> = {
   IMAGE: 15 * 1024 * 1024,
   PDF: 30 * 1024 * 1024,
   AUDIO: 30 * 1024 * 1024,
