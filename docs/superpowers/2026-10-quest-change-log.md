@@ -22,6 +22,7 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - `@setup` specs are excluded unless `E2E_SETUP=1`, run on desktop only, and refuse any non-localhost base URL.
   - After a client-side navigation, wait for real page content before asserting: the URL changes while `loading.tsx` is still showing.
   - e2e stays out of Vitest's `include`; tsc and eslint cover it.
+  - Login lockout: 5 failed logins for the same email and IP lock that pair for 15 minutes. E2E tests that exercise lockout must use a made-up email (e.g. lockout-test@raphel.test), never the E2E accounts, or parallel specs fail.
 - **How to verify:**
   - `npm run e2e` from `web/` (8 smoke tests: 2 roles x 2 languages x 2 viewports).
   - Demo data: `E2E_SETUP=1 npx playwright test --grep @setup --project desktop`. It fills in only missing pieces and writes nothing once complete. Result: 3 bloques (Cocina, Lavandería, Sala) x 4 partidas, resident assigned.
@@ -29,4 +30,3 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - The smoke test covers login, dashboard and sign-out only; theme switching is not exercised.
   - Screenshots can catch the `.reveal` fade-in partway.
   - Prisma CLI reads only `web/.env`. Run it as `node --env-file=.env.local node_modules/prisma/build/index.js <cmd>`, and never create `web/.env`.
-  - Local Postgres for this machine is Homebrew 16 on port 5433.
