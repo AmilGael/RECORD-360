@@ -16,6 +16,7 @@ import { pageWindow } from "@/lib/feed/paginate";
 import { SubmitButton } from "@/components/submit-button";
 import { concludePartida, reopenPartida } from "@/app/actions/lifecycle";
 import type { Role } from "@prisma/client";
+import { formatRecordTime } from "@/lib/format/datetime";
 
 export default async function PartidaPage({
   params, searchParams,
@@ -128,7 +129,7 @@ export default async function PartidaPage({
           <div>
             <div className="mono" style={{ fontSize: "0.8rem" }}>{t.lifecycle.concluded} · 100%</div>
             <div className="kicker" style={{ color: "var(--steel)" }}>
-              {t.lifecycle.concludedOn} {new Date(partida.completedAt).toLocaleString(lang === "es" ? "es-DO" : "en-US")}
+              {t.lifecycle.concludedOn} {formatRecordTime(partida.completedAt, lang)}
             </div>
           </div>
           {canEditStructure && !partida.segment?.closedAt && (
@@ -217,7 +218,7 @@ export default async function PartidaPage({
           <div key={s.id} style={{ marginBottom: 12, fontSize: "0.9rem" }}>
             <div>
               <strong>{s.signerName}</strong> · {s.signerRole} ·{" "}
-              {new Date(s.signedAt).toLocaleString(lang === "es" ? "es-DO" : "en-US")}
+              {formatRecordTime(s.signedAt, lang)}
             </div>
             {s.statement && <div className="text-steel" style={{ margin: "2px 0" }}>{s.statement}</div>}
             <div className="kicker" style={{ color: "var(--steel)" }}>
