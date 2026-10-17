@@ -23,6 +23,26 @@ export async function follow(page: Page, name: RegExp): Promise<void> {
   await page.waitForLoadState("networkidle");
 }
 
+/** Clicks a partida row (button, not a link) and waits for its panel heading. */
+export async function selectPartida(page: Page, name: string): Promise<void> {
+  const row = page.getByRole("button", { name: startsWith(name) }).first();
+  await expect(row).toBeVisible();
+  await row.click();
+  await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+  await expect(page).toHaveURL(/[?&]p=/);
+}
+
+/** Opens the selected partida's Cuaderno via the panel link (goto: Link clicks can hang on the ping bug). */
+export async function openCuaderno(page: Page, t: T, name: string): Promise<void> {
+  const link = page.getByRole("link", { name: t.project.openCuaderno }).first();
+  await expect(link).toBeVisible();
+  const href = await link.getAttribute("href");
+  if (!href) throw new Error("Abrir cuaderno has no href");
+  await page.goto(href);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+}
+
 /** Opens the e2e partida's Cuaderno, creating the partida in bloque Sala on first use. */
 export async function openTestPartida(page: Page, t: T): Promise<void> {
   await page.goto("/app");
@@ -30,15 +50,14 @@ export async function openTestPartida(page: Page, t: T): Promise<void> {
   await follow(page, startsWith(BLOQUE));
   const partidaForm = page.locator(`input[placeholder="${t.project.newPartida}"]:visible`).first();
   await expect(partidaForm).toBeVisible();
-  const partidaLink = page.getByRole("link", { name: startsWith(PARTIDA) });
-  if ((await partidaLink.count()) === 0) {
+  const partidaRow = page.getByRole("button", { name: startsWith(PARTIDA) });
+  if ((await partidaRow.count()) === 0) {
     await partidaForm.fill(PARTIDA);
     await page.getByRole("button", { name: t.project.add, exact: true }).click();
-    await expect(partidaLink.first()).toBeVisible();
+    await expect(partidaRow.first()).toBeVisible();
   }
-  await follow(page, startsWith(PARTIDA));
-  await follow(page, startsWith(t.project.openLog));
-  await expect(page.getByRole("heading", { level: 1, name: PARTIDA })).toBeVisible();
+  await selectPartida(page, PARTIDA);
+  await openCuaderno(page, t, PARTIDA);
 }
 
 /** Fills and submits the composer; the caller asserts the outcome. */

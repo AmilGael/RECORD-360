@@ -3,7 +3,7 @@ import { test, expect } from "./helpers/guards";
 import { loginAs } from "./helpers/auth";
 import { setLang, setTheme, type Theme } from "./helpers/prefs";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
-import { BLOQUE, OBRA, PARTIDA, fillAndSubmit, startsWith, type T } from "./helpers/partida";
+import { BLOQUE, OBRA, PARTIDA, fillAndSubmit, openCuaderno, selectPartida, startsWith, type T } from "./helpers/partida";
 
 // Q3 part A: Volver returns to the screen the user came from, inside the app,
 // and falls back to the page's parent when there is no in-app history.
@@ -63,11 +63,10 @@ async function walkToPartida(page: Page, t: T, bloque: string, partida: string) 
   await clickLink(page, startsWith(bloque));
   const blockId = new URL(page.url()).searchParams.get("block");
   expect(blockId).toBeTruthy();
-  await clickLink(page, startsWith(partida));
+  await selectPartida(page, partida);
   await expect(page.getByRole("heading", { level: 2, name: partida })).toBeVisible();
   const workspaceUrl = new URL(page.url());
-  await clickLink(page, startsWith(t.project.openLog));
-  await expect(page.getByRole("heading", { level: 1, name: partida })).toBeVisible();
+  await openCuaderno(page, t, partida);
   const partidaId = new URL(page.url()).pathname.split("/").pop()!;
   return { obraPath: obraUrl.pathname, workspaceUrl, blockId: blockId!, partidaId };
 }

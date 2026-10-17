@@ -113,6 +113,12 @@ export function LogComposer({
     );
   }, []);
 
+  useEffect(() => {
+    if (window.location.hash !== "#composer") return;
+    formRef.current?.scrollIntoView({ block: "start" });
+    textRef.current?.focus();
+  }, []);
+
   // Follow the registro just queued until the server seals it or refuses it.
   const captureId = capture?.id ?? null;
   useEffect(() => {
@@ -240,7 +246,7 @@ export function LogComposer({
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="card" style={{ padding: 16, marginBottom: 28 }}>
+    <form id="composer" ref={formRef} onSubmit={handleSubmit} className="card" style={{ padding: 16, marginBottom: 28 }}>
       {correction && (
         <div className="mono" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", background: "var(--paper-2)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "8px 10px", fontSize: "0.7rem", marginBottom: 10 }}>
           <span>{correction.notice} {correction.label}</span>

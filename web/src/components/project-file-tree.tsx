@@ -1,18 +1,24 @@
+"use client";
 import Link from "next/link";
 import { createPartida } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
 import { Folder, Search } from "@/components/icons";
-import { MovePartidaForm, RenamePartidaForm, RenameSegmentForm } from "@/components/project-edit-controls";
+import { RenameSegmentForm } from "@/components/project-edit-controls";
 import { projectProgress } from "@/lib/project/progress";
-import { setPartidaTags } from "@/app/actions/partida-tags";
+import { formatTimestamp } from "@/lib/format/datetime";
+import { activityAging } from "@/lib/partida/aging";
+import type { Lang } from "@/i18n/dictionaries";
 
-type PartidaRow = {
+export type PartidaTreeRow = {
   id: string;
   name: string;
   progressPct: number;
   segmentId?: string | null;
+  completedAt?: string | null;
   tags?: { tag: { name: string } }[];
+  lastActivityAt?: string | null;
 };
+
 type TreeT = {
   ungrouped: string; newPartida: string; add: string;
   segmentPlaceholder: string; newSegment: string; addSegment: string;
@@ -21,12 +27,9 @@ type TreeT = {
   facetTags: string; facetProgress: string; facetProgressMin: string; facetProgressMax: string;
   facetOpenCambios: string; facetCreated: string;
   blockClosedNoCreate: string;
+  concluded: string; aging7: string; aging14: string; noActivity: string;
 };
 
-// The bloque a partida is created in while inside the block workspace (WS4C):
-// creation always targets the active block implicitly (hidden input), never
-// a free-typed segment name. `null` means the workspace is scoped to
-// "Sin bloque" (ungrouped) — always open, no lifecycle state.
 type ActiveBlock = { id: string; name: string; closedAt: Date | string | null } | null;
 
 type FacetsState = {
@@ -35,74 +38,79 @@ type FacetsState = {
   hasActive: boolean;
 };
 
-type SegmentOption = { id: string; name: string };
-
 type FilterState = { q: string; block: string; tags: string[]; progressMin: number | null; progressMax: number | null; openCambios: boolean; createdFrom: Date | null; createdTo: Date | null; total: number; hasFilters: boolean };
 
-function projectHref(projectId: string, params: Record<string, string | undefined>) {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value) search.set(key, value);
-  }
-  const qs = search.toString();
-  return `/app/projects/${projectId}${qs ? `?${qs}` : ""}`;
-}
-
 function FileRow({
-  projectId, pa, selectedId, isAdmin, segments, t, filters,
+  pa, selectedId, lang, t, onSelect, rowRef,
 }: {
-  projectId: string;
-  pa: PartidaRow;
+  pa: PartidaTreeRow;
   selectedId?: string;
-  isAdmin: boolean;
-  segments: SegmentOption[];
+  lang: Lang;
   t: TreeT;
-  filters: FilterState;
+  onSelect: (id: string) => void;
+  rowRef: (id: string, el: HTMLButtonElement | null) => void;
 }) {
+  const selected = pa.id === selectedId;
+  const aging = activityAging(pa.lastActivityAt);
+  const concluded = Boolean(pa.completedAt);
+  const rowClass = [
+    "tree-row",
+    selected ? "is-active" : "",
+    aging === "14" ? "is-aging-14" : "",
+  ].filter(Boolean).join(" ");
   return (
-    <div className={`tree-row${pa.id === selectedId ? " is-active" : ""}`}>
-      <Link
-        href={projectHref(projectId, { p: pa.id, q: filters.q, block: filters.block })}
+    <div className={rowClass}>
+      <button
+        type="button"
         className="tree-file"
+        aria-pressed={selected}
         aria-label={`${pa.name} — ${pa.progressPct}%`}
         title={pa.name}
+        onClick={() => onSelect(pa.id)}
+        ref={(el) => rowRef(pa.id, el)}
       >
         <span className="tree-file-name">{pa.name}</span>
         <span className="pct">{pa.progressPct}%</span>
-      </Link>
-      {isAdmin && (
-        <div className="tree-row-actions">
-          <RenamePartidaForm partidaId={pa.id} currentName={pa.name} t={t} />
-          <MovePartidaForm partidaId={pa.id} currentSegmentId={pa.segmentId ?? null} segments={segments} t={t} />
-          <form action={setPartidaTags} className="tag-edit">
-            <input type="hidden" name="partidaId" value={pa.id} />
-            <input name="tags" defaultValue={(pa.tags ?? []).map((x) => x.tag.name).join(", ")} className="input" aria-label="Tags" />
-            <SubmitButton className="btn btn-ghost">{t.save}</SubmitButton>
-          </form>
-        </div>
-      )}
-      {pa.tags && pa.tags.length > 0 && (
-        <div className="tag-line">
-          {pa.tags.map((x) => <span key={x.tag.name} className="chip">{x.tag.name}</span>)}
-        </div>
-      )}
+      </button>
+      <div className="tree-row-meta">
+        {concluded && <span className="state-badge is-concluded">{t.concluded}</span>}
+        {pa.tags && pa.tags.length > 0 && pa.tags.map((x) => (
+          <span key={x.tag.name} className="chip">{x.tag.name}</span>
+        ))}
+        <span className={`tree-activity${aging === "7" ? " is-aging-7" : ""}`}>
+          {pa.lastActivityAt
+            ? formatTimestamp(new Date(pa.lastActivityAt), lang)
+            : t.noActivity}
+        </span>
+        {aging && (
+          <span className={`aging-mark is-${aging}`}>{aging === "14" ? t.aging14 : t.aging7}</span>
+        )}
+      </div>
+      <span className="tree-row-track" aria-hidden="true" />
+      <span
+        className={`tree-row-band${concluded ? " is-done" : ""}`}
+        style={{ width: `${Math.min(Math.max(pa.progressPct, 0), 100)}%` }}
+        aria-hidden="true"
+      />
     </div>
   );
 }
 
 export function ProjectFileTree({
-  projectId, segments, ungrouped, segmentOptions, selectedId, isAdmin, filters, facets, activeBlock, t,
+  projectId, segments, ungrouped, selectedId, isAdmin, filters, facets, activeBlock, lang, t, onSelect, rowRef,
 }: {
   projectId: string;
-  segments: { id: string; name: string; partidas: PartidaRow[] }[];
-  ungrouped: PartidaRow[];
-  segmentOptions: SegmentOption[];
+  segments: { id: string; name: string; partidas: PartidaTreeRow[] }[];
+  ungrouped: PartidaTreeRow[];
   selectedId?: string;
   isAdmin: boolean;
   filters: FilterState;
   facets: FacetsState;
   activeBlock: ActiveBlock;
+  lang: Lang;
   t: TreeT;
+  onSelect: (id: string) => void;
+  rowRef: (id: string, el: HTMLButtonElement | null) => void;
 }) {
   return (
     <div className="tree">
@@ -162,13 +170,17 @@ export function ProjectFileTree({
             <span className="pct">{projectProgress(s.partidas)}%</span>
             {isAdmin && <RenameSegmentForm segmentId={s.id} currentName={s.name} t={t} />}
           </div>
-          {s.partidas.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} filters={filters} />)}
+          {s.partidas.map((pa) => (
+            <FileRow key={pa.id} pa={pa} selectedId={selectedId} lang={lang} t={t} onSelect={onSelect} rowRef={rowRef} />
+          ))}
         </div>
       ))}
       {ungrouped.length > 0 && (
         <div>
           <div className="tree-folder" style={{ opacity: 0.7 }}><span className="tree-folder-name"><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{t.ungrouped}</span></div>
-          {ungrouped.map((pa) => <FileRow key={pa.id} projectId={projectId} pa={pa} selectedId={selectedId} isAdmin={isAdmin} segments={segmentOptions} t={t} filters={filters} />)}
+          {ungrouped.map((pa) => (
+            <FileRow key={pa.id} pa={pa} selectedId={selectedId} lang={lang} t={t} onSelect={onSelect} rowRef={rowRef} />
+          ))}
         </div>
       )}
       {isAdmin && (
