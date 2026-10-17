@@ -54,7 +54,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             {reset && (
               <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.resetDone}</p>
             )}
-            <input name="email" type="email" placeholder={T.email} required className="input" style={{ marginBottom: 10 }} autoComplete="email" autoFocus />
+            <input name="email" type="email" placeholder={T.email} required className="input" style={{ marginBottom: 10 }} autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" autoFocus />
             <input name="password" type="password" placeholder={T.password} required className="input" style={{ marginBottom: 8 }} autoComplete="current-password" />
             <div style={{ textAlign: "right", marginBottom: 18 }}>
               <Link href="/forgot-password" className="mono text-steel" style={{ fontSize: "0.66rem", textDecoration: "none" }}>{T.forgot}</Link>

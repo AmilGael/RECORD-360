@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
             {state.message}
           </p>
         )}
-        <input name="email" type="email" placeholder="Correo" required className="input" style={{ marginBottom: 18 }} autoComplete="email" autoFocus />
+        <input name="email" type="email" placeholder="Correo" required className="input" style={{ marginBottom: 18 }} autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" autoFocus />
         {/* Honeypot: hidden from users, bots fill it. */}
         <input name="company_site" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1 }} />
         <button type="submit" className="btn btn-ink" style={{ width: "100%" }} disabled={pending}>
