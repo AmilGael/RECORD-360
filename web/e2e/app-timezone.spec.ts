@@ -3,6 +3,7 @@ import { test, expect } from "./helpers/guards";
 import { loginAs } from "./helpers/auth";
 import { setLang, setTheme, type Theme } from "./helpers/prefs";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
+import { escapeRe, openTestPartida, resolvePendingRow, startsWith } from "./helpers/partida";
 
 // Q2: typed reminder times and displayed times follow America/Santo_Domingo
 // whatever zone the browser is in. Every registro written here goes to ONE
@@ -10,15 +11,10 @@ import { dictionaries, type Lang } from "../src/i18n/dictionaries";
 // partidas stay clean; each test resolves the reminder it created.
 // Run: E2E_PROD=1 npx playwright test e2e/app-timezone.spec.ts --workers=1
 
-const OBRA = "E2E Obra Demo";
-const BLOQUE = "Sala";
-const PARTIDA = "Pruebas automáticas";
 const SD = "America/Santo_Domingo";
 const langs: Lang[] = ["es", "en"];
 const themes: Theme[] = ["dark", "light"];
 
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const startsWith = (s: string) => new RegExp(`^${escape(s)}`);
 const shot = (name: string, info: TestInfo) => `e2e/artifacts/app-timezone/${name}-${info.project.name}.png`;
 
 /** Wall-clock parts of an instant in a zone. */
@@ -45,34 +41,7 @@ function sdText(instant: Date, lang: Lang): RegExp {
     timeZone: SD, year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "shortOffset",
   }).format(instant);
   // Intl may put narrow no-break spaces before AM/PM; match any whitespace.
-  return new RegExp(escape(s).replace(/\s/g, "\\s"));
-}
-
-/** Follows a link by its href: a click racing hydration can be swallowed. */
-async function follow(page: Page, name: RegExp): Promise<void> {
-  const link = page.getByRole("link", { name }).first();
-  await expect(link).toBeVisible();
-  const href = await link.getAttribute("href");
-  if (!href) throw new Error(`link ${name} has no href`);
-  await page.goto(href);
-  await page.waitForLoadState("networkidle");
-}
-
-async function openTestPartida(page: Page, t: (typeof dictionaries)["es"]): Promise<void> {
-  await page.goto("/app");
-  await follow(page, startsWith(OBRA));
-  await follow(page, startsWith(BLOQUE));
-  const partidaForm = page.locator(`input[placeholder="${t.project.newPartida}"]:visible`).first();
-  await expect(partidaForm).toBeVisible();
-  const partidaLink = page.getByRole("link", { name: startsWith(PARTIDA) });
-  if ((await partidaLink.count()) === 0) {
-    await partidaForm.fill(PARTIDA);
-    await page.getByRole("button", { name: t.project.add, exact: true }).click();
-    await expect(partidaLink.first()).toBeVisible();
-  }
-  await follow(page, startsWith(PARTIDA));
-  await follow(page, startsWith(t.project.openLog));
-  await expect(page.getByRole("heading", { level: 1, name: PARTIDA })).toBeVisible();
+  return new RegExp(escapeRe(s).replace(/\s/g, "\\s"));
 }
 
 async function submitRegistro(page: Page, t: (typeof dictionaries)["es"], text: string, reminder: string): Promise<void> {
@@ -92,12 +61,8 @@ async function checkAndResolvePending(page: Page, t: (typeof dictionaries)["es"]
   await expect(row).toContainText(due);
   await expect(row).toContainText("GMT-4");
   await page.screenshot({ path: shot(name, info), fullPage: true });
-  const resolve = row.getByRole("button", { name: t.pendingWork.resolve, exact: true });
-  // Prove the resolution persisted with a fresh load once the server action
-  // has answered; the in-place refresh after the action is not under test here.
-  const actionDone = page.waitForResponse((r) => r.request().method() === "POST" && Boolean(r.request().headers()["next-action"]));
-  await resolve.click();
-  expect((await actionDone).status()).toBe(200);
+  await resolvePendingRow(page, t, row);
+  // A fresh load proves the resolution persisted, not just the optimistic removal.
   await page.reload();
   await expect(page.locator(".row").filter({ hasText: text })).toHaveCount(0);
 }
