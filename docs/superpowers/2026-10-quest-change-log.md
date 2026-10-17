@@ -69,7 +69,7 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - `src/lib/format/datetime.ts`: every format pins `APP_TIME_ZONE`; new `formatRecordTime` (offset label); future instants are absolute, never "ahora". `src/lib/format/period.ts`: `formatPeriodDate`.
   - Composer and cambio form convert datetime-local to ISO in the browser (`src/lib/time/local-input.ts`); the input `min` is set after mount. Server parsers read offset-less values in `APP_TIME_ZONE`.
   - `parseRangeParam` / informe `parseDate`: date-only bounds are local days. PDF "Periodo" and informe PERIODO use `formatPeriodDate`.
-  - `src/lib/offline/sync.ts`: `syncQueue` returns `{ synced }`; `OfflineProvider` refreshes only when it is > 0 (also drops the refresh on every page load). The composer no longer syncs or refreshes itself.
+  - `src/lib/offline/sync.ts`: `syncQueue` returns `{ synced }`; `OfflineProvider` refreshes only when it is > 0 (also drops the refresh on every page load). The composer no longer syncs or refreshes itself. A capture queued during a running pass is sent by that pass instead of waiting for the next page load.
 - **Migrations:** none.
 - **Accepted side effect:** the informe idempotency key changes for date-only periods, so the first identical request after deploy generates once more instead of reusing the old informe.
 - **Rules for future work:**

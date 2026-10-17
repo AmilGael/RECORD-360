@@ -142,6 +142,23 @@ describe("syncQueue result: { synced }", () => {
   });
 });
 
+describe("syncQueue: a capture queued while a pass is running", () => {
+  it("is sent by the running pass and counted there", async () => {
+    const q = new InMemoryQueue();
+    await q.enqueue(item("a"));
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    let calls = 0;
+    const slow = async () => { if (++calls === 1) await gate; return ok(); };
+    const first = syncQueue({ queue: q, fetchFn: slow, isOnline: () => true });
+    await q.enqueue(item("b"));
+    await expect(syncQueue({ queue: q, fetchFn: slow, isOnline: () => true })).resolves.toEqual({ synced: 0 });
+    release();
+    await expect(first).resolves.toEqual({ synced: 2 });
+    expect(await q.all()).toHaveLength(0);
+  });
+});
+
 describe("shouldRefreshAfterSync", () => {
   it("refreshes only when the server accepted something", () => {
     expect(shouldRefreshAfterSync({ synced: 0 })).toBe(false);
