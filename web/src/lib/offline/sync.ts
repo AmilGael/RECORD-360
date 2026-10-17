@@ -78,11 +78,11 @@ async function sendItem(queue: OfflineQueue, item: QueuedRegistro, fetchFn: type
       // Session expired. Not the user's fault and not fixable by retrying
       // the same request — the offline provider already re-runs syncQueue
       // on the next login/app load, so this clears itself automatically.
-      await queue.update(item.id, { status: "blocked", error: "Sesión expirada. Inicia sesión y vuelve a intentar; se sincronizará automáticamente." });
+      await queue.update(item.id, { status: "blocked", errorCode: "session_expired", error: undefined });
     } else if (res.status === 403) {
       // Terminal: the caller lost access to the project. Retrying changes
       // nothing until an admin restores access, so don't auto-retry.
-      await queue.update(item.id, { status: "error", error: "Sin acceso al proyecto." });
+      await queue.update(item.id, { status: "error", errorCode: "forbidden", error: undefined });
     } else if (res.status >= 500) {
       // Server-side failure — transient by nature, keep retrying.
       await queue.update(item.id, { status: "pending", attempts: item.attempts + 1 });
@@ -91,7 +91,7 @@ async function sendItem(queue: OfflineQueue, item: QueuedRegistro, fetchFn: type
       // (validation). Terminal — surface the server's own message.
       let msg = "No se pudo registrar.";
       try { msg = (await res.json())?.error ?? msg; } catch {}
-      await queue.update(item.id, { status: "error", error: msg });
+      await queue.update(item.id, { status: "error", errorCode: undefined, error: msg });
     }
   } catch {
     // Network failure (offline, DNS, timeout…) — retryable.

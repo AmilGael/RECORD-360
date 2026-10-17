@@ -1010,6 +1010,16 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   animation: working 1.4s ease-in-out infinite;
 }
 
+/* ---------- capture notice (composer: on this phone → sealed / failed) ---------- */
+.capture-notice {
+  border: 1px solid var(--line-strong); border-radius: 0;
+  padding: 8px 11px; margin: 0 0 10px; font-size: 0.84rem;
+}
+.capture-notice.is-on-device { border-style: dashed; color: var(--ink-soft); }
+.capture-notice.is-sealed { border-color: var(--state-active); background: var(--state-active-bg); color: var(--state-active); }
+.capture-notice.is-failed { border-color: var(--state-blocked); background: var(--state-blocked-bg); color: var(--state-blocked); }
+.capture-notice-hint { display: block; margin-top: 3px; font-size: 0.76rem; }
+
 /* ---------- navigation skeletons ---------- */
 .skel { display: flex; flex-direction: column; gap: 14px; }
 .skel-line, .skel-block {

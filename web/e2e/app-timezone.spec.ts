@@ -48,7 +48,8 @@ async function submitRegistro(page: Page, t: (typeof dictionaries)["es"], text: 
   await page.locator(`textarea[placeholder="${t.composer.placeholder}"]:visible`).first().fill(text);
   await page.locator('input[name="reminderDueAt"]:visible').first().fill(reminder);
   await page.getByRole("button", { name: startsWith(t.composer.submit) }).click();
-  await expect(page.getByRole("status").filter({ hasText: t.composer.saved })).toBeVisible();
+  const captured = new RegExp(`${escapeRe(t.composer.savedOnDevice)}|${escapeRe(t.composer.savedSealed)}`);
+  await expect(page.getByRole("status").filter({ hasText: captured })).toBeVisible();
 }
 
 /** Finds the reminder on the pending queue, checks its due time, then resolves it. */

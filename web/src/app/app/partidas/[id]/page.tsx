@@ -105,6 +105,7 @@ export default async function PartidaPage({
   const bloqueHref = projectHrefWithParams(partida.projectId, {
     tab: "code", block: partida.segment?.id ?? UNGROUPED_FILTER, p: partida.id,
   });
+  const syncErrors = { sessionExpired: t.offlineCapture.errorSessionExpired, forbidden: t.offlineCapture.errorForbidden };
 
   return (
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
@@ -164,10 +165,10 @@ export default async function PartidaPage({
           )}
         </>
       )}
-      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
+      <LogComposer partidaId={partida.id} t={t.composer} syncErrors={syncErrors} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
       <PendingEntries
         partidaId={partida.id}
-        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, discard: t.offlineCapture.discard, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle }}
+        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, discard: t.offlineCapture.discard, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle, errors: syncErrors }}
       />
       {registros.map((r) => (
         <RecordCard
