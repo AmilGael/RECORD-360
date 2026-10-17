@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/db";
+import { normalizeEmail } from "@/lib/auth/email";
 
 const WINDOW_MS = 15 * 60_000;
 const MAX_FAILURES = 5;
 
 export function loginThrottleKey(email: string, request: Request) {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const realIp = request.headers.get("x-real-ip")?.trim();
   const cfIp = request.headers.get("cf-connecting-ip")?.trim();

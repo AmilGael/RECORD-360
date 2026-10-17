@@ -9,6 +9,7 @@ import { passwordResetLinkEmail } from "@/lib/email/templates";
 import { rateLimit, clientIp } from "@/lib/auth/rate-limit";
 import { createToken, verifyToken, consumeTokens, resetUrl } from "@/lib/auth/tokens";
 import { validatePassword } from "@/lib/auth/password-policy";
+import { normalizeEmail } from "@/lib/auth/email";
 import { writeAudit } from "@/lib/audit/log";
 import { TokenPurpose } from "@prisma/client";
 
@@ -32,7 +33,7 @@ export async function requestPasswordReset(
   // Honeypot: real users never fill this hidden field.
   if (String(formData.get("company_site") ?? "").trim() !== "") return NEUTRAL;
 
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = normalizeEmail(formData.get("email"));
   if (!email) return { status: "error", message: "Ingresa tu correo." };
 
   // Enumeration-safe: unknown, unactivated, or disabled accounts get the same
