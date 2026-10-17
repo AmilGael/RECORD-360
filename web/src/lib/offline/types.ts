@@ -14,7 +14,10 @@ export interface QueuedRegistro {
   locationLabel: string | null;     // upserted server-side on sync
   correctionOfId: string | null;    // synced (server) ids only
   replyToId: string | null;
-  reminderDueAt: string | null;     // ISO or null
+  // ISO with Z (converted from the device clock at capture) or null. Entries
+  // queued by older builds hold an offset-less datetime-local value instead;
+  // the server reads those as wall time in APP_TIME_ZONE.
+  reminderDueAt: string | null;
   clientCapturedAt: string;         // ISO, set at capture
   attachments: QueuedAttachment[];
   // "blocked": session expired (401) — needs the user to log back in; the
@@ -24,9 +27,15 @@ export interface QueuedRegistro {
   // changing something. Old persisted records only ever used "error"; they
   // remain valid values (no migration needed for IndexedDB-stored rows).
   status: "pending" | "syncing" | "blocked" | "error";
+  // Errors the client itself detects carry a code that the UI maps to the
+  // user's language. `error` is the server's own validation message, or the
+  // Spanish text that items queued by older builds still hold (no errorCode).
+  errorCode?: SyncErrorCode;
   error?: string;
   attempts: number;
 }
+
+export type SyncErrorCode = "session_expired" | "forbidden";
 
 export interface OfflineQueue {
   enqueue(item: QueuedRegistro): Promise<void>;

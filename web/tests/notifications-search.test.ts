@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { buildNotificationWhere } from "@/lib/notifications/query";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
+import { parseDayBound } from "@/lib/time/zone";
 
 // R3 WS3: server-side (DB-level) search/filter/pagination for the notifications
 // page — asserts the where-builder actually narrows the DB query (never
@@ -99,6 +100,34 @@ describe("buildNotificationWhere", () => {
     });
     const titles = rows.map((r) => r.title).sort();
     expect(titles).toEqual(["Bloque Norte creado", "Partida X concluida", "Solicitud SC-1 creada"].sort());
+  });
+
+  describe("date-only filter values are whole days in Santo Domingo", () => {
+    let dayUserId = "";
+    beforeAll(async () => {
+      const s = `nsd-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      dayUserId = (await prisma.user.create({ data: { email: `ns-day-${s}@x.do`, name: "D", role: "MANAGER", companyId, passwordHash: "x" } })).id;
+      await prisma.notification.createMany({
+        data: [
+          { companyId, userId: dayUserId, type: "block.created", eventKey: "block.created", title: "00:10 del día", createdAt: new Date("2026-03-10T04:10:00.000Z") },
+          { companyId, userId: dayUserId, type: "block.created", eventKey: "block.created", title: "23:30 del día", createdAt: new Date("2026-03-11T03:30:00.000Z") },
+          { companyId, userId: dayUserId, type: "block.created", eventKey: "block.created", title: "00:10 del siguiente", createdAt: new Date("2026-03-11T04:10:00.000Z") },
+          { companyId, userId: dayUserId, type: "block.created", eventKey: "block.created", title: "23:30 del anterior", createdAt: new Date("2026-03-10T03:30:00.000Z") },
+        ],
+      });
+    });
+    afterAll(async () => {
+      await prisma.notification.deleteMany({ where: { userId: dayUserId } });
+      await prisma.user.deleteMany({ where: { id: dayUserId } });
+    });
+
+    it("includes 23:30 local on the 'to' day and excludes 00:10 local the next day", async () => {
+      const rows = await prisma.notification.findMany({
+        where: buildNotificationWhere(dayUserId, { from: parseDayBound("2026-03-10", "start"), to: parseDayBound("2026-03-10", "end") }),
+        orderBy: { createdAt: "asc" },
+      });
+      expect(rows.map((r) => r.title)).toEqual(["00:10 del día", "23:30 del día"]);
+    });
   });
 
   it("combines filters (AND) rather than only the last one applied", async () => {

@@ -1,6 +1,7 @@
 // Server-side validation for cambio (change-request) inputs. The form
 // constrains these in the browser, but the action must not trust client input.
 import type { RequestKind, RequestSeverity } from "@prisma/client";
+import { parseInstantInput } from "@/lib/time/zone";
 
 /**
  * Parse and validate a change-request title.
@@ -14,11 +15,12 @@ export function parseChangeTitle(raw: unknown): string {
   return v;
 }
 
-
+/** Required reminder. ISO with an offset is taken as is; an offset-less
+ *  datetime-local value (no-JS form post) is a wall time in APP_TIME_ZONE. */
 export function parseReminderDueAt(raw: unknown): Date {
   const v = String(raw ?? "").trim();
   if (v === "") throw new Error("El recordatorio es obligatorio en una solicitud de cambio.");
-  const d = new Date(v);
+  const d = parseInstantInput(v);
   if (Number.isNaN(d.getTime())) throw new Error("Recordatorio inválido.");
   if (d.getTime() < Date.now() - 60_000) throw new Error("El recordatorio debe ser una fecha futura.");
   return d;

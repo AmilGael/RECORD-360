@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseChangeTitle, parseReminderDueAt, parseResolutionNote, parseRequestGps, parseRequestKind, parseRequestSeverity } from "@/lib/cambios/validate";
+import { zonedTimestamp } from "@/lib/time/zone";
 
 describe("parseChangeTitle", () => {
   it("trims and returns", () => { expect(parseChangeTitle("  Refuerzo  ")).toBe("Refuerzo"); });
@@ -23,6 +24,18 @@ describe("parseReminderDueAt", () => {
   });
   it("rejects past dates — a mandatory reminder must be in the future", () => {
     expect(() => parseReminderDueAt("2020-01-01T10:00")).toThrow(/futura/i);
+  });
+  it("reads an offset-less value (no-JS post) as Santo Domingo wall time", () => {
+    expect(parseReminderDueAt("2027-01-15T10:00").toISOString()).toBe("2027-01-15T14:00:00.000Z");
+  });
+  it("accepts an offset-less 'now + 2 h' in Santo Domingo that a UTC reading would call past", () => {
+    const target = new Date(Date.now() + 2 * 3_600_000);
+    const wall = zonedTimestamp(target).replace(" ", "T");
+    expect(parseReminderDueAt(wall).toISOString()).toBe(new Date(Math.floor(target.getTime() / 60_000) * 60_000).toISOString());
+  });
+  it("keeps ISO with Z unchanged (what the form sends after client conversion)", () => {
+    const iso = new Date(Date.now() + 3_600_000).toISOString();
+    expect(parseReminderDueAt(iso).toISOString()).toBe(iso);
   });
 });
 

@@ -10,15 +10,12 @@ import { EVENT_KEYS, type EventKey } from "@/lib/notifications/events";
 import { buildNotificationWhere } from "@/lib/notifications/query";
 import { SeverityMarker } from "@/components/severity-marker";
 import { FiltersSheet } from "@/components/filters-sheet";
+import { BackButton } from "@/components/back-button";
+import { formatRecordTime } from "@/lib/format/datetime";
+import { parseDayBound } from "@/lib/time/zone";
 
 const SEVERITIES = ["SUCCESS", "IMPORTANT", "CRITICAL"] as const;
 const PAGE_SIZE = 25;
-
-function parseDate(v?: string): Date | undefined {
-  if (!v) return undefined;
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? undefined : d;
-}
 
 type SearchParams = {
   q?: string; status?: string; projectId?: string; type?: string; severity?: string; from?: string; to?: string; page?: string;
@@ -30,7 +27,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   if (!userId) return null;
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
 
-  const { t } = await getDict();
+  const { t, lang } = await getDict();
   const N = t.notifications;
   const F = N.filters;
 
@@ -41,8 +38,9 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const type: EventKey | undefined = sp.type && (EVENT_KEYS as readonly string[]).includes(sp.type) ? (sp.type as EventKey) : undefined;
   const severity: NotificationSeverity | undefined =
     sp.severity && (SEVERITIES as readonly string[]).includes(sp.severity) ? (sp.severity as NotificationSeverity) : undefined;
-  const from = parseDate(sp.from);
-  const to = parseDate(sp.to);
+  // Date inputs pick whole local days in APP_TIME_ZONE, not UTC days.
+  const from = parseDayBound(sp.from, "start");
+  const to = parseDayBound(sp.to, "end");
   const rawPage = parseInt(sp.page ?? "1", 10);
   const hasActiveFilters = Boolean(q || status || projectId || type || severity || from || to);
 
@@ -87,6 +85,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
   return (
     <div className="reveal" style={{ maxWidth: 720, margin: "0 auto" }}>
+      <BackButton fallbackHref="/app" labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <p className="kicker">{N.title.toUpperCase()}</p>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 20px" }}>{N.title}</h1>
 
@@ -166,7 +165,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                 </div>
                 {n.body && <p className="text-soft" style={{ margin: "2px 0 0", fontSize: "0.88rem" }}>{n.body}</p>}
                 <p className="text-steel" style={{ margin: "3px 0 0", fontSize: "0.76rem" }}>
-                  {n.createdAt.toLocaleString("es-DO", { dateStyle: "medium", timeStyle: "short" })}
+                  {formatRecordTime(n.createdAt, lang)}
                   {isUnread && (
                     <span style={{ marginLeft: 6, fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent)" }}>
                       {t.notifications.unread}

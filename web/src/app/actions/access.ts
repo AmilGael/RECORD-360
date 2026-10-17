@@ -8,6 +8,7 @@ import { newAccessRequestEmail, accountActivationEmail } from "@/lib/email/templ
 import { rateLimit, clientIp } from "@/lib/auth/rate-limit";
 import { createActivationToken, activationUrl } from "@/lib/auth/tokens";
 import { requireSuperAdmin } from "@/lib/auth/operator";
+import { normalizeEmail } from "@/lib/auth/email";
 import { writeAudit } from "@/lib/audit/log";
 import { Role } from "@prisma/client";
 
@@ -33,7 +34,7 @@ export async function requestAccess(_prev: RequestAccessState, formData: FormDat
 
   const businessName = String(formData.get("business") ?? "").trim();
   const contactName = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = normalizeEmail(formData.get("email"));
   const phone = String(formData.get("phone") ?? "").trim();
   const website = String(formData.get("website") ?? "").trim() || null;
   const message = String(formData.get("message") ?? "").trim() || null;

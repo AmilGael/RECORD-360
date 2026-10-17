@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mic } from "@/components/icons";
 import { IndexedDbQueue } from "@/lib/offline/queue";
-import { syncQueue } from "@/lib/offline/sync";
 import type { QueuedRegistro } from "@/lib/offline/types";
+import { nextCaptureState, syncErrorText, type CaptureState, type SyncErrorLabels } from "@/lib/offline/capture-status";
 import type { Lang } from "@/i18n/dictionaries";
 import { classifyDictationError, mergeTranscript } from "@/lib/dictation";
+import { datetimeLocalToIso, useDatetimeLocalMin } from "@/lib/time/local-input";
 
 // Minimal structural type for the Web Speech API recogniser — avoids `any`.
 type SpeechRecognitionLike = {
@@ -45,9 +46,14 @@ type ComposerT = {
   dictateErrorNetwork?: string;
   dictateErrorAborted?: string;
   dictateErrorOther?: string;
-  saved?: string;
+  savedOnDevice: string;
+  savedSealed: string;
+  savedFailed: string;
+  savedFailedHint: string;
   categories: Record<string, string>;
 };
+
+const SEALED_NOTICE_MS = 4000;
 
 // Lazy browser-only singleton — IndexedDB is only touched inside event handlers.
 let _queue: IndexedDbQueue | null = null;
@@ -60,10 +66,11 @@ function emitQueueChanged() {
 }
 
 export function LogComposer({
-  partidaId, t, locations, correction, reply, lang,
+  partidaId, t, syncErrors, locations, correction, reply, lang,
 }: {
   partidaId: string;
   t: ComposerT;
+  syncErrors: SyncErrorLabels;
   locations: string[];
   correction?: { id: string; label: string; cancelLabel: string; notice: string } | null;
   reply?: { id: string; label: string; cancelLabel: string; notice: string } | null;
@@ -76,8 +83,8 @@ export function LogComposer({
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const savedTimerRef = useRef<number | null>(null);
+  const [capture, setCapture] = useState<{ id: string; state: CaptureState } | null>(null);
+  const reminderMin = useDatetimeLocalMin();
 
   const [speechSupported, setSpeechSupported] = useState(false);
   const [listening, setListening] = useState(false);
@@ -107,13 +114,35 @@ export function LogComposer({
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (savedTimerRef.current) {
-        window.clearTimeout(savedTimerRef.current);
-        savedTimerRef.current = null;
-      }
-    };
+    if (window.location.hash !== "#composer") return;
+    formRef.current?.scrollIntoView({ block: "start" });
+    textRef.current?.focus();
   }, []);
+
+  // Follow the registro just queued until the server seals it or refuses it.
+  const captureId = capture?.id ?? null;
+  useEffect(() => {
+    if (!captureId) return;
+    const check = () => {
+      void getQueue().all().then((queued) => {
+        setCapture((c) => (c && c.id === captureId ? { id: c.id, state: nextCaptureState(c.state, c.id, queued) } : c));
+      }).catch(() => {});
+    };
+    check();
+    window.addEventListener("raphl:sync-progress", check);
+    window.addEventListener("raphl:queue-changed", check);
+    return () => {
+      window.removeEventListener("raphl:sync-progress", check);
+      window.removeEventListener("raphl:queue-changed", check);
+    };
+  }, [captureId]);
+
+  const captureKind = capture?.state.kind ?? null;
+  useEffect(() => {
+    if (captureKind !== "sealed") return;
+    const timer = window.setTimeout(() => setCapture(null), SEALED_NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [captureKind]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -138,7 +167,7 @@ export function LogComposer({
       locationLabel: (String(fd.get("location") ?? "").trim()) || null,
       correctionOfId: correction?.id ?? null,
       replyToId: reply?.id ?? null,
-      reminderDueAt: (String(fd.get("reminderDueAt") ?? "").trim()) || null,
+      reminderDueAt: datetimeLocalToIso(String(fd.get("reminderDueAt") ?? "")) || null,
       clientCapturedAt: new Date().toISOString(),
       attachments: files.map((f) => ({ blob: f, filename: f.name, contentType: f.type })),
       status: "pending",
@@ -148,16 +177,11 @@ export function LogComposer({
     try {
       await getQueue().enqueue(item);
       form.reset();
-      setSaved(true);
+      setCapture({ id: item.id, state: { kind: "on-device" } });
+      // OfflineProvider syncs on this event and refreshes the feed only once
+      // the server has accepted the item.
       emitQueueChanged();
-      // Background sync; refresh the feed when it settles (no-op if offline).
-      void syncQueue({ queue: getQueue(), onChange: emitQueueChanged }).then(() => router.refresh());
       if (correction || reply) router.replace(`/app/partidas/${partidaId}`);
-      if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = window.setTimeout(() => {
-        setSaved(false);
-        savedTimerRef.current = null;
-      }, 4000);
     } catch {
       setError(t.error);
     } finally {
@@ -222,7 +246,7 @@ export function LogComposer({
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="card" style={{ padding: 16, marginBottom: 28 }}>
+    <form id="composer" ref={formRef} onSubmit={handleSubmit} className="card" style={{ padding: 16, marginBottom: 28 }}>
       {correction && (
         <div className="mono" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", background: "var(--paper-2)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "8px 10px", fontSize: "0.7rem", marginBottom: 10 }}>
           <span>{correction.notice} {correction.label}</span>
@@ -241,9 +265,16 @@ export function LogComposer({
           {error}
         </p>
       )}
-      {saved && (
-        <p role="status" style={{ background: "rgba(46,125,50,0.08)", border: "1px solid #2e7d32", color: "#2e7d32", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
-          {t.saved ?? "Guardado."}
+      {capture?.state.kind === "on-device" && (
+        <p role="status" className="capture-notice is-on-device">{t.savedOnDevice}</p>
+      )}
+      {capture?.state.kind === "sealed" && (
+        <p role="status" className="capture-notice is-sealed">{t.savedSealed}</p>
+      )}
+      {capture?.state.kind === "failed" && (
+        <p role="alert" className="capture-notice is-failed">
+          {[t.savedFailed, syncErrorText(capture.state.item, syncErrors)].filter(Boolean).join(": ")}
+          <span className="capture-notice-hint">{t.savedFailedHint}</span>
         </p>
       )}
       {dictationError && (
@@ -264,7 +295,7 @@ export function LogComposer({
         </datalist>
         <label className="mono text-steel" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.68rem" }}>
           {t.reminder ?? "Reminder"}
-        <input type="datetime-local" name="reminderDueAt" min={new Date(Date.now() + 60_000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)} className="input" style={{ width: 190 }} />
+        <input type="datetime-local" name="reminderDueAt" min={reminderMin} className="input" style={{ width: 190 }} />
         </label>
         <button
           type="button"

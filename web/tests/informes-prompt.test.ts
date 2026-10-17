@@ -55,6 +55,26 @@ describe("buildInformeUserMessage — prompt cap", () => {
   });
 });
 
+describe("buildInformeUserMessage — time zone", () => {
+  it("states the zone exactly once and prints registro times in Santo Domingo", () => {
+    const msg = buildInformeUserMessage(makeData(2), "Mi solicitud");
+    expect(msg.split("Horas en hora de República Dominicana (UTC-4)").length - 1).toBe(1);
+    // 2026-01-01T00:00Z is 20:00 the previous evening in Santo Domingo.
+    expect(msg).toContain("- [2025-12-31 20:00] Autor @ Partida: reg-1");
+    expect(msg).not.toContain("[2026-01-01 00:00]");
+  });
+
+  it("PERIODO prints legacy UTC-marker bounds as the picked dates", () => {
+    const data = { ...makeData(1), from: new Date("2026-02-01T00:00:00.000Z"), to: new Date("2026-02-28T23:59:59.999Z") };
+    expect(buildInformeUserMessage(data, "x")).toContain("PERIODO: 2026-02-01 a 2026-02-28");
+  });
+
+  it("PERIODO prints Santo Domingo day bounds as the picked dates", () => {
+    const data = { ...makeData(1), from: new Date("2026-02-01T04:00:00.000Z"), to: new Date("2026-03-01T03:59:59.999Z") };
+    expect(buildInformeUserMessage(data, "x")).toContain("PERIODO: 2026-02-01 a 2026-02-28");
+  });
+});
+
 describe("buildInformeSystem — archetype branching (R3 WS7)", () => {
   it("produces materially distinct prompts for the three archetypes", () => {
     const owner = buildInformeSystem("OWNER");

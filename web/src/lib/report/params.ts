@@ -4,14 +4,28 @@
  * constraint: extra exports from route files cause build failures).
  */
 
+import { endOfDayUtc, isDateOnly, startOfDayUtc } from "@/lib/time/zone";
+
 /** Parse a from/to date query param. Returns null if absent, "invalid" if not a valid date.
- * For "to" params with a date-only value (YYYY-MM-DD), the time is set to end-of-day (T23:59:59.999Z).
+ * A date-only value (YYYY-MM-DD) is the whole local day in APP_TIME_ZONE:
+ * "from" starts at local midnight, "to" ends at the next local midnight − 1 ms.
+ * Ending "to" at 23:59:59.999Z dropped that evening's registros (after 20:00 in
+ * Santo Domingo) from legal reports. Full ISO values are used as given.
  */
 export function parseRangeParam(url: URL, key: "from" | "to"): Date | null | "invalid" {
   const raw = url.searchParams.get(key);
   if (!raw) return null;
-  if (key === "to" && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    return new Date(`${raw}T23:59:59.999Z`);
+  return parseRangeValue(raw, key);
+}
+
+/** Shared by the report routes and the informe action (see parseRangeParam). */
+export function parseRangeValue(raw: string, key: "from" | "to"): Date | "invalid" {
+  if (isDateOnly(raw)) {
+    try {
+      return key === "from" ? startOfDayUtc(raw) : endOfDayUtc(raw);
+    } catch {
+      return "invalid";
+    }
   }
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? "invalid" : d;

@@ -3,11 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { IndexedDbQueue } from "@/lib/offline/queue";
 import { syncQueue } from "@/lib/offline/sync";
 import type { QueuedRegistro } from "@/lib/offline/types";
+import { syncErrorText, type SyncErrorLabels } from "@/lib/offline/capture-status";
 
 let _queue: IndexedDbQueue | null = null;
 function getQueue(): IndexedDbQueue { if (!_queue) _queue = new IndexedDbQueue(); return _queue; }
 
-type T = { syncTitle: string; pendingOne: string; syncing: string; retry: string; discard: string; errorTitle: string; blockedTitle: string };
+type T = { syncTitle: string; pendingOne: string; syncing: string; retry: string; discard: string; errorTitle: string; blockedTitle: string; errors: SyncErrorLabels };
 
 // This list is ONLY the device's local offline-capture queue (this partida's
 // unsent registros) — never the operational "pendientes por resolver" queue
@@ -29,7 +30,7 @@ export function PendingEntries({ partidaId, t }: { partidaId: string; t: T }) {
   }, [reload]);
 
   function retry(id: string) {
-    void getQueue().update(id, { status: "pending", error: undefined }).then(() => {
+    void getQueue().update(id, { status: "pending", errorCode: undefined, error: undefined }).then(() => {
       reload();
       void syncQueue({ queue: getQueue(), onChange: () => window.dispatchEvent(new Event("raphl:sync-progress")) }).then(reload);
     });
@@ -45,7 +46,7 @@ export function PendingEntries({ partidaId, t }: { partidaId: string; t: T }) {
   if (items.length === 0) return null;
 
   function statusLine(i: QueuedRegistro): string {
-    if (i.status === "error") return `${t.errorTitle}: ${i.error ?? ""}`;
+    if (i.status === "error") return [t.errorTitle, syncErrorText(i, t.errors)].filter(Boolean).join(": ");
     if (i.status === "blocked") return t.blockedTitle;
     if (i.status === "syncing") return t.syncing;
     return t.pendingOne; // "pending" — queued locally, retried automatically
