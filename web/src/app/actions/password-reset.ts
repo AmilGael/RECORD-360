@@ -96,5 +96,15 @@ export async function resetPassword(
     });
   });
 
+  // A user locked out of login who proves mailbox ownership gets their login
+  // lockout lifted on every IP. Only this email's "<email>|<ip>" keys: never
+  // other accounts, never the IP-scoped resetpw:/reset: limiters. Prisma's
+  // startsWith is a SQL LIKE that leaves "_" (common in emails) as a wildcard,
+  // so candidates are re-checked literally before deleting.
+  const prefix = `${normalizeEmail(user.email)}|`;
+  const candidates = await prisma.loginAttempt.findMany({ where: { key: { startsWith: prefix } }, select: { key: true } });
+  const keys = candidates.map((c) => c.key).filter((k) => k.startsWith(prefix));
+  if (keys.length) await prisma.loginAttempt.deleteMany({ where: { key: { in: keys } } });
+
   redirect("/login?reset=1");
 }
