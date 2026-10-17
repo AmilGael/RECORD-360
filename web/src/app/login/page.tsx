@@ -44,7 +44,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             {error && (
               <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>
                 {error === "locked" ? (
-                  <>{T.locked} <Link href="/forgot-password" style={{ color: "inherit" }}>{T.forgot}</Link></>
+                  <>{T.locked} <Link href="/forgot-password" style={{ color: "inherit", textDecoration: "underline" }}>{T.forgot}</Link></>
                 ) : T.error}
               </p>
             )}
