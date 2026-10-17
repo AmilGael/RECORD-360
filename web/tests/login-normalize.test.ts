@@ -9,7 +9,7 @@ vi.mock("next-auth", async () => ({ CredentialsSignin: (await import("@auth/core
 
 import { prisma } from "@/lib/db";
 import { normalizeEmail } from "@/lib/auth/email";
-import { verifyCredentials } from "@/lib/auth/credentials";
+import { DUMMY_HASH, verifyCredentials } from "@/lib/auth/credentials";
 import { authorizeCredentials } from "@/lib/auth/authorize";
 import { loginThrottleBlocked, loginThrottleFailure, loginThrottleKey } from "@/lib/auth/login-throttle";
 import { CredentialsSignin } from "@auth/core/errors";
@@ -64,6 +64,11 @@ describe("login email normalization", () => {
     const key = `twin-${tag}@example.do|10.0.0.2`;
     expect(await verifyCredentials(`twin-${tag}@example.do`, PASSWORD, key)).toBeNull();
     expect((await prisma.loginAttempt.findUnique({ where: { key } }))?.failures).toBe(1);
+  });
+
+  it("uses a precomputed cost-10 dummy hash that matches nothing", async () => {
+    expect(bcrypt.getRounds(DUMMY_HASH)).toBe(10);
+    expect(await bcrypt.compare(PASSWORD, DUMMY_HASH)).toBe(false);
   });
 
   it("runs bcrypt against a dummy hash for an unknown email", async () => {

@@ -6,10 +6,12 @@ import { loginThrottleBlocked, loginThrottleFailure, loginThrottleReset } from "
 
 export type AuthedUser = { id: string; name: string; email: string; role: Role; companyId: string };
 
-// Same cost as real password hashes, so the no-user / disabled / unactivated
-// paths spend the same bcrypt time as a wrong password and response latency
-// does not reveal which emails have usable accounts.
-const DUMMY_HASH = bcrypt.hashSync("raphel-dummy-password-never-matches", 10);
+// Cost-10 bcrypt hash of a random password that was discarded, so nothing
+// matches it. Comparing against it on the no-user / disabled / unactivated
+// paths costs the same as a wrong password, so latency does not reveal which
+// emails have usable accounts. A literal, not hashSync at load: this module
+// loads with auth.ts on most routes, and hashing would block every cold start.
+export const DUMMY_HASH = "$2b$10$xI6QJ7b1FbvByLZ7ekxkyeVYHI6u3kPX/TaTcShf5qa60ni/6Sbya";
 
 /**
  * Exact match on the normalized email first. Legacy rows stored before emails
