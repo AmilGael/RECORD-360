@@ -160,6 +160,9 @@ body {
 .btn-accent:hover { background: var(--accent-deep); transform: translateY(-1px); }
 .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
 .btn-ghost:hover { border-color: var(--ink); transform: translateY(-1px); }
+/* "Volver": compact on desktop, sits above the breadcrumbs; the coarse-pointer
+   rule below still lifts it to 44px. */
+.btn-back { padding: 0.4rem 0.8rem; font-size: 0.74rem; margin-bottom: 10px; }
 
 /* File pickers: the app renders native <input type="file"> in 8 places (covers,
    seal, planos, evidencia, firma/foto, adjuntos). Styling the native control
