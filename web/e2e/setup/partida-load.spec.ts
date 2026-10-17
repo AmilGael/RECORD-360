@@ -62,7 +62,13 @@ test("phone: last row and Volver stay above the open sheet @load", async ({ page
     await expect(page.locator(".workspace.is-sheet-open")).toBeVisible();
 
     const last = page.getByRole("button", { name: startsWith(seeded.lastName) }).first();
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await last.evaluate((el) => {
+      const panel = document.querySelector(".workspace-panel.is-open");
+      const sheetTop = panel instanceof HTMLElement
+        ? panel.getBoundingClientRect().top
+        : window.innerHeight * 0.45;
+      window.scrollBy(0, el.getBoundingClientRect().bottom - sheetTop + 8);
+    });
     await expect.poll(async () => page.evaluate((name) => {
       const row = [...document.querySelectorAll("button.tree-file")].find((el) => (el.textContent ?? "").includes(name));
       const panel = document.querySelector(".workspace-panel.is-open");
