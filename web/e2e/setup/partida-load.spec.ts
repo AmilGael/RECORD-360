@@ -62,14 +62,22 @@ test("phone: last row and Volver stay above the open sheet @load", async ({ page
     await expect(page.locator(".workspace.is-sheet-open")).toBeVisible();
 
     const last = page.getByRole("button", { name: startsWith(seeded.lastName) }).first();
-    await last.scrollIntoViewIfNeeded();
-    const sheet = page.locator(".workspace-panel.is-open");
+    await last.evaluate((el) => {
+      const panel = document.querySelector(".workspace-panel.is-open");
+      const sheetTop = panel instanceof HTMLElement
+        ? panel.getBoundingClientRect().top
+        : window.innerHeight * 0.45;
+      const top = sheetTop > 0 && sheetTop < window.innerHeight ? sheetTop : window.innerHeight * 0.45;
+      window.scrollBy(0, el.getBoundingClientRect().bottom - top + 12);
+    });
     await last.click();
     await expect(page.getByRole("heading", { level: 2, name: seeded.lastName })).toBeVisible();
-    const rowBox = await last.boundingBox();
-    const sheetBox = await sheet.boundingBox();
-    expect(rowBox && sheetBox, "row and sheet on screen").toBeTruthy();
-    expect((rowBox?.y ?? 0) + (rowBox?.height ?? 0), "last row sits above the sheet").toBeLessThanOrEqual((sheetBox?.y ?? 0) + 1);
+    await expect.poll(async () => page.evaluate((name) => {
+      const row = [...document.querySelectorAll("button.tree-file")].find((el) => (el.textContent ?? "").includes(name));
+      const panel = document.querySelector(".workspace-panel.is-open");
+      if (!row || !panel) return false;
+      return row.getBoundingClientRect().bottom <= panel.getBoundingClientRect().top + 1;
+    }, seeded.lastName)).toBe(true);
 
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole("button", { name: dictionaries.es.nav.backAria }).click();

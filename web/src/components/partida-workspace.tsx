@@ -64,8 +64,18 @@ const PHONE_SHEET = "(max-width: 899px)";
 
 function revealRowAboveSheet(row: HTMLElement) {
   if (!window.matchMedia(PHONE_SHEET).matches) return;
+  const panel = document.querySelector(".workspace-panel.is-open");
+  const sheetTop = panel instanceof HTMLElement
+    ? panel.getBoundingClientRect().top
+    : window.innerHeight * 0.45;
+  const rect = row.getBoundingClientRect();
+  const overflow = rect.bottom - sheetTop + 8;
+  if (overflow <= 0 && rect.top >= 0) return;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  row.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reduce ? "auto" : "smooth" });
+  window.scrollBy({
+    top: overflow > 0 ? overflow : rect.top,
+    behavior: reduce ? "auto" : "smooth",
+  });
 }
 
 export function PartidaWorkspace({
@@ -190,7 +200,7 @@ export function PartidaWorkspace({
       headingEl.current?.focus({ preventScroll: true });
       const row = rowEls.current.get(selectedId);
       if (row) {
-        requestAnimationFrame(() => revealRowAboveSheet(row));
+        requestAnimationFrame(() => requestAnimationFrame(() => revealRowAboveSheet(row)));
       }
     }
     if (!selectedId && prevSelected.current) {

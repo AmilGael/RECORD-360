@@ -520,6 +520,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
      fully above it. Desktop is a two-column grid and never takes this padding. */
   .workspace.is-sheet-open { padding-bottom: calc(55dvh + var(--safe-b)); }
   .workspace.is-sheet-open .tree-row,
+  .workspace.is-sheet-open .tree-file,
   .workspace.is-sheet-open .tree-filter {
     scroll-margin-bottom: calc(55dvh + var(--safe-b));
   }
