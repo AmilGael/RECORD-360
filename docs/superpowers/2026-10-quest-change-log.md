@@ -117,7 +117,7 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - `project-file-tree.tsx`: rows are buttons, not links; last activity and Concluida on the row; inline edit forms removed (they live in the panel).
   - `partida-summary.tsx` deleted (nothing imported it).
   - `log-composer.tsx`: `id="composer"`; `#composer` focuses the textarea.
-  - `globals.css`: `--brass` / `--brass-bg` next to `--state-*` (day `#8a6c1a`, night `#b08a2e`); aging marks use the token; workspace 1fr 1fr ≥900px, mobile 55dvh sheet; 4px tree-row-band; coarse 44px row/close.
+  - `globals.css`: `--brass` / `--brass-bg` next to `--state-*` (day `#8a6c1a`, night `#b08a2e`); aging marks use the token; workspace 1fr 1fr ≥900px, mobile 55dvh sheet; 4px tree-row-band; coarse 44px row/close. Below 900px, an open sheet adds `padding-bottom: calc(55dvh + var(--safe-b))` on the workspace (desktop unchanged) and `scroll-margin-bottom` on rows, filters and Volver; the tapped row is scrolled into the area above the sheet (`prefers-reduced-motion` respected).
   - Dictionaries es+en: `newRegistro`, `openCuaderno`, `editPartida`, `panelOffline` (exact strings), `panelClose`, `aging7`/`aging14`, `noActivity`, `tagsLabel`.
 - **Migrations:** none.
 - **Rules for future work:**

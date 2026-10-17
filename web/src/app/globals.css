@@ -516,6 +516,14 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 @media (max-width: 899px) {
   .workspace { grid-template-columns: 1fr; min-height: 0; }
   .workspace-list { max-height: none; border-right: none; }
+  /* Only while the sheet is open: the page can scroll every row and control
+     fully above it. Desktop is a two-column grid and never takes this padding. */
+  .workspace.is-sheet-open { padding-bottom: calc(55dvh + var(--safe-b)); }
+  .workspace.is-sheet-open .tree-row,
+  .workspace.is-sheet-open .tree-filter {
+    scroll-margin-bottom: calc(55dvh + var(--safe-b));
+  }
+  html.sheet-open .btn-back { scroll-margin-bottom: calc(55dvh + var(--safe-b)); }
   .workspace-panel {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 35;
     height: 55dvh; max-height: 55dvh;

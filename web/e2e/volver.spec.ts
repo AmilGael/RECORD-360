@@ -160,6 +160,7 @@ for (const lang of langs) {
     expect(trail.at(-1)).toBe(workspaceEntry);
     expect(trail.at(-2), "previous entry must not be the partida we just left").not.toBe(partidaPath);
 
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole("button", { name: t.nav.backAria }).click();
     // router.push after a browser back can hang (react/react#37805). The
     // failure this test exists to catch is a bounce back to the partida.
