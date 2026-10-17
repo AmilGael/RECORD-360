@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getDict } from "@/i18n/server";
 import { LogComposer } from "@/components/log-composer";
 import { RecordCard } from "@/components/record-card";
@@ -31,7 +32,8 @@ export default async function PartidaPage({
   const isOwner = sessionUser.role === "ADMIN"; // delete is ADMIN-only
   const { lang, t } = await getDict();
   // Tenant scoping: only return the partida if its project belongs to the caller's company.
-  const partida = await prisma.partida.findFirstOrThrow({
+  // A missing id and another tenant's id both render the same 404.
+  const partida = await prisma.partida.findFirst({
     where: { id, project: projectAccessWhere(sessionUser), deletedAt: null },
     include: {
       project: {
@@ -43,6 +45,7 @@ export default async function PartidaPage({
       segment: { select: { closedAt: true } },
     },
   });
+  if (!partida) notFound();
   // Pagination
   const total = await prisma.registro.count({ where: { partidaId: id } });
   const rawPage = parseInt(pageParam ?? "1", 10);

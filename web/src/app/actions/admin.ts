@@ -13,6 +13,7 @@ import { mailer, sendBestEffort } from "@/lib/email";
 import { accountActivationEmail, passwordResetLinkEmail } from "@/lib/email/templates";
 import { createActivationToken, activationUrl, createToken, resetUrl } from "@/lib/auth/tokens";
 import { requireFreshSession } from "@/lib/auth/session";
+import { normalizeEmail } from "@/lib/auth/email";
 import { createNotifications } from "@/lib/notifications/create";
 import { notifyEvent } from "@/lib/notifications/events";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
@@ -285,7 +286,7 @@ export async function createUser(formData: FormData) {
   const submitted = String(formData.get("role"));
   if (!ASSIGNABLE_ROLES.includes(submitted as Role)) throw new Error("Invalid role");
 
-  const email = String(formData.get("email")).trim().toLowerCase();
+  const email = normalizeEmail(String(formData.get("email")));
   const name = String(formData.get("name")).trim();
 
   // Inactive user: no password, not verified. They activate via the emailed link.

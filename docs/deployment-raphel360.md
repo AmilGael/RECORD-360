@@ -16,7 +16,7 @@ One-time production setup. Order matters: email DNS can verify before the app mo
 1. Site settings → Domain management → add `raphel360.com` as the primary domain.
 2. Add `www.raphel360.com` as an alias (redirects to primary).
 3. Point DNS at Netlify (apex A/ALIAS + www CNAME per Netlify's instructions).
-4. Wait for the TLS certificate to provision. HSTS/CSP already ship in `netlify.toml`.
+4. Wait for the TLS certificate to provision. HSTS/CSP are already sent by the app itself (`web/src/lib/security-headers.ts`, applied in `next.config.ts`), not by `netlify.toml`.
 
 ## 4. Verify end-to-end (production)
 1. Redeploy so the new env vars take effect.
@@ -48,6 +48,17 @@ Cloudflare dashboard → R2 → the bucket → Settings → CORS policy:
 
 No `AllowedOrigins` wildcard: the presigned URL already scopes who can
 write, but there is no reason to let other origins burn upload quota.
-Verify after deploy: upload a >5 MB PDF on the Planos tab; the network
-panel should show `PUT` to the R2 endpoint (not a POST to the page) and
-the plano should list.
+
+The app's CSP must also allow the browser to reach R2: `connect-src` gets
+the origin of `S3_ENDPOINT` (no path, no wildcard). The CSP is computed when
+`next.config.ts` loads during the build, so in Netlify → Site settings →
+Environment variables, `S3_BUCKET` and `S3_ENDPOINT` must include the
+**Builds** scope (not only Functions/Runtime). If `S3_BUCKET` is set but
+`S3_ENDPOINT` is missing, not a URL, or not https, the build fails on purpose.
+
+Verify after deploy:
+1. `curl -sI https://www.raphel360.com/login | grep -i content-security-policy`
+   must show the R2 origin (e.g. `https://<account>.r2.cloudflarestorage.com`)
+   in `connect-src`.
+2. Upload a >5 MB PDF on the Planos tab; the network panel should show `PUT`
+   to the R2 endpoint (not a POST to the page) and the plano should list.

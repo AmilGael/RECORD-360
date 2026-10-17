@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { SECURITY_HEADERS } from "@/lib/security-headers";
 import nextConfig from "../next.config";
 
@@ -41,5 +41,40 @@ describe("security headers", () => {
     expect(re.test("")).toBe(true); // the root path
     expect(re.test("api/uploads/presign")).toBe(true);
     expect(re.test("api/media/abc.pdf")).toBe(false);
+  });
+});
+
+// Direct uploads PUT to the R2 endpoint from the browser, so connect-src must
+// carry its origin. The header string is computed at module load, so each case
+// re-evaluates the module under its own stubbed env.
+describe("CSP connect-src for direct uploads", () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
+
+  async function cspWith(env: { S3_BUCKET?: string; S3_ENDPOINT?: string }) {
+    vi.resetModules();
+    vi.stubEnv("S3_BUCKET", env.S3_BUCKET ?? "");
+    vi.stubEnv("S3_ENDPOINT", env.S3_ENDPOINT ?? "");
+    const mod = await import("@/lib/security-headers");
+    return mod.SECURITY_HEADERS.find((h) => h.key === "Content-Security-Policy")!.value;
+  }
+  const connectSrc = (csp: string) => csp.split(";").map((d) => d.trim()).find((d) => d.startsWith("connect-src"));
+
+  it("adds the endpoint origin, without the bucket path, when S3 is configured", async () => {
+    const csp = await cspWith({ S3_BUCKET: "raphel-media", S3_ENDPOINT: "https://acct123.r2.cloudflarestorage.com/raphel-media" });
+    expect(connectSrc(csp)).toBe("connect-src 'self' https://acct123.r2.cloudflarestorage.com");
+    expect(csp).not.toContain("raphel-media");
+    expect(csp).not.toContain("*");
+  });
+
+  it("keeps connect-src at 'self' when S3 is not configured", async () => {
+    expect(connectSrc(await cspWith({}))).toBe("connect-src 'self'");
+  });
+
+  it.each([
+    ["S3_ENDPOINT is missing", { S3_BUCKET: "b" }, /S3_ENDPOINT is missing/],
+    ["S3_ENDPOINT is not a URL", { S3_BUCKET: "b", S3_ENDPOINT: "acct.r2.cloudflarestorage.com" }, /not a valid URL/],
+    ["S3_ENDPOINT is not https", { S3_BUCKET: "b", S3_ENDPOINT: "http://acct.r2.cloudflarestorage.com" }, /must use https/],
+  ])("fails loudly when %s", async (_label, env, message) => {
+    await expect(cspWith(env)).rejects.toThrow(message);
   });
 });

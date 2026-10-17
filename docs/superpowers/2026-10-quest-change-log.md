@@ -30,3 +30,33 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - The smoke test covers login, dashboard and sign-out only; theme switching is not exercised.
   - Screenshots can catch the `.reveal` fade-in partway.
   - Prisma CLI reads only `web/.env`. Run it as `node --env-file=.env.local node_modules/prisma/build/index.js <cmd>`, and never create `web/.env`.
+
+## Q1: Pilot blockers (fix/pilot-blockers, 2026-10-16)
+
+- **What users will notice:** emails log in regardless of case or stray spaces; after 5 failed logins the 6th shows "Demasiados intentos…" with a reset link; a password reset lifts that email's lockout; phone keyboards no longer capitalize email fields; large plano uploads can reach R2 once the build sees the S3 vars; missing or foreign obra/partida/cambio links show a branded 404; crashes show a branded error screen with a "Código".
+- **What changed in code:**
+  - `src/lib/auth/email.ts`: `normalizeEmail()`, used by login, throttle keys, reset, access requests, `createUser`, `scripts/create-admin.ts`.
+  - `src/lib/auth/credentials.ts`: exact lookup, then single case-insensitive legacy match; bcrypt runs against a cost-10 dummy hash on no-user/disabled/unactivated paths.
+  - `src/lib/auth/authorize.ts` + `errors.ts`: authorize moved out of `auth.ts`; throws `LockedOutSignin` (`code = "locked"`) when blocked. `login/page.tsx` maps it to `?error=locked`.
+  - `src/app/actions/password-reset.ts`: after commit, deletes only `<email>|*` LoginAttempt keys.
+  - `src/lib/security-headers.ts`: `connect-src` adds `new URL(S3_ENDPOINT).origin` when `S3_BUCKET` is set; throws if the endpoint is missing, invalid or not https.
+  - `src/app/{error,global-error,not-found}.tsx`, `src/app/app/{error,not-found}.tsx`, `components/{error-screen,not-found-screen}.tsx`; copy in `src/i18n/errors-copy.ts`.
+  - Obra, partida and cambio detail pages: `findFirst` + `notFound()` with the same access filter.
+  - `vitest.config.ts`: `oxc.jsx.runtime = "automatic"` (Vite 8 ignores `esbuild`) so tests can render components.
+- **Migrations:** none.
+- **Rules for future work:**
+  - Normalize every email with `normalizeEmail()`; never inline `trim().toLowerCase()`.
+  - Lockout must stay existence-independent (blocked key throws before any user lookup). Do not add messages that differ for known vs unknown emails.
+  - Prisma `startsWith`/`contains` leave `_` as a SQL wildcard: re-check matches literally before deleting.
+  - Client components must not import `dictionaries.ts` values. Copy needed on the client goes in a small plain-data module (like `errors-copy.ts`) re-exposed in `dictionaries.ts`.
+  - Error screens never render `error.message`; only `error.digest`.
+  - Detail pages use `findFirst` + `notFound()`, never `findFirstOrThrow`, so missing and cross-tenant ids look identical.
+  - Netlify: `S3_BUCKET` and `S3_ENDPOINT` need the "Builds" scope; the CSP is computed at build time.
+  - Tests importing `@/lib/auth/errors` must mock `next-auth` with `@auth/core/errors`' `CredentialsSignin` (next-auth's entry does not load under Vitest).
+- **How to verify:** `npm test` (602 tests); `npx playwright test e2e/pilot-blockers.spec.ts` against a production build; after deploy, `curl -sI https://www.raphel360.com/login | grep -i content-security-policy` must show the R2 origin in `connect-src`.
+- **Known limits:**
+  - F1 (CSP for R2) cannot be reproduced locally (no S3 in `.env.local`); unit tests plus the production curl check are its only verification.
+  - Next 15.5 streams the /app shell through `/app/loading.tsx` before `notFound()` resolves; React recovers the boundary on the client and Next reports React error #419. The page shown is the correct 404. `e2e/pilot-blockers.spec.ts` ignores only that error, only after the 404 heading is visible. Revisit when Next is upgraded.
+  - Lockout e2e runs leave `LoginAttempt` rows for `lockout-*@raphel.test` in the local DB.
+  - Error boundaries are verified by render tests only; there is no route that triggers them on purpose.
+  - `/forgot-password` and `/request-access` copy is still hardcoded Spanish.

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getDict } from "@/i18n/server";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { resolveChangeRequest } from "@/app/actions/cambios";
@@ -18,7 +19,8 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
   const C = t.changes;
   const R = t.requests;
 
-  const cr = await prisma.changeRequest.findFirstOrThrow({
+  // A missing id and another tenant's id both render the same 404.
+  const cr = await prisma.changeRequest.findFirst({
     where: { id: crId, projectId: id, project: projectAccessWhere(u) },
     include: {
       segments: { include: { segment: { select: { name: true } } } },
@@ -26,6 +28,7 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
       attachments: true,
     },
   });
+  if (!cr) notFound();
 
   const resolverName = cr.resolvedById
     ? (await prisma.user.findFirst({ where: { id: cr.resolvedById, companyId: u.companyId }, select: { name: true } }))?.name ?? null
