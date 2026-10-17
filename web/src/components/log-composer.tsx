@@ -8,6 +8,7 @@ import { syncQueue } from "@/lib/offline/sync";
 import type { QueuedRegistro } from "@/lib/offline/types";
 import type { Lang } from "@/i18n/dictionaries";
 import { classifyDictationError, mergeTranscript } from "@/lib/dictation";
+import { datetimeLocalToIso, useDatetimeLocalMin } from "@/lib/time/local-input";
 
 // Minimal structural type for the Web Speech API recogniser — avoids `any`.
 type SpeechRecognitionLike = {
@@ -78,6 +79,7 @@ export function LogComposer({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const savedTimerRef = useRef<number | null>(null);
+  const reminderMin = useDatetimeLocalMin();
 
   const [speechSupported, setSpeechSupported] = useState(false);
   const [listening, setListening] = useState(false);
@@ -138,7 +140,7 @@ export function LogComposer({
       locationLabel: (String(fd.get("location") ?? "").trim()) || null,
       correctionOfId: correction?.id ?? null,
       replyToId: reply?.id ?? null,
-      reminderDueAt: (String(fd.get("reminderDueAt") ?? "").trim()) || null,
+      reminderDueAt: datetimeLocalToIso(String(fd.get("reminderDueAt") ?? "")) || null,
       clientCapturedAt: new Date().toISOString(),
       attachments: files.map((f) => ({ blob: f, filename: f.name, contentType: f.type })),
       status: "pending",
@@ -264,7 +266,7 @@ export function LogComposer({
         </datalist>
         <label className="mono text-steel" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.68rem" }}>
           {t.reminder ?? "Reminder"}
-        <input type="datetime-local" name="reminderDueAt" min={new Date(Date.now() + 60_000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)} className="input" style={{ width: 190 }} />
+        <input type="datetime-local" name="reminderDueAt" min={reminderMin} className="input" style={{ width: 190 }} />
         </label>
         <button
           type="button"

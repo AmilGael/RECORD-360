@@ -2,6 +2,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createChangeRequest, type CreateChangeRequestState } from "@/app/actions/cambios";
 import { ClipboardPlus } from "@/components/icons";
+import { datetimeLocalToIso, useDatetimeLocalMin } from "@/lib/time/local-input";
 
 type GpsState = "acquiring" | "acquired" | "denied" | "unavailable" | "timeout" | "invalid";
 
@@ -27,6 +28,15 @@ export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsState, setGpsState] = useState<GpsState>("acquiring");
   const [state, formAction, pending] = useActionState(createChangeRequest, INITIAL);
+  const reminderMin = useDatetimeLocalMin();
+  // The datetime-local value is device wall time; turn it into an instant here,
+  // where the device zone is known. Without JS the raw value still posts and
+  // the server reads it in APP_TIME_ZONE.
+  const submit = (fd: FormData) => {
+    const iso = datetimeLocalToIso(String(fd.get("reminderDueAt") ?? ""));
+    if (iso) fd.set("reminderDueAt", iso);
+    formAction(fd);
+  };
 
   // GPS state machine (WS5 §6): acquiring -> acquired | denied | unavailable |
   // timeout | invalid. Starts automatically on mount; Retry re-triggers.
@@ -73,7 +83,7 @@ export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
   return (
     <form
       ref={formRef}
-      action={formAction}
+      action={submit}
       className="card"
       style={{ padding: 16, marginBottom: 20 }}
     >
@@ -127,7 +137,7 @@ export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
         type="datetime-local"
         name="reminderDueAt"
         required
-        min={new Date(Date.now() + 60_000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
+        min={reminderMin}
         aria-label={t.fieldReminderPlaceholder}
         className="input"
         style={{ marginBottom: 10 }}
