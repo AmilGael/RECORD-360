@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryQueue } from "@/lib/offline/queue";
-import { syncQueue } from "@/lib/offline/sync";
+import { shouldRefreshAfterSync, syncQueue } from "@/lib/offline/sync";
 import type { QueuedRegistro } from "@/lib/offline/types";
 
 const item = (id: string): QueuedRegistro => ({ id, partidaId: "p", text: "x", category: null,
@@ -106,5 +106,46 @@ describe("syncQueue", () => {
     const rest = await q.all();
     expect(rest).toHaveLength(1);
     expect(rest[0].id).toBe("dead");
+  });
+});
+
+describe("syncQueue result: { synced }", () => {
+  let q: InMemoryQueue;
+  beforeEach(() => { q = new InMemoryQueue(); });
+
+  it("returns 0 when offline", async () => {
+    await q.enqueue(item("a"));
+    await expect(syncQueue({ queue: q, fetchFn: ok, isOnline: () => false })).resolves.toEqual({ synced: 0 });
+  });
+  it("returns 0 on a thrown fetch and leaves the item pending", async () => {
+    await q.enqueue(item("a"));
+    const fail = () => Promise.reject(new TypeError("Failed to fetch"));
+    await expect(syncQueue({ queue: q, fetchFn: fail, isOnline: () => true })).resolves.toEqual({ synced: 0 });
+    const [it0] = await q.all();
+    expect(it0.status).toBe("pending");
+  });
+  it("returns 0 for an empty queue and for retryable 5xx", async () => {
+    await expect(syncQueue({ queue: q, fetchFn: ok, isOnline: () => true })).resolves.toEqual({ synced: 0 });
+    await q.enqueue(item("a"));
+    const down = () => Promise.resolve(new Response("", { status: 503 }));
+    await expect(syncQueue({ queue: q, fetchFn: down, isOnline: () => true })).resolves.toEqual({ synced: 0 });
+  });
+  it("counts only items the server accepted", async () => {
+    await q.enqueue(item("a"));
+    await q.enqueue(item("b"));
+    await expect(syncQueue({ queue: q, fetchFn: ok, isOnline: () => true })).resolves.toEqual({ synced: 2 });
+    await q.enqueue(item("c"));
+    await q.enqueue(item("d"));
+    let n = 0;
+    const mixed = () => (++n === 1 ? ok() : Promise.resolve(new Response(JSON.stringify({ error: "malo" }), { status: 400 })));
+    await expect(syncQueue({ queue: q, fetchFn: mixed, isOnline: () => true })).resolves.toEqual({ synced: 1 });
+  });
+});
+
+describe("shouldRefreshAfterSync", () => {
+  it("refreshes only when the server accepted something", () => {
+    expect(shouldRefreshAfterSync({ synced: 0 })).toBe(false);
+    expect(shouldRefreshAfterSync({ synced: 1 })).toBe(true);
+    expect(shouldRefreshAfterSync({ synced: 3 })).toBe(true);
   });
 });

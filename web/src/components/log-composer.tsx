@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mic } from "@/components/icons";
 import { IndexedDbQueue } from "@/lib/offline/queue";
-import { syncQueue } from "@/lib/offline/sync";
 import type { QueuedRegistro } from "@/lib/offline/types";
 import type { Lang } from "@/i18n/dictionaries";
 import { classifyDictationError, mergeTranscript } from "@/lib/dictation";
@@ -151,9 +150,9 @@ export function LogComposer({
       await getQueue().enqueue(item);
       form.reset();
       setSaved(true);
+      // OfflineProvider syncs on this event and refreshes the feed only once
+      // the server has accepted the item.
       emitQueueChanged();
-      // Background sync; refresh the feed when it settles (no-op if offline).
-      void syncQueue({ queue: getQueue(), onChange: emitQueueChanged }).then(() => router.refresh());
       if (correction || reply) router.replace(`/app/partidas/${partidaId}`);
       if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
       savedTimerRef.current = window.setTimeout(() => {
