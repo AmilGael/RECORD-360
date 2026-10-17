@@ -2,11 +2,14 @@
 // the toggle. Server components read the locale via `@/i18n/server`; the client
 // LanguageSwitcher sets the cookie and refreshes.
 
+import { errorsCopy } from "./errors-copy";
+
 export const dictionaries = {
   es: {
     common: { app: "Raphel", blackBox: "BLACK BOX" },
-    nav: { sites: "Obras", team: "Equipo", signOut: "Salir", notifications: "Notificaciones" },
+    nav: { sites: "Obras", team: "Equipo", signOut: "Salir", notifications: "Notificaciones", back: "Volver", backAria: "Volver a la pantalla anterior" },
     offline: { title: "Sin conexión", body: "No hay conexión a internet. Vuelve a intentarlo cuando recuperes la señal." },
+    errors: errorsCopy.es,
     signatures: { title: "Firmas", sign: "Firmar", password: "Contraseña", statement: "Declaración (opcional)", statementPlaceholder: "Doy fe del estado de esta partida…", signed: "Firma registrada.", none: "Aún no hay firmas.", sealLabel: "Sello", boundTo: "Estado del Cuaderno", emptyLedger: "Cuaderno vacío" },
     severity: { success: "Resuelto", important: "Importante", critical: "Crítica" },
     lifecycle: {
@@ -51,6 +54,7 @@ export const dictionaries = {
       typeAlert: "Alerta",
       typeReminder: "Recordatorio",
       resolve: "Resolver",
+      resolveError: "No se pudo resolver. Revisa la conexión e inténtalo de nuevo.",
       viewRequest: "Ver solicitud",
       dueLabel: "Vence",
       authorLabel: "Reportado por",
@@ -139,6 +143,7 @@ export const dictionaries = {
       password: "Contraseña",
       submit: "Entrar",
       error: "Credenciales inválidas. Inténtalo de nuevo.",
+      locked: "Demasiados intentos. Espera 15 minutos o restablece tu contraseña.",
       back: "Volver al inicio",
       activated: "Cuenta activada. Inicia sesión.",
       forgot: "¿Olvidaste tu contraseña?",
@@ -190,7 +195,6 @@ export const dictionaries = {
       colProgress: "Avance",
       colResident: "Residente",
       colDate: "Creada",
-      backToDash: "Volver al tablero",
       openTable: "Ver tabla",
     },
     sidebar: {
@@ -273,7 +277,6 @@ export const dictionaries = {
       bloquesTitle: "Bloques",
       bloqueCard: "partidas",
       openBloque: "Ver bloque",
-      backToBloques: "Volver a bloques",
       deleteBloque: "Borrar bloque",
       deleteBloqueConfirm: "¿Borrar este bloque definitivamente?",
       bloqueNotEmpty: "Solo se pueden borrar bloques vacíos.",
@@ -372,13 +375,16 @@ export const dictionaries = {
       dictateErrorNetwork: "Error de red durante el dictado.",
       dictateErrorAborted: "Dictado cancelado.",
       dictateErrorOther: "No se pudo dictar. Inténtalo de nuevo.",
-      saved: "Guardado. Se sincronizará al recuperar conexión.",
+      savedOnDevice: "Guardado en este teléfono. Se enviará al recuperar señal.",
+      savedSealed: "Registrado y sellado.",
+      savedFailed: "No se pudo enviar",
+      savedFailedHint: "Revísalo en «Pendientes de sincronización», aquí abajo.",
       categories: {
         MATERIALES: "Materiales", PROCESOS: "Procesos", EVENTUALIDADES: "Eventualidades",
         OBSERVACIONES: "Observaciones", COSTOS: "Costos", PERSONAL: "Personal",
       },
     },
-    offlineCapture: { pending: "pendientes", pendingOne: "Pendiente de sincronizar", syncing: "Sincronizando…", retry: "Reintentar", discard: "Descartar", capturado: "Capturado", sellado: "Sellado", errorTitle: "No se pudo sincronizar", blockedTitle: "Sesión expirada — se sincronizará al iniciar sesión" },
+    offlineCapture: { pending: "pendientes", pendingOne: "Pendiente de sincronizar", syncing: "Sincronizando…", retry: "Reintentar", discard: "Descartar", capturado: "Capturado", sellado: "Sellado", errorTitle: "No se pudo sincronizar", blockedTitle: "Sesión expirada — se sincronizará al iniciar sesión", errorSessionExpired: "Sesión expirada. Inicia sesión y se enviará automáticamente.", errorForbidden: "Sin acceso a esta obra." },
     record: { noGps: "sin GPS", immutable: "inalterable", by: "por", document: "Ver documento" },
     admin: {
       title: "Control de Accesos y Roles",
@@ -527,8 +533,9 @@ export const dictionaries = {
   },
   en: {
     common: { app: "Raphel", blackBox: "BLACK BOX" },
-    nav: { sites: "Sites", team: "Team", signOut: "Sign out", notifications: "Notifications" },
+    nav: { sites: "Sites", team: "Team", signOut: "Sign out", notifications: "Notifications", back: "Back", backAria: "Back to the previous screen" },
     offline: { title: "You're offline", body: "No internet connection. Try again once your signal is back." },
+    errors: errorsCopy.en,
     signatures: { title: "Signatures", sign: "Sign", password: "Password", statement: "Statement (optional)", statementPlaceholder: "I attest to the state of this work item…", signed: "Signature recorded.", none: "No signatures yet.", sealLabel: "Seal", boundTo: "Ledger state", emptyLedger: "Empty ledger" },
     severity: { success: "Resolved", important: "Important", critical: "Critical" },
     lifecycle: {
@@ -573,6 +580,7 @@ export const dictionaries = {
       typeAlert: "Alert",
       typeReminder: "Reminder",
       resolve: "Resolve",
+      resolveError: "Could not resolve. Check the connection and try again.",
       viewRequest: "View request",
       dueLabel: "Due",
       authorLabel: "Reported by",
@@ -661,6 +669,7 @@ export const dictionaries = {
       password: "Password",
       submit: "Enter",
       error: "Invalid credentials. Please try again.",
+      locked: "Too many attempts. Wait 15 minutes or reset your password.",
       back: "Back to home",
       activated: "Account activated. Please sign in.",
       forgot: "Forgot your password?",
@@ -712,7 +721,6 @@ export const dictionaries = {
       colProgress: "Progress",
       colResident: "Resident",
       colDate: "Created",
-      backToDash: "Back to dashboard",
       openTable: "Open table",
     },
     sidebar: {
@@ -795,7 +803,6 @@ export const dictionaries = {
       bloquesTitle: "Blocks",
       bloqueCard: "work items",
       openBloque: "Open block",
-      backToBloques: "Back to blocks",
       deleteBloque: "Delete block",
       deleteBloqueConfirm: "Delete this block permanently?",
       bloqueNotEmpty: "Only empty blocks can be deleted.",
@@ -893,13 +900,16 @@ export const dictionaries = {
       dictateErrorNetwork: "Network error during dictation.",
       dictateErrorAborted: "Dictation cancelled.",
       dictateErrorOther: "Couldn't dictate. Try again.",
-      saved: "Saved. It will sync when the connection returns.",
+      savedOnDevice: "Saved on this phone. It will be sent when signal returns.",
+      savedSealed: "Recorded and sealed.",
+      savedFailed: "Could not send",
+      savedFailedHint: "Check it under “Pending synchronization” just below.",
       categories: {
         MATERIALES: "Materials", PROCESOS: "Processes", EVENTUALIDADES: "Incidents",
         OBSERVACIONES: "Observations", COSTOS: "Costs", PERSONAL: "Labor",
       },
     },
-    offlineCapture: { pending: "pending", pendingOne: "Pending sync", syncing: "Syncing…", retry: "Retry", discard: "Discard", capturado: "Captured", sellado: "Sealed", errorTitle: "Could not sync", blockedTitle: "Session expired — will sync automatically on login" },
+    offlineCapture: { pending: "pending", pendingOne: "Pending sync", syncing: "Syncing…", retry: "Retry", discard: "Discard", capturado: "Captured", sellado: "Sealed", errorTitle: "Could not sync", blockedTitle: "Session expired — will sync automatically on login", errorSessionExpired: "Session expired. Log in and it will be sent automatically.", errorForbidden: "No access to this site." },
     record: { noGps: "no GPS", immutable: "immutable", by: "by", document: "View document" },
     admin: {
       title: "Access Control & Roles",

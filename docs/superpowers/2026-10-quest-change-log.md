@@ -30,3 +30,76 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - The smoke test covers login, dashboard and sign-out only; theme switching is not exercised.
   - Screenshots can catch the `.reveal` fade-in partway.
   - Prisma CLI reads only `web/.env`. Run it as `node --env-file=.env.local node_modules/prisma/build/index.js <cmd>`, and never create `web/.env`.
+
+## Q1: Pilot blockers (fix/pilot-blockers, 2026-10-16)
+
+- **What users will notice:** emails log in regardless of case or stray spaces; after 5 failed logins the 6th shows "Demasiados intentos…" with a reset link; a password reset lifts that email's lockout; phone keyboards no longer capitalize email fields; large plano uploads can reach R2 once the build sees the S3 vars; missing or foreign obra/partida/cambio links show a branded 404; crashes show a branded error screen with a "Código".
+- **What changed in code:**
+  - `src/lib/auth/email.ts`: `normalizeEmail()`, used by login, throttle keys, reset, access requests, `createUser`, `scripts/create-admin.ts`.
+  - `src/lib/auth/credentials.ts`: exact lookup, then single case-insensitive legacy match; bcrypt runs against a cost-10 dummy hash on no-user/disabled/unactivated paths.
+  - `src/lib/auth/authorize.ts` + `errors.ts`: authorize moved out of `auth.ts`; throws `LockedOutSignin` (`code = "locked"`) when blocked. `login/page.tsx` maps it to `?error=locked`.
+  - `src/app/actions/password-reset.ts`: after commit, deletes only `<email>|*` LoginAttempt keys.
+  - `src/lib/security-headers.ts`: `connect-src` adds `new URL(S3_ENDPOINT).origin` when `S3_BUCKET` is set; throws if the endpoint is missing, invalid or not https.
+  - `src/app/{error,global-error,not-found}.tsx`, `src/app/app/{error,not-found}.tsx`, `components/{error-screen,not-found-screen}.tsx`; copy in `src/i18n/errors-copy.ts`.
+  - Obra, partida and cambio detail pages: `findFirst` + `notFound()` with the same access filter.
+  - `vitest.config.ts`: `oxc.jsx.runtime = "automatic"` (Vite 8 ignores `esbuild`) so tests can render components.
+- **Migrations:** none.
+- **Rules for future work:**
+  - Normalize every email with `normalizeEmail()`; never inline `trim().toLowerCase()`.
+  - Lockout must stay existence-independent (blocked key throws before any user lookup). Do not add messages that differ for known vs unknown emails.
+  - Prisma `startsWith`/`contains` leave `_` as a SQL wildcard: re-check matches literally before deleting.
+  - Client components must not import `dictionaries.ts` values. Copy needed on the client goes in a small plain-data module (like `errors-copy.ts`) re-exposed in `dictionaries.ts`.
+  - Error screens never render `error.message`; only `error.digest`.
+  - Detail pages use `findFirst` + `notFound()`, never `findFirstOrThrow`, so missing and cross-tenant ids look identical.
+  - Netlify: `S3_BUCKET` and `S3_ENDPOINT` need the "Builds" scope; the CSP is computed at build time.
+  - Tests importing `@/lib/auth/errors` must mock `next-auth` with `@auth/core/errors`' `CredentialsSignin` (next-auth's entry does not load under Vitest).
+- **How to verify:** `npm test` (602 tests); `npx playwright test e2e/pilot-blockers.spec.ts` against a production build; after deploy, `curl -sI https://www.raphel360.com/login | grep -i content-security-policy` must show the R2 origin in `connect-src`.
+- **Known limits:**
+  - F1 (CSP for R2) cannot be reproduced locally (no S3 in `.env.local`); unit tests plus the production curl check are its only verification.
+  - Next 15.5 streams the /app shell through `/app/loading.tsx` before `notFound()` resolves; React recovers the boundary on the client and Next reports React error #419. The page shown is the correct 404. `e2e/pilot-blockers.spec.ts` ignores only that error, only after the 404 heading is visible. Revisit when Next is upgraded.
+  - Lockout e2e runs leave `LoginAttempt` rows for `lockout-*@raphel.test` in the local DB.
+  - Error boundaries are verified by render tests only; there is no route that triggers them on purpose.
+  - `/forgot-password` and `/request-access` copy is still hardcoded Spanish.
+
+## Q2: Time zone correctness (fix/app-timezone, 2026-10-16)
+
+- **What users will notice:** reminders fire at the typed time (they fired 4 h early, and anything under 4 h ahead was rejected as past); record cards, signatures, conclusion, notifications, due dates and cambio times show Santo Domingo time with "GMT-4"; date filters include their whole "to" day; PDF reports and informes with a date-only "to" now include that evening's registros (they stopped at 19:59); informe prompts state "Horas en hora de República Dominicana (UTC-4)"; saving while offline no longer leaves the page.
+- **What changed in code:**
+  - `src/lib/time/zone.ts`: `APP_TIME_ZONE` (`NEXT_PUBLIC_APP_TIME_ZONE`, default `America/Santo_Domingo`, invalid falls back), `zonedWallTimeToUtc`, `startOfDayUtc`/`endOfDayUtc`, `parseInstantInput`, `parseDayBound`. Intl only.
+  - `src/lib/format/datetime.ts`: every format pins `APP_TIME_ZONE`; new `formatRecordTime` (offset label); future instants are absolute, never "ahora". `src/lib/format/period.ts`: `formatPeriodDate`.
+  - Composer and cambio form convert datetime-local to ISO in the browser (`src/lib/time/local-input.ts`); the input `min` is set after mount. Server parsers read offset-less values in `APP_TIME_ZONE`.
+  - `parseRangeParam` / informe `parseDate`: date-only bounds are local days. PDF "Periodo" and informe PERIODO use `formatPeriodDate`.
+  - `src/lib/offline/sync.ts`: `syncQueue` returns `{ synced }`; `OfflineProvider` refreshes only when it is > 0 (also drops the refresh on every page load). The composer no longer syncs or refreshes itself. A capture queued during a running pass is sent by that pass instead of waiting for the next page load.
+- **Migrations:** none.
+- **Accepted side effect:** the informe idempotency key changes for date-only periods, so the first identical request after deploy generates once more instead of reusing the old informe.
+- **Rules for future work:**
+  - No raw `toLocale*` in `web/src`. Use `formatRecordTime` for times that belong to the record, `formatTimestamp`/`formatDate` elsewhere.
+  - Never `new Date(userInput)` on a wall-clock value: convert in the browser to ISO, or parse with `parseInstantInput`. Day filters use `parseDayBound` (or `startOfDayUtc`/`endOfDayUtc`).
+  - Stored instants, `serverCreatedAt`, hashing and `idempotency.ts` stay UTC; PDF timestamps stay UTC with the "UTC" label.
+  - Changing `NEXT_PUBLIC_APP_TIME_ZONE` needs a rebuild (inlined in the client bundle).
+  - Call `router.refresh()` only after the server accepted work. `navigator.onLine` is not proof of a connection; a failed refresh navigates to the offline page.
+- **How to verify:** `TZ=UTC npm test` and `TZ=Asia/Tokyo npm test` (653 tests); `E2E_PROD=1 npx playwright test e2e/app-timezone.spec.ts --workers=1` against a production build (20 tests, offline included).
+- **Known limits:**
+  - Offline entries queued by older builds hold offset-less values and are read as Santo Domingo time, whatever the device zone was.
+  - On phone the pending "Resolver" button sometimes stays disabled after the action succeeds; the spec reloads to confirm the resolution.
+  - E2E registros stay in the local DB (append-only), all in "Pruebas automáticas" (bloque Sala, E2E Obra Demo), with reminders resolved.
+
+## Q3: Volver, pending Resolve, capture status (feat/volver, 2026-10-17)
+
+- **What users will notice:** every app screen except the dashboard root has Volver (never the browser's Back). It returns to the last in-app screen, or to the page's parent if the tab has no history. Partida crumbs are Obras › Obra › Bloque › Partida. Resolving several reminders in a row no longer leaves Resolver stuck. After queueing a registro the composer says it is on this phone, then "Registrado y sellado." once the server takes it; a refusal shows the error and points at the sync list.
+- **What changed in code:**
+  - `lib/nav/trail.ts` + `nav-trail.tsx` (sessionStorage `raphel:nav-trail`) + `back-button.tsx`. `reconcileOnPop` keeps the trail when only the top equals current (transient-param popstate). A push of the previous screen pops (missed popstate / remount after browser back) so Volver cannot bounce forward.
+  - Dashboard `page`/`loading` moved to `app/app/(home)/`; `operator/access-requests/loading.tsx` added. The root `/app` loading boundary is gone.
+  - `PendingList` hides a resolved row with `useOptimistic` while the action runs; failure restores the row and shows `pendingWork.resolveError`.
+  - `lib/offline/capture-status.ts`: `nextCaptureState` and `syncErrorText`. Sync stores `errorCode` `session_expired` / `forbidden` instead of Spanish text. Composer notices use theme tokens.
+- **Migrations:** none.
+- **Rules for future work:**
+  - Volver is `router.push` of the previous trail entry, never `router.back()`. Only `/app` paths; cap 50. Wrap every sessionStorage access.
+  - Client-made sync errors are codes; map them at the UI. Legacy queue items with only `error` render that text.
+  - Do not add timers, retries or forced re-renders to paper over a stuck transition.
+- **How to verify:** unit tests for trail, capture-status and sync codes. `E2E_PROD=1` `pending-resolve`, `volver`, `capture-status` (phone + desktop, es/en, night/day where the UI changed).
+- **Known limits:**
+  - Root cause of the stuck Resolver: bundled react-dom (`19.2.0-canary-0bdb9206-20250818`, Next 15.4 through 16.4) drops a ping that arrives during render (`pingSuspendedRoot` when `executionContext & 2`, [react/react#37805](https://github.com/react/react/issues/37805)). Phone production: **21/40 failed** after only narrowing the loading boundary; **0/40 failed** after optimistic Resolve. The hang can still stall `router.push` (Volver after browser back) and `<Link>` clicks; Volver e2e follows setup hrefs with `goto` for that reason. Planos → Analítica → Volver flaked 1/6 on desktop.
+  - React #419 on app 404s is gone (0/20 after the route group; Q1's swallow was removed).
+  - Server validation messages stay in the language the API sent. The 4xx fallback "No se pudo registrar." is still Spanish.
+  - E2E registros stay in "Pruebas automáticas"; their reminders are resolved.

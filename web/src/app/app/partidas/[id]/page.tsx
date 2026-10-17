@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getDict } from "@/i18n/server";
 import { LogComposer } from "@/components/log-composer";
 import { RecordCard } from "@/components/record-card";
@@ -15,6 +16,10 @@ import { pageWindow } from "@/lib/feed/paginate";
 import { SubmitButton } from "@/components/submit-button";
 import { concludePartida, reopenPartida } from "@/app/actions/lifecycle";
 import type { Role } from "@prisma/client";
+import { formatRecordTime } from "@/lib/format/datetime";
+import { BackButton } from "@/components/back-button";
+import { projectHrefWithParams } from "@/lib/project/space-links";
+import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 
 export default async function PartidaPage({
   params, searchParams,
@@ -31,7 +36,8 @@ export default async function PartidaPage({
   const isOwner = sessionUser.role === "ADMIN"; // delete is ADMIN-only
   const { lang, t } = await getDict();
   // Tenant scoping: only return the partida if its project belongs to the caller's company.
-  const partida = await prisma.partida.findFirstOrThrow({
+  // A missing id and another tenant's id both render the same 404.
+  const partida = await prisma.partida.findFirst({
     where: { id, project: projectAccessWhere(sessionUser), deletedAt: null },
     include: {
       project: {
@@ -40,9 +46,10 @@ export default async function PartidaPage({
           assignments: { select: { userId: true } },
         },
       },
-      segment: { select: { closedAt: true } },
+      segment: { select: { id: true, name: true, closedAt: true } },
     },
   });
+  if (!partida) notFound();
   // Pagination
   const total = await prisma.registro.count({ where: { partidaId: id } });
   const rawPage = parseInt(pageParam ?? "1", 10);
@@ -93,14 +100,22 @@ export default async function PartidaPage({
         cancelLabel: correctionCopy.cancelLabel,
       }
     : null;
+  // The partida's place in its bloque workspace: the Volver fallback and the
+  // bloque crumb both land there with this partida selected.
+  const bloqueHref = projectHrefWithParams(partida.projectId, {
+    tab: "code", block: partida.segment?.id ?? UNGROUPED_FILTER, p: partida.id,
+  });
+  const syncErrors = { sessionExpired: t.offlineCapture.errorSessionExpired, forbidden: t.offlineCapture.errorForbidden };
 
   return (
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
+      <BackButton fallbackHref={bloqueHref} labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <Breadcrumbs
         ariaLabel={t.breadcrumb.aria}
         items={[
           { label: t.nav.sites, href: "/app" },
           { label: partida.project.name, href: `/app/projects/${partida.projectId}` },
+          { label: partida.segment?.name ?? t.project.ungrouped, href: bloqueHref },
           { label: partida.name },
         ]}
       />
@@ -125,7 +140,7 @@ export default async function PartidaPage({
           <div>
             <div className="mono" style={{ fontSize: "0.8rem" }}>{t.lifecycle.concluded} · 100%</div>
             <div className="kicker" style={{ color: "var(--steel)" }}>
-              {t.lifecycle.concludedOn} {new Date(partida.completedAt).toLocaleString(lang === "es" ? "es-DO" : "en-US")}
+              {t.lifecycle.concludedOn} {formatRecordTime(partida.completedAt, lang)}
             </div>
           </div>
           {canEditStructure && !partida.segment?.closedAt && (
@@ -150,10 +165,10 @@ export default async function PartidaPage({
           )}
         </>
       )}
-      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
+      <LogComposer partidaId={partida.id} t={t.composer} syncErrors={syncErrors} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
       <PendingEntries
         partidaId={partida.id}
-        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, discard: t.offlineCapture.discard, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle }}
+        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, discard: t.offlineCapture.discard, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle, errors: syncErrors }}
       />
       {registros.map((r) => (
         <RecordCard
@@ -214,7 +229,7 @@ export default async function PartidaPage({
           <div key={s.id} style={{ marginBottom: 12, fontSize: "0.9rem" }}>
             <div>
               <strong>{s.signerName}</strong> · {s.signerRole} ·{" "}
-              {new Date(s.signedAt).toLocaleString(lang === "es" ? "es-DO" : "en-US")}
+              {formatRecordTime(s.signedAt, lang)}
             </div>
             {s.statement && <div className="text-steel" style={{ margin: "2px 0" }}>{s.statement}</div>}
             <div className="kicker" style={{ color: "var(--steel)" }}>

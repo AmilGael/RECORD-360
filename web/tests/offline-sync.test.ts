@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryQueue } from "@/lib/offline/queue";
-import { syncQueue } from "@/lib/offline/sync";
+import { shouldRefreshAfterSync, syncQueue } from "@/lib/offline/sync";
 import type { QueuedRegistro } from "@/lib/offline/types";
 
 const item = (id: string): QueuedRegistro => ({ id, partidaId: "p", text: "x", category: null,
@@ -32,22 +32,33 @@ describe("syncQueue", () => {
     const [it0] = await q.all();
     expect(it0.status).toBe("error");
     expect(it0.error).toBe("malo");
+    expect(it0.errorCode).toBeUndefined();
   });
-  it("marks 'blocked' (not terminal error) on 401, with a session-expired message", async () => {
+  it("marks 'blocked' (not terminal error) on 401 with the session_expired code, no text", async () => {
     await q.enqueue(item("a"));
     const un = () => Promise.resolve(new Response("", { status: 401 }));
     await syncQueue({ queue: q, fetchFn: un, isOnline: () => true });
     const [it0] = await q.all();
     expect(it0.status).toBe("blocked");
-    expect(it0.error).toMatch(/sesión/i);
+    expect(it0.errorCode).toBe("session_expired");
+    expect(it0.error).toBeUndefined();
   });
-  it("marks terminal error 'sin acceso' on 403", async () => {
+  it("marks terminal error on 403 with the forbidden code, no text", async () => {
     await q.enqueue(item("a"));
     const forbidden = () => Promise.resolve(new Response("", { status: 403 }));
     await syncQueue({ queue: q, fetchFn: forbidden, isOnline: () => true });
     const [it0] = await q.all();
     expect(it0.status).toBe("error");
-    expect(it0.error).toMatch(/sin acceso/i);
+    expect(it0.errorCode).toBe("forbidden");
+    expect(it0.error).toBeUndefined();
+  });
+  it("replaces a legacy Spanish error with the code when a blocked item fails again", async () => {
+    await q.enqueue({ ...item("a"), status: "blocked", error: "Sesión expirada." });
+    const un = () => Promise.resolve(new Response("", { status: 401 }));
+    await syncQueue({ queue: q, fetchFn: un, isOnline: () => true, retryBlocked: true });
+    const [it0] = await q.all();
+    expect(it0.errorCode).toBe("session_expired");
+    expect(it0.error).toBeUndefined();
   });
   it("keeps + counts attempts as 'pending' on 5xx (retryable, not terminal)", async () => {
     await q.enqueue(item("a"));
@@ -106,5 +117,63 @@ describe("syncQueue", () => {
     const rest = await q.all();
     expect(rest).toHaveLength(1);
     expect(rest[0].id).toBe("dead");
+  });
+});
+
+describe("syncQueue result: { synced }", () => {
+  let q: InMemoryQueue;
+  beforeEach(() => { q = new InMemoryQueue(); });
+
+  it("returns 0 when offline", async () => {
+    await q.enqueue(item("a"));
+    await expect(syncQueue({ queue: q, fetchFn: ok, isOnline: () => false })).resolves.toEqual({ synced: 0 });
+  });
+  it("returns 0 on a thrown fetch and leaves the item pending", async () => {
+    await q.enqueue(item("a"));
+    const fail = () => Promise.reject(new TypeError("Failed to fetch"));
+    await expect(syncQueue({ queue: q, fetchFn: fail, isOnline: () => true })).resolves.toEqual({ synced: 0 });
+    const [it0] = await q.all();
+    expect(it0.status).toBe("pending");
+  });
+  it("returns 0 for an empty queue and for retryable 5xx", async () => {
+    await expect(syncQueue({ queue: q, fetchFn: ok, isOnline: () => true })).resolves.toEqual({ synced: 0 });
+    await q.enqueue(item("a"));
+    const down = () => Promise.resolve(new Response("", { status: 503 }));
+    await expect(syncQueue({ queue: q, fetchFn: down, isOnline: () => true })).resolves.toEqual({ synced: 0 });
+  });
+  it("counts only items the server accepted", async () => {
+    await q.enqueue(item("a"));
+    await q.enqueue(item("b"));
+    await expect(syncQueue({ queue: q, fetchFn: ok, isOnline: () => true })).resolves.toEqual({ synced: 2 });
+    await q.enqueue(item("c"));
+    await q.enqueue(item("d"));
+    let n = 0;
+    const mixed = () => (++n === 1 ? ok() : Promise.resolve(new Response(JSON.stringify({ error: "malo" }), { status: 400 })));
+    await expect(syncQueue({ queue: q, fetchFn: mixed, isOnline: () => true })).resolves.toEqual({ synced: 1 });
+  });
+});
+
+describe("syncQueue: a capture queued while a pass is running", () => {
+  it("is sent by the running pass and counted there", async () => {
+    const q = new InMemoryQueue();
+    await q.enqueue(item("a"));
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    let calls = 0;
+    const slow = async () => { if (++calls === 1) await gate; return ok(); };
+    const first = syncQueue({ queue: q, fetchFn: slow, isOnline: () => true });
+    await q.enqueue(item("b"));
+    await expect(syncQueue({ queue: q, fetchFn: slow, isOnline: () => true })).resolves.toEqual({ synced: 0 });
+    release();
+    await expect(first).resolves.toEqual({ synced: 2 });
+    expect(await q.all()).toHaveLength(0);
+  });
+});
+
+describe("shouldRefreshAfterSync", () => {
+  it("refreshes only when the server accepted something", () => {
+    expect(shouldRefreshAfterSync({ synced: 0 })).toBe(false);
+    expect(shouldRefreshAfterSync({ synced: 1 })).toBe(true);
+    expect(shouldRefreshAfterSync({ synced: 3 })).toBe(true);
   });
 });

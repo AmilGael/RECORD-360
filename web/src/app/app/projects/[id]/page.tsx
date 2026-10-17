@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getDict } from "@/i18n/server";
 import { ProjectFileTree } from "@/components/project-file-tree";
 import { PartidaSummary } from "@/components/partida-summary";
@@ -23,6 +24,7 @@ import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel"
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BackButton } from "@/components/back-button";
 import type { DocumentKind, Role } from "@prisma/client";
 import { BloqueCards } from "@/components/bloque-cards";
 import { ProjectSearchResultsPanel } from "@/components/project-search-results";
@@ -30,6 +32,7 @@ import { MediaGalleries, isMediaTab, type MediaItem, type MediaTab } from "@/com
 import { searchProject } from "@/lib/project/search";
 import { projectHrefWithParams } from "@/lib/project/space-links";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
+import { parseDayBound } from "@/lib/time/zone";
 
 export default async function ProjectPage({
   params, searchParams,
@@ -60,7 +63,8 @@ export default async function ProjectPage({
   };
 
   // Tenant scoping: only return the project if it belongs to the caller's company.
-  const project = await prisma.project.findFirstOrThrow({
+  // A missing id and another tenant's id both render the same 404.
+  const project = await prisma.project.findFirst({
     where: { id, ...projectAccessWhere(sessionUser) },
     include: {
       company: { select: { name: true } },
@@ -85,6 +89,7 @@ export default async function ProjectPage({
       },
     },
   });
+  if (!project) notFound();
 
   const allPartidas = [...project.segments.flatMap((s) => s.partidas), ...project.partidas];
   const canEditStructure = isAdmin || project.assignments.some((a) => a.userId === sessionUser.id);
@@ -129,8 +134,6 @@ export default async function ProjectPage({
   // the type is stable. The open-CRs query is gated on inBloqueView.
   const tagsParam = ([] as string[]).concat(tags ?? []).filter(Boolean);
   const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
-  const dateOrNull = (v: unknown) => { const d = new Date(String(v ?? "")); return v && !Number.isNaN(d.getTime()) ? d : null; };
-
   const openCRs = inBloqueView
     ? await prisma.changeRequest.findMany({
         where: { projectId: id, status: "OPEN" },
@@ -147,8 +150,9 @@ export default async function ProjectPage({
     progressMin: pmin != null && pmin !== "" ? num(pmin) : null,
     progressMax: pmax != null && pmax !== "" ? num(pmax) : null,
     openCambios: cambios === "open",
-    createdFrom: dateOrNull(ffrom),
-    createdTo: dateOrNull(fto),
+    // Whole local days in APP_TIME_ZONE; "to" includes its entire day.
+    createdFrom: parseDayBound(ffrom, "start") ?? null,
+    createdTo: parseDayBound(fto, "end") ?? null,
   };
   const filteredPartidas = inBloqueView
     ? (() => {
@@ -412,8 +416,13 @@ export default async function ProjectPage({
       })
     : [];
 
+  // The overview (default tab, no bloque; search and media params included)
+  // is the obra root; every other view of the obra returns to it.
+  const isObraRoot = activeTab === "code" && !inBloqueView;
+
   return (
     <div className="reveal">
+      <BackButton fallbackHref={isObraRoot ? "/app" : `/app/projects/${project.id}`} labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <Breadcrumbs
         ariaLabel={t.breadcrumb.aria}
         items={[
@@ -538,9 +547,6 @@ export default async function ProjectPage({
         />
       ) : inBloqueView ? (
         <>
-          <Link href={`/app/projects/${project.id}`} className="kicker" style={{ textDecoration: "none", display: "inline-block", margin: "12px 0 0" }}>
-            ← {P.backToBloques}
-          </Link>
           <div className="workspace">
             <ProjectFileTree
               projectId={project.id}

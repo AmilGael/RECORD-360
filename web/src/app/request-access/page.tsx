@@ -25,7 +25,7 @@ export default function RequestAccessPage() {
         )}
         <input name="business" placeholder="Nombre de la empresa" required className="input" style={{ marginBottom: 10 }} />
         <input name="name" placeholder="Tu nombre" required className="input" style={{ marginBottom: 10 }} />
-        <input name="email" type="email" placeholder="Correo" required className="input" style={{ marginBottom: 10 }} autoComplete="email" />
+        <input name="email" type="email" placeholder="Correo" required className="input" style={{ marginBottom: 10 }} autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" />
         <input name="phone" placeholder="Teléfono" required className="input" style={{ marginBottom: 10 }} />
         <input name="website" placeholder="Sitio web o red social (opcional)" className="input" style={{ marginBottom: 10 }} />
         <textarea name="message" placeholder="Cuéntanos sobre tu empresa (opcional)" className="input" style={{ marginBottom: 18, minHeight: 72 }} />
