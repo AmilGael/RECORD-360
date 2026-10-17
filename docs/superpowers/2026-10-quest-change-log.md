@@ -134,3 +134,24 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - Remaining `#b08a2e` on health dots, supervisor avatar, and severity chips was not in this quest's files.
   - E2E leftover partidas named `Q4 concluida …` / `Q4 avance …` stay in bloque Cocina of E2E Obra Demo (append-only).
   - Playwright was run against this quest's production build on `:3002`; `:3000` may still be an older build. Carga's 300 rows are seeded and deleted in the load spec (`assertLocalDatabase`).
+
+## Q4b: Patch bundled react-dom so pings that arrive during render are kept (fix/react-ping-patch, 2026-10-17)
+
+- **What users will notice:** client navigations that used to freeze (Volver after a tab change, a `<Link>` click, `router.refresh` after an action) should complete. Optimistic Resolve on the pending queue stays; it is still the right UX even with the engine fix.
+- **What the bug is:** Next 15.5.18 ships react-dom `19.2.0-canary-0bdb9206-20250818`. In `pingSuspendedRoot`, a ping that arrives while `executionContext` has the render bit (`& 2` / `RenderContext`) was dropped: `0 === (executionContext & 2) && prepareFreshStack(root, 0)` short-circuits and never records `workInProgressRootPingedLanes`. React then never retries the suspended tree. Upstream: [react/react#37805](https://github.com/react/react/issues/37805). The same change is in the React bundled with `next@16.5.0-canary.16`.
+- **What changed in code:**
+  - `web/patches/next+15.5.18.patch` via `patch-package` 8.0.1. `postinstall`: `patch-package`. `next` stays exactly `15.5.18`.
+  - In all 10 `react-dom` / `react-dom-experimental` client, profiling, and `unstable_testing` cjs files (production, profiling, development), that `&&` becomes `? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)`. Nothing else in those files changes.
+  - `web/tests/react-ping-patch.test.ts`: every one of those files contains the fixed ternary and none contains `&& prepareFreshStack(root, 0)`.
+  - `volver.spec.ts`: notifications → partida creates a reminder in "Pruebas automáticas", resolves it, then follows the notification. E2E writes stay in that partida.
+- **How to remove it:** when upgrading Next to a version whose bundled React already keeps pings during render, delete `web/patches/next+15.5.18.patch` and the `postinstall` script. The guard test will fail and say so.
+- **Migrations:** none.
+- **Optimistic UI:** `PendingList` still hides a resolved row with `useOptimistic`. Keep it.
+- **How to verify:** `rm -rf node_modules .next && npm ci` (postinstall must print `next@15.5.18 ✔`). `npm test` (709). Production build. Stress against that build:
+  - Planos → Analítica → Volver desktop: **before 1/6 hung, after 0/40**.
+  - pending-resolve phone (optimistic still on): **before 21/40 then 0/40 with optimistic; after 0/40**.
+  - Q1 404 phone: **before 0/20 (after the Q3 route group); after 0/20**.
+  - Phone browser-back-then-Volver: **before 2/2 timed out (called a ping hang). After 13/13 timed out for a different reason** — Playwright cannot click Volver because `.workspace .viewport` (the open partida sheet) intercepts the pointer. Not a dropped ping. Desktop of that spec already passed in Q4.
+- **Known limits:**
+  - Phone: with a partida panel open, Volver is under the sheet. Follow-up, not this patch.
+  - Q4 leftover `Q4 concluida …` / `Q4 avance …` rows in Cocina are left in place; new e2e writes go only to "Pruebas automáticas".

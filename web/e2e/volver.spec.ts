@@ -3,13 +3,13 @@ import { test, expect } from "./helpers/guards";
 import { loginAs } from "./helpers/auth";
 import { setLang, setTheme, type Theme } from "./helpers/prefs";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
-import { BLOQUE, OBRA, PARTIDA, fillAndSubmit, openCuaderno, selectPartida, startsWith, type T } from "./helpers/partida";
+import { BLOQUE, OBRA, PARTIDA, fillAndSubmit, openCuaderno, openTestPartida, resolvePendingRow, sdLocalInput, sealedCard, selectPartida, startsWith, type T } from "./helpers/partida";
 
 // Q3 part A: Volver returns to the screen the user came from, inside the app,
 // and falls back to the page's parent when there is no in-app history.
 // Navigation uses real clicks after the page settles, so the trail records
-// client-side navigation the way a user produces it. Only the correction
-// test writes, and only to "Pruebas automáticas".
+// client-side navigation the way a user produces it. Writes stay in
+// "Pruebas automáticas" (correction and the notifications setup).
 
 const langs: Lang[] = ["es", "en"];
 const themes: Theme[] = ["dark", "light"];
@@ -186,12 +186,18 @@ for (const lang of langs) {
     expect(back.searchParams.get("p")).toBe(partidaId);
   });
 
-  test(`notifications → partida → Volver returns to notifications (${lang})`, async ({ page }) => {
+  test(`notifications → partida → Volver returns to notifications (${lang})`, async ({ page }, info) => {
     await prepare(page, lang);
     await loginAs(page, "resident");
+    await openTestPartida(page, t);
+    const text = `Volver desde notificaciones ${lang} ${info.project.name} ${Date.now()}`;
+    await fillAndSubmit(page, t, text, sdLocalInput(2));
+    await expect(sealedCard(page, text)).toBeVisible({ timeout: 30_000 });
+    await page.goto("/app/pending?kind=reminder");
+    await settle(page);
+    await resolvePendingRow(page, t, page.locator(".row").filter({ hasText: text }));
     await page.goto("/app/notifications");
     await settle(page);
-    // Resolving the e2e reminders notifies their author, so the resident always has one.
     await page.getByRole("link", { name: new RegExp(PARTIDA) }).first().click();
     await expect(page).toHaveURL(/\/app\/partidas\//);
     await settle(page);
