@@ -127,11 +127,6 @@ test.describe("browser in Santo Domingo", () => {
     });
 
     test(`an offline reminder syncs with the same typed time (${lang})`, async ({ page, context }, info) => {
-      // Blocked by an existing offline bug, not by time zones: after an offline
-      // save, log-composer and offline-provider call router.refresh(), Next
-      // falls back to a full browser navigation and the user lands on the
-      // offline page. Remove this line once refresh is skipped while offline.
-      test.fixme(true, "router.refresh() after an offline save navigates to the offline page");
       await prepare(page, lang);
       await loginAs(page, "resident");
       await openTestPartida(page, t);
@@ -163,6 +158,9 @@ test.describe("browser in Madrid", () => {
       if (wall(instant, "UTC").time === "13:00") expect(wall(instant, SD).time).toBe("09:00");
       const text = `TZ e2e madrid ${lang} ${info.project.name} ${Date.now()}`;
       await submitRegistro(page, t, text, `${tomorrow}T15:00`);
+      // "Saved" means queued on the device; leaving before the upload lands
+      // would only defer it to the next page load.
+      await expect(page.locator(".card").filter({ hasText: text }).filter({ hasText: "HASH" })).toContainText("GMT-4");
       await checkAndResolvePending(page, t, text, sdText(instant, lang), `madrid-${lang}`, info);
     });
   }

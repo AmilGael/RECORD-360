@@ -78,7 +78,7 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - Stored instants, `serverCreatedAt`, hashing and `idempotency.ts` stay UTC; PDF timestamps stay UTC with the "UTC" label.
   - Changing `NEXT_PUBLIC_APP_TIME_ZONE` needs a rebuild (inlined in the client bundle).
   - Call `router.refresh()` only after the server accepted work. `navigator.onLine` is not proof of a connection; a failed refresh navigates to the offline page.
-- **How to verify:** `TZ=UTC npm test` and `TZ=Asia/Tokyo npm test` (647 tests); `E2E_PROD=1 npx playwright test e2e/app-timezone.spec.ts --workers=1` against a production build.
+- **How to verify:** `TZ=UTC npm test` and `TZ=Asia/Tokyo npm test` (653 tests); `E2E_PROD=1 npx playwright test e2e/app-timezone.spec.ts --workers=1` against a production build (20 tests, offline included).
 - **Known limits:**
   - Offline entries queued by older builds hold offset-less values and are read as Santo Domingo time, whatever the device zone was.
   - On phone the pending "Resolver" button sometimes stays disabled after the action succeeds; the spec reloads to confirm the resolution.
