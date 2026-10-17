@@ -31,6 +31,7 @@ import { MediaGalleries, isMediaTab, type MediaItem, type MediaTab } from "@/com
 import { searchProject } from "@/lib/project/search";
 import { projectHrefWithParams } from "@/lib/project/space-links";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
+import { parseDayBound } from "@/lib/time/zone";
 
 export default async function ProjectPage({
   params, searchParams,
@@ -132,8 +133,6 @@ export default async function ProjectPage({
   // the type is stable. The open-CRs query is gated on inBloqueView.
   const tagsParam = ([] as string[]).concat(tags ?? []).filter(Boolean);
   const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
-  const dateOrNull = (v: unknown) => { const d = new Date(String(v ?? "")); return v && !Number.isNaN(d.getTime()) ? d : null; };
-
   const openCRs = inBloqueView
     ? await prisma.changeRequest.findMany({
         where: { projectId: id, status: "OPEN" },
@@ -150,8 +149,9 @@ export default async function ProjectPage({
     progressMin: pmin != null && pmin !== "" ? num(pmin) : null,
     progressMax: pmax != null && pmax !== "" ? num(pmax) : null,
     openCambios: cambios === "open",
-    createdFrom: dateOrNull(ffrom),
-    createdTo: dateOrNull(fto),
+    // Whole local days in APP_TIME_ZONE; "to" includes its entire day.
+    createdFrom: parseDayBound(ffrom, "start") ?? null,
+    createdTo: parseDayBound(fto, "end") ?? null,
   };
   const filteredPartidas = inBloqueView
     ? (() => {
