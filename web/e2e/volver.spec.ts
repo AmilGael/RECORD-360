@@ -161,7 +161,11 @@ for (const lang of langs) {
     expect(trail.at(-2), "previous entry must not be the partida we just left").not.toBe(partidaPath);
 
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.getByRole("button", { name: t.nav.backAria }).click();
+    const volver = page.getByRole("button", { name: t.nav.backAria });
+    await expect(volver).toBeVisible();
+    const backBox = await volver.boundingBox();
+    if (!backBox) throw new Error("Volver has no box");
+    await page.mouse.click(backBox.x + backBox.width / 2, backBox.y + backBox.height / 2);
     // router.push after a browser back can hang (react/react#37805). The
     // failure this test exists to catch is a bounce back to the partida.
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 8_000 }).not.toBe(partidaPath);

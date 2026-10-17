@@ -62,25 +62,26 @@ test("phone: last row and Volver stay above the open sheet @load", async ({ page
     await expect(page.locator(".workspace.is-sheet-open")).toBeVisible();
 
     const last = page.getByRole("button", { name: startsWith(seeded.lastName) }).first();
-    await last.evaluate((el) => {
-      const panel = document.querySelector(".workspace-panel.is-open");
-      const sheetTop = panel instanceof HTMLElement
-        ? panel.getBoundingClientRect().top
-        : window.innerHeight * 0.45;
-      const top = sheetTop > 0 && sheetTop < window.innerHeight ? sheetTop : window.innerHeight * 0.45;
-      window.scrollBy(0, el.getBoundingClientRect().bottom - top + 12);
-    });
-    await last.click();
-    await expect(page.getByRole("heading", { level: 2, name: seeded.lastName })).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect.poll(async () => page.evaluate((name) => {
       const row = [...document.querySelectorAll("button.tree-file")].find((el) => (el.textContent ?? "").includes(name));
       const panel = document.querySelector(".workspace-panel.is-open");
       if (!row || !panel) return false;
-      return row.getBoundingClientRect().bottom <= panel.getBoundingClientRect().top + 1;
+      const rb = row.getBoundingClientRect();
+      const pb = panel.getBoundingClientRect();
+      return rb.bottom <= pb.top + 1 && rb.top >= 0;
     }, seeded.lastName)).toBe(true);
+    const rowBox = await last.boundingBox();
+    if (!rowBox) throw new Error("last row has no box");
+    await page.mouse.click(rowBox.x + Math.min(40, rowBox.width / 2), rowBox.y + Math.min(12, rowBox.height / 2));
+    await expect(page.getByRole("heading", { level: 2, name: seeded.lastName })).toBeVisible();
 
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.getByRole("button", { name: dictionaries.es.nav.backAria }).click();
+    const volver = page.getByRole("button", { name: dictionaries.es.nav.backAria });
+    await expect(volver).toBeVisible();
+    const backBox = await volver.boundingBox();
+    if (!backBox) throw new Error("Volver has no box");
+    await page.mouse.click(backBox.x + backBox.width / 2, backBox.y + backBox.height / 2);
     await expect(page).not.toHaveURL(/[?&]block=/);
     await page.screenshot({ path: "e2e/artifacts/partida-panel/sheet-space-phone.png", fullPage: true });
   } finally {
