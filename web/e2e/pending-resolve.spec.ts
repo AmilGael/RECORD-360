@@ -6,11 +6,12 @@ import { fillAndSubmit, openTestPartida, resolvePendingRow, sdLocalInput, sealed
 
 // Q3 part B: on the pending queue, resolving several reminders in a row must
 // leave every remaining Resolve button usable, with no reload in between.
-// Before the optimistic list this failed about half the time on production
-// builds: the bundled react-dom drops a ping that arrives during render
-// (react/react#37805), so the action's transition never committed and the
-// clicked button stayed disabled. The registros stay in "Pruebas automáticas"
-// (append-only); their reminders are resolved by the test itself.
+// The bundled react-dom drops a ping that arrives during render
+// (react/react#37805). After scoping /app/loading.tsx to the dashboard only,
+// the hang was still 21/40 on phone production builds. Hiding the row with
+// useOptimistic (urgent) made this spec 40/40. The registros stay in
+// "Pruebas automáticas" (append-only); their reminders are resolved by the
+// test itself.
 
 test.use({ timezoneId: "America/Santo_Domingo" });
 
