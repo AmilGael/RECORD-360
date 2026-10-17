@@ -60,3 +60,25 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - Lockout e2e runs leave `LoginAttempt` rows for `lockout-*@raphel.test` in the local DB.
   - Error boundaries are verified by render tests only; there is no route that triggers them on purpose.
   - `/forgot-password` and `/request-access` copy is still hardcoded Spanish.
+
+## Q2: Time zone correctness (fix/app-timezone, 2026-10-16)
+
+- **What users will notice:** reminders fire at the typed time (they fired 4 h early, and anything under 4 h ahead was rejected as past); record cards, signatures, conclusion, notifications, due dates and cambio times show Santo Domingo time with "GMT-4"; date filters include their whole "to" day; PDF reports and informes with a date-only "to" now include that evening's registros (they stopped at 19:59); informe prompts state "Horas en hora de República Dominicana (UTC-4)".
+- **What changed in code:**
+  - `src/lib/time/zone.ts`: `APP_TIME_ZONE` (`NEXT_PUBLIC_APP_TIME_ZONE`, default `America/Santo_Domingo`, invalid falls back), `zonedWallTimeToUtc`, `startOfDayUtc`/`endOfDayUtc`, `parseInstantInput`, `parseDayBound`. Intl only.
+  - `src/lib/format/datetime.ts`: every format pins `APP_TIME_ZONE`; new `formatRecordTime` (offset label); future instants are absolute, never "ahora". `src/lib/format/period.ts`: `formatPeriodDate`.
+  - Composer and cambio form convert datetime-local to ISO in the browser (`src/lib/time/local-input.ts`); the input `min` is set after mount. Server parsers read offset-less values in `APP_TIME_ZONE`.
+  - `parseRangeParam` / informe `parseDate`: date-only bounds are local days. PDF "Periodo" and informe PERIODO use `formatPeriodDate`.
+- **Migrations:** none.
+- **Accepted side effect:** the informe idempotency key changes for date-only periods, so the first identical request after deploy generates once more instead of reusing the old informe.
+- **Rules for future work:**
+  - No raw `toLocale*` in `web/src`. Use `formatRecordTime` for times that belong to the record, `formatTimestamp`/`formatDate` elsewhere.
+  - Never `new Date(userInput)` on a wall-clock value: convert in the browser to ISO, or parse with `parseInstantInput`. Day filters use `parseDayBound` (or `startOfDayUtc`/`endOfDayUtc`).
+  - Stored instants, `serverCreatedAt`, hashing and `idempotency.ts` stay UTC; PDF timestamps stay UTC with the "UTC" label.
+  - Changing `NEXT_PUBLIC_APP_TIME_ZONE` needs a rebuild (inlined in the client bundle).
+- **How to verify:** `TZ=UTC npm test` and `TZ=Asia/Tokyo npm test` (647 tests); `E2E_PROD=1 npx playwright test e2e/app-timezone.spec.ts --workers=1` against a production build.
+- **Known limits:**
+  - The offline Playwright test is `fixme`: an existing bug sends the user to the offline page after an offline save (`router.refresh()` runs while offline). The time conversion on that path is covered by unit tests and a one-off run.
+  - Offline entries queued by older builds hold offset-less values and are read as Santo Domingo time, whatever the device zone was.
+  - On phone the pending "Resolver" button sometimes stays disabled after the action succeeds; the spec reloads to confirm the resolution.
+  - E2E registros stay in the local DB (append-only), all in "Pruebas automáticas" (bloque Sala, E2E Obra Demo), with reminders resolved.
