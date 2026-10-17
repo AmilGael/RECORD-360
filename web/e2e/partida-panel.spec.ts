@@ -3,7 +3,7 @@ import { test, expect } from "./helpers/guards";
 import { loginAs } from "./helpers/auth";
 import { setLang, setTheme, type Theme } from "./helpers/prefs";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
-import { OBRA, selectPartida, startsWith, type T } from "./helpers/partida";
+import { OBRA, createPartidaInWorkspace, selectPartida, startsWith, type T } from "./helpers/partida";
 
 const langs: Lang[] = ["es", "en"];
 const themes: Theme[] = ["dark", "light"];
@@ -96,14 +96,15 @@ for (const lang of langs) {
     await loginAs(page, "admin");
     await openBloque(page, t);
     const name = `Q4 concluida ${lang} ${Date.now()}`;
-    await page.locator(`input[placeholder="${t.project.newPartida}"]:visible`).first().fill(name);
-    await page.getByRole("button", { name: t.project.add, exact: true }).click();
+    await createPartidaInWorkspace(page, t, name);
     await selectPartida(page, name);
+    const partidaId = new URL(page.url()).searchParams.get("p");
+    const progressInput = page.locator(`#panel-progress-${partidaId}`);
     await page.getByRole("button", { name: t.lifecycle.concludePartida }).click();
     await expect(page.getByText(`${t.lifecycle.concluded} · 100%`)).toBeVisible();
-    await expect(page.locator(`#panel-progress-${new URL(page.url()).searchParams.get("p")}`)).toHaveCount(0);
+    await expect(progressInput).toHaveCount(0);
     await page.getByRole("button", { name: t.lifecycle.reopenPartida }).click();
-    await expect(page.getByLabel(t.partida.progress)).toBeVisible();
+    await expect(progressInput).toBeVisible();
   });
 
   test(`progress save updates the panel and the row (${lang})`, async ({ page }) => {
@@ -111,12 +112,12 @@ for (const lang of langs) {
     await loginAs(page, "admin");
     await openBloque(page, t);
     const name = `Q4 avance ${lang} ${Date.now()}`;
-    await page.locator(`input[placeholder="${t.project.newPartida}"]:visible`).first().fill(name);
-    await page.getByRole("button", { name: t.project.add, exact: true }).click();
+    await createPartidaInWorkspace(page, t, name);
     await selectPartida(page, name);
-    const input = page.getByLabel(t.partida.progress);
+    const partidaId = new URL(page.url()).searchParams.get("p");
+    const input = page.locator(`#panel-progress-${partidaId}`);
     await input.fill("37");
-    await page.getByRole("button", { name: t.project.save, exact: true }).click();
+    await page.locator(".workspace-panel").getByRole("button", { name: t.project.save, exact: true }).click();
     await expect(page.getByRole("button", { name: startsWith(name) })).toContainText("37%");
     await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
     await expect(input).toHaveValue("37");

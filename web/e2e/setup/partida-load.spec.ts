@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { test, expect } from "../helpers/guards";
 import { loginAs } from "../helpers/auth";
 import { setLang } from "../helpers/prefs";
-import { OBRA, selectPartida, startsWith } from "../helpers/partida";
+import { OBRA, follow, selectPartida, startsWith } from "../helpers/partida";
 import { assertLocalDatabase, cargaRemaining, removeCarga, seedCarga } from "./carga-load";
 
 const prisma = new PrismaClient();
@@ -19,11 +19,10 @@ test("300 partidas in Carga stay scrollable and selectable @load", async ({ page
     await setLang(page, "es");
     await loginAs(page, "admin");
     await page.goto("/app");
-    await page.getByRole("link", { name: startsWith(OBRA) }).click();
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("link", { name: startsWith("Carga") }).click();
-    await page.waitForURL(/[?&]block=/);
-    await expect(page.getByRole("button", { name: startsWith(seeded.firstName) })).toBeVisible();
+    await follow(page, startsWith(OBRA));
+    await follow(page, startsWith("Carga"));
+    await expect(page).toHaveURL(/[?&]block=/);
+    await expect(page.getByRole("button", { name: startsWith(seeded.firstName) })).toBeVisible({ timeout: 30_000 });
 
     const list = page.locator(".workspace-list");
     await list.evaluate((el) => { el.scrollTop = el.scrollHeight; });

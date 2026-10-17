@@ -43,6 +43,19 @@ export async function openCuaderno(page: Page, t: T, name: string): Promise<void
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
+/** Creates a partida in the current bloque workspace and reloads so the new row is on the list. */
+export async function createPartidaInWorkspace(page: Page, t: T, name: string): Promise<void> {
+  const form = page.locator(`input[placeholder="${t.project.newPartida}"]:visible`).first();
+  await expect(form).toBeVisible();
+  await form.fill(name);
+  const answered = page.waitForResponse((r) => r.request().method() === "POST" && Boolean(r.request().headers()["next-action"]));
+  await page.getByRole("button", { name: t.project.add, exact: true }).click();
+  expect((await answered).status()).toBe(200);
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("button", { name: startsWith(name) }).first()).toBeVisible();
+}
+
 /** Opens the e2e partida's Cuaderno, creating the partida in bloque Sala on first use. */
 export async function openTestPartida(page: Page, t: T): Promise<void> {
   await page.goto("/app");
