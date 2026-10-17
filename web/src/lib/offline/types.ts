@@ -14,7 +14,10 @@ export interface QueuedRegistro {
   locationLabel: string | null;     // upserted server-side on sync
   correctionOfId: string | null;    // synced (server) ids only
   replyToId: string | null;
-  reminderDueAt: string | null;     // ISO or null
+  // ISO with Z (converted from the device clock at capture) or null. Entries
+  // queued by older builds hold an offset-less datetime-local value instead;
+  // the server reads those as wall time in APP_TIME_ZONE.
+  reminderDueAt: string | null;
   clientCapturedAt: string;         // ISO, set at capture
   attachments: QueuedAttachment[];
   // "blocked": session expired (401) — needs the user to log back in; the

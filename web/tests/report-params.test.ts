@@ -6,16 +6,20 @@ function url(qs: string): URL {
 }
 
 describe("parseRangeParam", () => {
-  it("'to' with a date-only value ends at T23:59:59.999Z", () => {
+  it("'to' with a date-only value ends at the last ms of that day in Santo Domingo", () => {
     const result = parseRangeParam(url("?to=2026-02-28"), "to");
     expect(result).toBeInstanceOf(Date);
-    expect((result as Date).toISOString()).toBe("2026-02-28T23:59:59.999Z");
+    expect((result as Date).toISOString()).toBe("2026-03-01T03:59:59.999Z");
   });
 
-  it("'from' with a date-only value stays at start-of-day (T00:00:00.000Z)", () => {
+  it("'from' with a date-only value starts at local midnight in Santo Domingo", () => {
     const result = parseRangeParam(url("?from=2026-02-01"), "from");
     expect(result).toBeInstanceOf(Date);
-    expect((result as Date).toISOString()).toBe("2026-02-01T00:00:00.000Z");
+    expect((result as Date).toISOString()).toBe("2026-02-01T04:00:00.000Z");
+  });
+
+  it("returns 'invalid' for an impossible date-only value", () => {
+    expect(parseRangeParam(url("?to=2026-02-30"), "to")).toBe("invalid");
   });
 
   it("returns null when the key is absent", () => {

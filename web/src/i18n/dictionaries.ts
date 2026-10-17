@@ -2,11 +2,14 @@
 // the toggle. Server components read the locale via `@/i18n/server`; the client
 // LanguageSwitcher sets the cookie and refreshes.
 
+import { errorsCopy } from "./errors-copy";
+
 export const dictionaries = {
   es: {
     common: { app: "Raphel", blackBox: "BLACK BOX" },
     nav: { sites: "Obras", team: "Equipo", signOut: "Salir", notifications: "Notificaciones" },
     offline: { title: "Sin conexión", body: "No hay conexión a internet. Vuelve a intentarlo cuando recuperes la señal." },
+    errors: errorsCopy.es,
     signatures: { title: "Firmas", sign: "Firmar", password: "Contraseña", statement: "Declaración (opcional)", statementPlaceholder: "Doy fe del estado de esta partida…", signed: "Firma registrada.", none: "Aún no hay firmas.", sealLabel: "Sello", boundTo: "Estado del Cuaderno", emptyLedger: "Cuaderno vacío" },
     severity: { success: "Resuelto", important: "Importante", critical: "Crítica" },
     lifecycle: {
@@ -139,6 +142,7 @@ export const dictionaries = {
       password: "Contraseña",
       submit: "Entrar",
       error: "Credenciales inválidas. Inténtalo de nuevo.",
+      locked: "Demasiados intentos. Espera 15 minutos o restablece tu contraseña.",
       back: "Volver al inicio",
       activated: "Cuenta activada. Inicia sesión.",
       forgot: "¿Olvidaste tu contraseña?",
@@ -529,6 +533,7 @@ export const dictionaries = {
     common: { app: "Raphel", blackBox: "BLACK BOX" },
     nav: { sites: "Sites", team: "Team", signOut: "Sign out", notifications: "Notifications" },
     offline: { title: "You're offline", body: "No internet connection. Try again once your signal is back." },
+    errors: errorsCopy.en,
     signatures: { title: "Signatures", sign: "Sign", password: "Password", statement: "Statement (optional)", statementPlaceholder: "I attest to the state of this work item…", signed: "Signature recorded.", none: "No signatures yet.", sealLabel: "Seal", boundTo: "Ledger state", emptyLedger: "Empty ledger" },
     severity: { success: "Resolved", important: "Important", critical: "Critical" },
     lifecycle: {
@@ -661,6 +666,7 @@ export const dictionaries = {
       password: "Password",
       submit: "Enter",
       error: "Invalid credentials. Please try again.",
+      locked: "Too many attempts. Wait 15 minutes or reset your password.",
       back: "Back to home",
       activated: "Account activated. Please sign in.",
       forgot: "Forgot your password?",

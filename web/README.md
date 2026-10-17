@@ -15,9 +15,14 @@ construction site logging. This is the `web/` workspace; the product PRD lives i
 ```bash
 npm install
 cp .env.example .env.local          # then fill in the values
-npx prisma migrate dev              # creates/updates your local schema
+node --env-file=.env.local ./node_modules/.bin/prisma migrate deploy   # applies migrations to your local DB
 npm run dev                         # http://localhost:3000
 ```
+
+Use `migrate deploy`, never `migrate dev`: `migrate dev` is broken in this repo (RLS checksum
+drift) and can offer to reset the database. New migrations are hand-written SQL files.
+The Prisma CLI reads only `web/.env`, so run every Prisma command with `.env.local` loaded:
+`node --env-file=.env.local ./node_modules/.bin/prisma <command>`. Do not create `web/.env`.
 
 Without `S3_BUCKET` set, uploads are written to local disk under `.uploads/` — fine for dev,
 but those files are lost on redeploy, so production needs S3/R2.

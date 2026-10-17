@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { IndexedDbQueue } from "@/lib/offline/queue";
-import { syncQueue } from "@/lib/offline/sync";
+import { shouldRefreshAfterSync, syncQueue } from "@/lib/offline/sync";
 
 let _queue: IndexedDbQueue | null = null;
 function getQueue(): IndexedDbQueue { if (!_queue) _queue = new IndexedDbQueue(); return _queue; }
@@ -13,7 +13,10 @@ export function OfflineProvider() {
   useEffect(() => {
     const onProgress = () => window.dispatchEvent(new Event("raphl:sync-progress"));
     const kick = (retryBlocked = false) => {
-      void syncQueue({ queue: getQueue(), onChange: onProgress, retryBlocked }).then(() => { onProgress(); router.refresh(); });
+      void syncQueue({ queue: getQueue(), onChange: onProgress, retryBlocked }).then((result) => {
+        onProgress();
+        if (shouldRefreshAfterSync(result)) router.refresh();
+      });
     };
     // Mount follows a fresh page load (and therefore any login), so this is
     // the one kick where retrying "blocked" (session-expired) items makes sense.

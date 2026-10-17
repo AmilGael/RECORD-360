@@ -9,6 +9,7 @@ import { passwordResetLinkEmail } from "@/lib/email/templates";
 import { rateLimit, clientIp } from "@/lib/auth/rate-limit";
 import { createToken, verifyToken, consumeTokens, resetUrl } from "@/lib/auth/tokens";
 import { validatePassword } from "@/lib/auth/password-policy";
+import { normalizeEmail } from "@/lib/auth/email";
 import { writeAudit } from "@/lib/audit/log";
 import { TokenPurpose } from "@prisma/client";
 
@@ -32,7 +33,7 @@ export async function requestPasswordReset(
   // Honeypot: real users never fill this hidden field.
   if (String(formData.get("company_site") ?? "").trim() !== "") return NEUTRAL;
 
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = normalizeEmail(formData.get("email"));
   if (!email) return { status: "error", message: "Ingresa tu correo." };
 
   // Enumeration-safe: unknown, unactivated, or disabled accounts get the same
@@ -94,6 +95,16 @@ export async function resetPassword(
       summary: `Password reset via emailed link (${user.email})`,
     });
   });
+
+  // A user locked out of login who proves mailbox ownership gets their login
+  // lockout lifted on every IP. Only this email's "<email>|<ip>" keys: never
+  // other accounts, never the IP-scoped resetpw:/reset: limiters. Prisma's
+  // startsWith is a SQL LIKE that leaves "_" (common in emails) as a wildcard,
+  // so candidates are re-checked literally before deleting.
+  const prefix = `${normalizeEmail(user.email)}|`;
+  const candidates = await prisma.loginAttempt.findMany({ where: { key: { startsWith: prefix } }, select: { key: true } });
+  const keys = candidates.map((c) => c.key).filter((k) => k.startsWith(prefix));
+  if (keys.length) await prisma.loginAttempt.deleteMany({ where: { key: { in: keys } } });
 
   redirect("/login?reset=1");
 }
