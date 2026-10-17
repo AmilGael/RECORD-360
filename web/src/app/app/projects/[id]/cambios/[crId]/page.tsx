@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import Link from "next/link";
+import { notFound } from "next/navigation";
+import { BackButton } from "@/components/back-button";
 import { getDict } from "@/i18n/server";
-import { formatTimestamp } from "@/lib/format/datetime";
+import { formatRecordTime } from "@/lib/format/datetime";
 import { resolveChangeRequest } from "@/app/actions/cambios";
 import { SubmitButton } from "@/components/submit-button";
 import { Pin } from "@/components/icons";
@@ -18,7 +19,8 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
   const C = t.changes;
   const R = t.requests;
 
-  const cr = await prisma.changeRequest.findFirstOrThrow({
+  // A missing id and another tenant's id both render the same 404.
+  const cr = await prisma.changeRequest.findFirst({
     where: { id: crId, projectId: id, project: projectAccessWhere(u) },
     include: {
       segments: { include: { segment: { select: { name: true } } } },
@@ -26,6 +28,7 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
       attachments: true,
     },
   });
+  if (!cr) notFound();
 
   const resolverName = cr.resolvedById
     ? (await prisma.user.findFirst({ where: { id: cr.resolvedById, companyId: u.companyId }, select: { name: true } }))?.name ?? null
@@ -39,8 +42,8 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
 
   return (
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
-      <Link href={`/app/projects/${id}?tab=cambios`} className="kicker" style={{ textDecoration: "none" }}>← {R.tab}</Link>
-      <div className="cr-detail card" style={{ marginTop: 12 }}>
+      <BackButton fallbackHref={`/app/projects/${id}?tab=cambios`} labels={{ label: t.nav.back, aria: t.nav.backAria }} />
+      <div className="cr-detail card" style={{ marginTop: 2 }}>
         <div className="cr-detail-head">
           <span className="mono" style={{ fontSize: "0.7rem", letterSpacing: "0.1em" }}>{cr.code}</span>
           <span className="state-badge" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -62,10 +65,10 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
         </Field>
         <Field label={C.requester}>
           {cr.gpsLat != null && <><Pin size={11} style={{ verticalAlign: -2, marginRight: 3 }} />{`${Number(cr.gpsLat).toFixed(4)} · `}</>}
-          {formatTimestamp(cr.createdAt, lang as Lang)}
+          {formatRecordTime(cr.createdAt, lang as Lang)}
         </Field>
         {cr.reminderDueAt && (
-          <Field label={C.fieldReminder}>{formatTimestamp(cr.reminderDueAt, lang as Lang)}</Field>
+          <Field label={C.fieldReminder}>{formatRecordTime(cr.reminderDueAt, lang as Lang)}</Field>
         )}
         {cr.attachments.length > 0 && (
           <Field label={C.evidence}>
@@ -87,7 +90,7 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
           <Field label={C.resolutionNote}>{cr.resolutionNote}</Field>
         )}
         {cr.status === "INTEGRATED" && cr.seal && (
-          <Field label={C.seal}><span className="mono">{cr.seal.slice(0, 8)}…{cr.seal.slice(-4)}</span> · {cr.resolvedAt ? formatTimestamp(cr.resolvedAt, lang as Lang) : ""}</Field>
+          <Field label={C.seal}><span className="mono">{cr.seal.slice(0, 8)}…{cr.seal.slice(-4)}</span> · {cr.resolvedAt ? formatRecordTime(cr.resolvedAt, lang as Lang) : ""}</Field>
         )}
         {canResolve && (
           <div className="cr-actions">

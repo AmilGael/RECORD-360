@@ -149,6 +149,7 @@ describe("logRegistro corrections", () => {
     const res = await logRegistro(null, fd);
     expect(res.ok).toBe(true);
     const note = await prisma.registro.findFirstOrThrow({ where: { partidaId, text: "reminder note" } });
-    expect(note.reminderDueAt?.toISOString()).toBe(new Date(due).toISOString());
+    // Offset-less datetime-local is Santo Domingo wall time (UTC-4, no DST).
+    expect(note.reminderDueAt?.toISOString()).toBe(new Date(`${due}:00-04:00`).toISOString());
   });
 });

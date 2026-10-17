@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getDict } from "@/i18n/server";
-import { ProjectFileTree } from "@/components/project-file-tree";
-import { PartidaSummary } from "@/components/partida-summary";
+import { PartidaWorkspace } from "@/components/partida-workspace";
 import { CambiosList } from "@/components/cambios-list";
 import { PlanosTab } from "@/components/planos-tab";
 import { AnaliticaTab } from "@/components/analitica-tab";
@@ -23,6 +23,7 @@ import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel"
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BackButton } from "@/components/back-button";
 import type { DocumentKind, Role } from "@prisma/client";
 import { BloqueCards } from "@/components/bloque-cards";
 import { ProjectSearchResultsPanel } from "@/components/project-search-results";
@@ -30,6 +31,8 @@ import { MediaGalleries, isMediaTab, type MediaItem, type MediaTab } from "@/com
 import { searchProject } from "@/lib/project/search";
 import { projectHrefWithParams } from "@/lib/project/space-links";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
+import { parseDayBound } from "@/lib/time/zone";
+import { getPartidaPreview, lastActivityByPartidaIds } from "@/lib/partida/preview";
 
 export default async function ProjectPage({
   params, searchParams,
@@ -60,7 +63,8 @@ export default async function ProjectPage({
   };
 
   // Tenant scoping: only return the project if it belongs to the caller's company.
-  const project = await prisma.project.findFirstOrThrow({
+  // A missing id and another tenant's id both render the same 404.
+  const project = await prisma.project.findFirst({
     where: { id, ...projectAccessWhere(sessionUser) },
     include: {
       company: { select: { name: true } },
@@ -85,6 +89,7 @@ export default async function ProjectPage({
       },
     },
   });
+  if (!project) notFound();
 
   const allPartidas = [...project.segments.flatMap((s) => s.partidas), ...project.partidas];
   const canEditStructure = isAdmin || project.assignments.some((a) => a.userId === sessionUser.id);
@@ -129,8 +134,6 @@ export default async function ProjectPage({
   // the type is stable. The open-CRs query is gated on inBloqueView.
   const tagsParam = ([] as string[]).concat(tags ?? []).filter(Boolean);
   const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
-  const dateOrNull = (v: unknown) => { const d = new Date(String(v ?? "")); return v && !Number.isNaN(d.getTime()) ? d : null; };
-
   const openCRs = inBloqueView
     ? await prisma.changeRequest.findMany({
         where: { projectId: id, status: "OPEN" },
@@ -147,8 +150,9 @@ export default async function ProjectPage({
     progressMin: pmin != null && pmin !== "" ? num(pmin) : null,
     progressMax: pmax != null && pmax !== "" ? num(pmax) : null,
     openCambios: cambios === "open",
-    createdFrom: dateOrNull(ffrom),
-    createdTo: dateOrNull(fto),
+    // Whole local days in APP_TIME_ZONE; "to" includes its entire day.
+    createdFrom: parseDayBound(ffrom, "start") ?? null,
+    createdTo: parseDayBound(fto, "end") ?? null,
   };
   const filteredPartidas = inBloqueView
     ? (() => {
@@ -174,6 +178,35 @@ export default async function ProjectPage({
         });
       })()
     : { segments: [], ungrouped: [], total: 0, hasFilters: false };
+
+  const visiblePartidaIds = inBloqueView
+    ? [
+      ...filteredPartidas.segments.flatMap((s) => s.partidas.map((p) => p.id)),
+      ...filteredPartidas.ungrouped.map((p) => p.id),
+    ]
+    : [];
+  const lastActivity = inBloqueView ? await lastActivityByPartidaIds(visiblePartidaIds) : new Map<string, string>();
+  const toTreeRow = (p: { id: string; name: string; progressPct: number; segmentId?: string | null; completedAt: Date | null; tags: { tag: { name: string } }[] }) => ({
+    id: p.id,
+    name: p.name,
+    progressPct: p.progressPct,
+    segmentId: p.segmentId,
+    completedAt: p.completedAt ? p.completedAt.toISOString() : null,
+    tags: p.tags,
+    lastActivityAt: lastActivity.get(p.id) ?? null,
+  });
+  const treeSegments = filteredPartidas.segments.map((s) => {
+    const source = project.segments.find((g) => g.id === s.id);
+    return {
+      id: s.id,
+      name: s.name,
+      closedAt: source?.closedAt ? source.closedAt.toISOString() : null,
+      partidas: s.partidas.map(toTreeRow),
+    };
+  });
+  const treeUngrouped = filteredPartidas.ungrouped.map(toTreeRow);
+  const loadedPreview = inBloqueView && selectedId ? await getPartidaPreview(sessionUser, selectedId) : null;
+  const initialPreview = loadedPreview && loadedPreview.projectId === id ? loadedPreview : null;
 
   const tagCounts = new Map<string, number>();
   if (inBloqueView) {
@@ -374,24 +407,6 @@ export default async function ProjectPage({
     ? Boolean((await prisma.company.findUnique({ where: { id: companyId }, select: { sealKey: true } }))?.sealKey)
     : true;
 
-  const selected = selectedId
-    ? await prisma.partida.findFirst({
-        where: { id: selectedId, projectId: id, deletedAt: null },
-        include: {
-          registros: {
-            orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
-            take: 3,
-            include: { attachments: true, location: true },
-          },
-        },
-      })
-    : null;
-  // Registro.authorId has no User relation; resolve the latest author's name directly.
-  const latestAuthorId = selected?.registros[0]?.authorId ?? null;
-  const authorName = latestAuthorId
-    ? (await prisma.user.findFirst({ where: { id: latestAuthorId, companyId }, select: { name: true } }))?.name ?? null
-    : null;
-
   const deletedPartidas = activeTab === "code" && inBloqueView && isOwner
     ? await prisma.partida.findMany({
         where: { projectId: id, deletedAt: { not: null } },
@@ -412,8 +427,13 @@ export default async function ProjectPage({
       })
     : [];
 
+  // The overview (default tab, no bloque; search and media params included)
+  // is the obra root; every other view of the obra returns to it.
+  const isObraRoot = activeTab === "code" && !inBloqueView;
+
   return (
     <div className="reveal">
+      <BackButton fallbackHref={isObraRoot ? "/app" : `/app/projects/${project.id}`} labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <Breadcrumbs
         ariaLabel={t.breadcrumb.aria}
         items={[
@@ -538,49 +558,46 @@ export default async function ProjectPage({
         />
       ) : inBloqueView ? (
         <>
-          <Link href={`/app/projects/${project.id}`} className="kicker" style={{ textDecoration: "none", display: "inline-block", margin: "12px 0 0" }}>
-            ← {P.backToBloques}
-          </Link>
-          <div className="workspace">
-            <ProjectFileTree
-              projectId={project.id}
-              segments={filteredPartidas.segments}
-              ungrouped={filteredPartidas.ungrouped}
-              segmentOptions={segmentOptions}
-              selectedId={selectedId}
-              isAdmin={canEditStructure}
-              filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters }}
-              facets={{
-                tagCounts: [...tagCounts.entries()],
-                selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios, createdFrom: String(ffrom ?? ""), createdTo: String(fto ?? "") },
-                hasActive: hasActiveFacets,
-              }}
-              activeBlock={activeSegment ? { id: activeSegment.id, name: activeSegment.name, closedAt: activeSegment.closedAt } : null}
-              t={{
-                ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add,
-                segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment,
-                addSegment: P.addSegment, rename: P.rename, save: P.save,
-                move: P.move, moveTo: P.moveTo, searchPartidas: P.searchPartidas,
-                allBlocks: P.allBlocks, filter: P.filter, clear: P.clear,
-                noResults: P.noResults,
-                facetTags: P.facetTags, facetProgress: P.facetProgress,
-                facetProgressMin: P.facetProgressMin, facetProgressMax: P.facetProgressMax,
-                facetOpenCambios: P.facetOpenCambios, facetCreated: P.facetCreated,
-                blockClosedNoCreate: t.lifecycle.blockClosedNoCreate,
-              }}
-            />
-            {selected ? (
-              <PartidaSummary
-                partida={selected}
-                authorName={authorName}
-                lang={lang}
-                canEdit={canEditStructure}
-                t={{ noEntries: P.summaryNoEntries, lastUpdate: P.lastUpdate, openLog: P.openLog, progress: t.partida.progress, save: P.save }}
-              />
-            ) : (
-              <div className="viewport"><div className="empty">{P.summaryEmpty}</div></div>
-            )}
-          </div>
+          <PartidaWorkspace
+            projectId={project.id}
+            segments={treeSegments}
+            ungrouped={treeUngrouped}
+            segmentOptions={segmentOptions}
+            selectedId={initialPreview ? selectedId : undefined}
+            initialPreview={initialPreview}
+            canEdit={canEditStructure}
+            filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters }}
+            facets={{
+              tagCounts: [...tagCounts.entries()],
+              selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios, createdFrom: String(ffrom ?? ""), createdTo: String(fto ?? "") },
+              hasActive: hasActiveFacets,
+            }}
+            activeBlock={activeSegment ? { id: activeSegment.id, name: activeSegment.name, closedAt: activeSegment.closedAt } : null}
+            lang={lang}
+            treeT={{
+              ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add,
+              segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment,
+              addSegment: P.addSegment, rename: P.rename, save: P.save,
+              move: P.move, moveTo: P.moveTo, searchPartidas: P.searchPartidas,
+              allBlocks: P.allBlocks, filter: P.filter, clear: P.clear,
+              noResults: P.noResults,
+              facetTags: P.facetTags, facetProgress: P.facetProgress,
+              facetProgressMin: P.facetProgressMin, facetProgressMax: P.facetProgressMax,
+              facetOpenCambios: P.facetOpenCambios, facetCreated: P.facetCreated,
+              blockClosedNoCreate: t.lifecycle.blockClosedNoCreate,
+              concluded: t.lifecycle.concluded, aging7: P.aging7, aging14: P.aging14, noActivity: P.noActivity,
+            }}
+            panelT={{
+              empty: P.summaryEmpty, noEntries: P.summaryNoEntries,
+              newRegistro: P.newRegistro, openCuaderno: P.openCuaderno, editPartida: P.editPartida,
+              panelOffline: P.panelOffline, panelClose: P.panelClose,
+              progress: t.partida.progress, save: P.save,
+              conclude: t.lifecycle.concludePartida, reopen: t.lifecycle.reopenPartida,
+              concluded: t.lifecycle.concluded, concludedOn: t.lifecycle.concludedOn,
+              rename: P.rename, move: P.move, moveTo: P.moveTo, ungrouped: P.ungrouped,
+              tagsLabel: P.tagsLabel,
+            }}
+          />
           <BloqueSpacesPanel
             projectId={project.id}
             segments={segmentSummaries}

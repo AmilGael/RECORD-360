@@ -36,6 +36,8 @@ outline, concluded = chalk plane, danger = rust band).
   --state-merged-bg: rgba(77, 90, 138, 0.12);
   --state-blocked: #a8432f;
   --state-blocked-bg: rgba(168, 67, 47, 0.10);
+  --brass: #8a6c1a;
+  --brass-bg: rgba(176, 138, 46, 0.14);
   --line: rgba(30, 35, 40, 0.16);
   --line-strong: rgba(30, 35, 40, 0.32);
   --grid: rgba(30, 35, 40, 0.045);
@@ -65,6 +67,8 @@ body[data-theme="dark"] {
   --state-merged-bg: rgba(141, 154, 196, 0.14);
   --state-blocked: #d0674d;
   --state-blocked-bg: rgba(208, 103, 77, 0.14);
+  --brass: #b08a2e;
+  --brass-bg: rgba(176, 138, 46, 0.16);
   --line: rgba(242, 241, 236, 0.14);
   --line-strong: rgba(242, 241, 236, 0.30);
   --grid: rgba(242, 241, 236, 0.035);
@@ -160,6 +164,9 @@ body {
 .btn-accent:hover { background: var(--accent-deep); transform: translateY(-1px); }
 .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
 .btn-ghost:hover { border-color: var(--ink); transform: translateY(-1px); }
+/* "Volver": compact on desktop, sits above the breadcrumbs; the coarse-pointer
+   rule below still lifts it to 44px. */
+.btn-back { padding: 0.4rem 0.8rem; font-size: 0.74rem; margin-bottom: 10px; }
 
 /* File pickers: the app renders native <input type="file"> in 8 places (covers,
    seal, planos, evidencia, firma/foto, adjuntos). Styling the native control
@@ -200,7 +207,8 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 /* 44px minimum touch targets on touch devices only — desktop density unchanged. */
 @media (pointer: coarse) {
   .btn, .tab, .sidebar-link, .sidebar-icon-button, .sidebar-signout,
-  .space-link, .space-block, .input, select.input, .drawer-toggle {
+  .space-link, .space-block, .input, select.input, .drawer-toggle,
+  .tree-file, .panel-close {
     min-height: 44px;
   }
   .tab { align-items: center; }
@@ -441,6 +449,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 }
 .state-badge.is-active { color: var(--state-active); background: var(--state-active-bg); border: 1px solid rgba(47,125,91,0.35); }
 .state-badge.is-archived { color: var(--steel); background: var(--paper-2); border: 1px solid var(--line-strong); }
+.state-badge.is-concluded { color: var(--ink); background: var(--paper-3); border: 1px solid var(--line-strong); }
 
 /* Segmented view switch scoped INSIDE a workspace panel (reminders
    open/resolved). Deliberately not .tabs — that is the page-level tab bar, and
@@ -478,10 +487,61 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   .tab { white-space: nowrap; flex: 0 0 auto; }
 }
 
-.workspace { display: grid; grid-template-columns: 240px 1fr; gap: 0; border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius); min-height: 360px; }
-@media (max-width: 760px) { .workspace { grid-template-columns: 1fr; } }
-.tree { border-right: 1px solid var(--line); padding: 10px 8px; }
-@media (max-width: 760px) { .tree { border-right: none; border-bottom: 1px solid var(--line); } }
+.workspace {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius);
+  min-height: min(70dvh, 640px);
+}
+.workspace-list {
+  min-width: 0; max-height: min(70dvh, 640px); overflow: auto;
+  overscroll-behavior: contain; border-right: 1px solid var(--line);
+}
+.workspace-list .tree-filter {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--paper); margin-bottom: 0;
+}
+.workspace-panel {
+  min-width: 0; max-height: min(70dvh, 640px); overflow: auto;
+  overscroll-behavior: contain; position: sticky; top: 0; align-self: start;
+  background: var(--paper-2);
+}
+.panel-grab { display: none; }
+.panel-close {
+  appearance: none; background: transparent; color: var(--ink);
+  border: 1px solid var(--line-strong); font-family: var(--font-mono), monospace;
+  font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.4rem 0.7rem; cursor: pointer;
+}
+.panel-close:hover { background: var(--paper-3); }
+@media (max-width: 899px) {
+  .workspace { grid-template-columns: 1fr; min-height: 0; }
+  .workspace-list { max-height: none; border-right: none; }
+  /* Only while the sheet is open: the page can scroll every row and control
+     fully above it. Desktop is a two-column grid and never takes this padding. */
+  .workspace.is-sheet-open { padding-bottom: calc(55dvh + var(--safe-b)); }
+  .workspace.is-sheet-open .tree-row,
+  .workspace.is-sheet-open .tree-file,
+  .workspace.is-sheet-open .tree-filter {
+    scroll-margin-bottom: calc(55dvh + var(--safe-b));
+  }
+  html.sheet-open .btn-back { scroll-margin-bottom: calc(55dvh + var(--safe-b)); }
+  .workspace-panel {
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 35;
+    height: 55dvh; max-height: 55dvh;
+    transform: translateY(100%); transition: transform 0.18s var(--ease);
+    box-shadow: var(--shadow-card); border-top: 1px solid var(--line-strong);
+    padding-bottom: var(--safe-b);
+  }
+  .workspace-panel.is-open { transform: translateY(0); }
+  .panel-grab {
+    display: block; width: 40px; height: 4px; margin: 8px auto 0;
+    background: var(--line-strong);
+  }
+}
+@media (max-width: 899px) and (prefers-reduced-motion: reduce) {
+  .workspace-panel { transition: none; }
+}
+.tree { padding: 10px 8px; }
 .tree-filter { display: flex; flex-direction: column; gap: 7px; padding: 2px 8px 10px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
 .tree-filter .search-input { min-height: 34px; font-size: 0.78rem; }
 .tree-filter .input { min-height: 34px; padding: 0.42rem 0.55rem; font-size: 0.76rem; }
@@ -489,16 +549,42 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .tree-folder { font-family: var(--font-mono), monospace; font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.03em; padding: 8px 8px 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tree-folder-name { min-width: 0; flex: 1 1 auto; display: inline-flex; align-items: center; gap: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tree-folder .pct { color: var(--steel); font-size: 0.62rem; margin-left: 4px; }
-.tree-row { border-radius: var(--radius-sm); transition: background 0.15s var(--ease), box-shadow 0.15s var(--ease); }
+.tree-row {
+  position: relative; overflow: hidden; padding-bottom: 4px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
 .tree-row:hover { background: var(--paper-2); }
 .tree-row.is-active { background: var(--paper-3); box-shadow: inset 2px 0 0 var(--accent); }
-.tree-file { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 22px; color: var(--ink); text-decoration: none; font-size: 0.9rem; min-width: 0; }
+.tree-row.is-aging-14 { box-shadow: inset 0 3px 0 var(--accent); }
+.tree-row.is-active.is-aging-14 { box-shadow: inset 2px 0 0 var(--accent), inset 0 3px 0 var(--accent); }
+.tree-row-track {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.tree-row-band { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--accent); }
+.tree-row-band.is-done { background: var(--state-active); }
+.tree-file {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 6px 8px 6px 22px; color: var(--ink); text-decoration: none;
+  font-size: 0.9rem; min-width: 0; background: none; border: none;
+  text-align: left; cursor: pointer; font-family: inherit;
+}
 .tree-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The selected partida drops the ellipsis and wraps: long names are the map of
    the obra, and the row you are standing on should never hide its full name
    (architect feedback). Unselected rows keep one line + a title tooltip. */
 .tree-row.is-active .tree-file-name { white-space: normal; overflow-wrap: anywhere; }
 .tree-file .pct { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); flex-shrink: 0; }
+.tree-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 8px 6px 22px; }
+.tree-activity { font-family: var(--font-mono), monospace; font-size: 0.62rem; color: var(--steel); letter-spacing: 0.02em; }
+.tree-activity.is-aging-7 { color: var(--brass); }
+.aging-mark {
+  font-family: var(--font-mono), monospace; font-size: 0.58rem; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 1px 5px; border: 1px solid currentColor;
+}
+.aging-mark.is-7 { color: var(--brass); background: var(--brass-bg); }
+.aging-mark.is-14 { color: var(--accent-deep); background: color-mix(in srgb, var(--accent) 12%, transparent); border-color: var(--accent); }
 .tree-row-actions { display: flex; gap: 8px; padding: 0 8px 7px 22px; flex-wrap: wrap; }
 .tree-actions { margin-top: 12px; padding: 10px 8px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 .inline-edit { display: inline-flex; align-items: center; color: var(--steel); font-family: var(--font-mono), monospace; font-size: 0.68rem; }
@@ -532,6 +618,19 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .viewport { padding: 18px 20px; }
 .viewport .telemetry { font-family: var(--font-mono), monospace; font-size: 0.72rem; color: var(--steel); letter-spacing: 0.02em; }
 .viewport .empty { color: var(--steel); display: flex; align-items: center; min-height: 200px; }
+.panel-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.panel-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.panel-entry {
+  display: flex; gap: 10px; border: 1px solid var(--line);
+  padding: 9px 11px; margin-bottom: 8px; background: var(--paper);
+}
+.panel-thumb { width: 48px; height: 48px; object-fit: cover; flex-shrink: 0; }
+.panel-progress-track {
+  height: 6px; background: color-mix(in srgb, var(--ink) 12%, transparent);
+  margin: 10px 0 14px; position: relative; overflow: hidden;
+}
+.panel-progress-band { display: block; height: 100%; background: var(--accent); }
+.panel-progress-band.is-done { background: var(--state-active); }
 
 /* ---------- dashboard layout ---------- */
 .dash-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start; }
@@ -1006,6 +1105,16 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
   animation: working 1.4s ease-in-out infinite;
 }
+
+/* ---------- capture notice (composer: on this phone → sealed / failed) ---------- */
+.capture-notice {
+  border: 1px solid var(--line-strong); border-radius: 0;
+  padding: 8px 11px; margin: 0 0 10px; font-size: 0.84rem;
+}
+.capture-notice.is-on-device { border-style: dashed; color: var(--ink-soft); }
+.capture-notice.is-sealed { border-color: var(--state-active); background: var(--state-active-bg); color: var(--state-active); }
+.capture-notice.is-failed { border-color: var(--state-blocked); background: var(--state-blocked-bg); color: var(--state-blocked); }
+.capture-notice-hint { display: block; margin-top: 3px; font-size: 0.76rem; }
 
 /* ---------- navigation skeletons ---------- */
 .skel { display: flex; flex-direction: column; gap: 14px; }

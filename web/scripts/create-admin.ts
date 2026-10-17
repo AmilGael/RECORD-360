@@ -12,6 +12,7 @@
  */
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { normalizeEmail } from "../src/lib/auth/email";
 
 const prisma = new PrismaClient();
 
@@ -22,7 +23,7 @@ function required(name: string): string {
 }
 
 async function main() {
-  const email = required("ADMIN_EMAIL").toLowerCase();
+  const email = normalizeEmail(required("ADMIN_EMAIL"));
   const roleRaw = process.env.ADMIN_ROLE?.trim() || "ADMIN";
   if (!Object.values(Role).includes(roleRaw as Role)) {
     console.error(`Invalid ADMIN_ROLE: ${roleRaw}. Use one of ${Object.values(Role).join(", ")}.`);

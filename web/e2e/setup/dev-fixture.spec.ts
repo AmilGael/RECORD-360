@@ -64,11 +64,11 @@ test("creates the E2E Obra Demo fixture @setup", async ({ page }, testInfo) => {
     const partidaForm = page.getByPlaceholder(t.project.newPartida);
     await expect(partidaForm).toBeVisible();
     for (const partida of partidas) {
-      const partidaLink = page.getByRole("link", { name: startsWith(partida) });
-      if ((await partidaLink.count()) > 0) continue;
+      const partidaRow = page.getByRole("button", { name: startsWith(partida) });
+      if ((await partidaRow.count()) > 0) continue;
       await partidaForm.fill(partida);
       await page.getByRole("button", { name: t.project.add, exact: true }).click();
-      await expect(partidaLink).toBeVisible();
+      await expect(partidaRow).toBeVisible();
       created.push(`partida ${bloque} / ${partida}`);
     }
   }

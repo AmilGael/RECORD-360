@@ -135,6 +135,15 @@ export function MoveRight({ size = 14, className, style }: IconProps) {
   );
 }
 
+export function ArrowLeft({ size = 14, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M20 12H5" />
+      <path d="m11 6-6 6 6 6" />
+    </svg>
+  );
+}
+
 export function Mic({ size = 14, className, style }: IconProps) {
   return (
     <svg {...base(size)} className={className} style={style}>

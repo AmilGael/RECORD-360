@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { parseProgressPct, parseLocation, parseReminderDueAt, parseOfflineReminderDueAt } from "@/lib/registro/validate";
+import { zonedTimestamp } from "@/lib/time/zone";
+
+const sdWall = (d: Date) => zonedTimestamp(d).replace(" ", "T");
+const floorToMinute = (d: Date) => new Date(Math.floor(d.getTime() / 60_000) * 60_000);
+function madridOffset(d: Date): string {
+  const name = new Intl.DateTimeFormat("en", { timeZone: "Europe/Madrid", timeZoneName: "longOffset" })
+    .formatToParts(d).find((p) => p.type === "timeZoneName")!.value; // "GMT+02:00"
+  return name === "GMT" ? "+00:00" : name.slice(3);
+}
 
 describe("parseProgressPct", () => {
   it("returns null for empty / missing input", () => {
@@ -59,6 +68,22 @@ describe("parseReminderDueAt (online path — stays strict)", () => {
     const iso = new Date(Date.now() + 60 * 60_000).toISOString();
     expect(parseReminderDueAt(iso)?.toISOString()).toBe(iso);
   });
+  it("keeps an explicit offset as given", () => {
+    const target = new Date(Date.now() + 2 * 3_600_000);
+    const withOffset = `${zonedTimestamp(target, "Europe/Madrid").replace(" ", "T")}:00${madridOffset(target)}`;
+    expect(parseReminderDueAt(withOffset)?.toISOString()).toBe(floorToMinute(target).toISOString());
+  });
+  it("reads an offset-less 'now + 2 h' as Santo Domingo wall time and stores that instant", () => {
+    const target = new Date(Date.now() + 2 * 3_600_000);
+    const wall = sdWall(target);
+    const stored = parseReminderDueAt(wall);
+    expect(stored?.toISOString()).toBe(floorToMinute(target).toISOString());
+    // Santo Domingo is UTC-4 all year: the stored instant is the wall time + 4 h.
+    expect(stored?.toISOString()).toBe(new Date(`${wall}:00-04:00`).toISOString());
+  });
+  it("still rejects an offset-less wall time that is past in Santo Domingo", () => {
+    expect(() => parseReminderDueAt(sdWall(new Date(Date.now() - 5 * 60_000)))).toThrow(/futura/i);
+  });
 });
 
 describe("parseOfflineReminderDueAt (R3 WS10 §5 offline policy)", () => {
@@ -87,5 +112,16 @@ describe("parseOfflineReminderDueAt (R3 WS10 §5 offline policy)", () => {
   });
   it("throws on a malformed date string", () => {
     expect(() => parseOfflineReminderDueAt("not-a-date", new Date())).toThrow(/inválido/i);
+  });
+  it("reads an offset-less value left in an old queue as Santo Domingo wall time", () => {
+    const capturedAt = new Date("2026-01-01T14:00:00.000Z"); // 10:00 in Santo Domingo
+    // Typed 11:00 on the device; queued without an offset by an older build.
+    expect(parseOfflineReminderDueAt("2026-01-01T11:00", capturedAt)?.toISOString()).toBe("2026-01-01T15:00:00.000Z");
+  });
+  it("applies the capture-time rule to offset-less values too", () => {
+    const capturedAt = new Date("2026-01-01T14:00:00.000Z"); // 10:00 in Santo Domingo
+    // 09:59:30 local is inside the 60 s skew; 09:00 local was already past at capture.
+    expect(parseOfflineReminderDueAt("2026-01-01T09:59:30", capturedAt)?.toISOString()).toBe("2026-01-01T13:59:30.000Z");
+    expect(() => parseOfflineReminderDueAt("2026-01-01T09:00", capturedAt)).toThrow(/futura/i);
   });
 });
