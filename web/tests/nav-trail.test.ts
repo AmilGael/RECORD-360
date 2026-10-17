@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  TRAIL_CAP, isTrailPath, nextTrail, normalizeEntry, parseTrail, popTo, previousEntry,
-  pushEntry, reconcileOnPop, type Trail, type TrailChange,
+  TRAIL_CAP, isTrailPath, nextTrail, normalizeEntry, onlyPChanged, parseTrail, popTo, previousEntry,
+  pushEntry, reconcileOnPop, replaceTop, type Trail, type TrailChange,
 } from "@/lib/nav/trail";
 
 const OBRA = "/app/projects/obra1";
@@ -81,6 +81,25 @@ describe("reconcileOnPop", () => {
     expect(reconcileOnPop(["/app", OBRA], PARTIDA)).toEqual([PARTIDA]);
     expect(reconcileOnPop([], PARTIDA)).toEqual([PARTIDA]);
   });
+  it("keeps the trail when only p changed (panel close / swap)", () => {
+    expect(reconcileOnPop(["/app", OBRA, COCINA_P], COCINA)).toEqual(["/app", OBRA, COCINA]);
+    expect(reconcileOnPop(["/app", OBRA, COCINA_P], `${COCINA}&p=par2`)).toEqual(["/app", OBRA, `${COCINA}&p=par2`]);
+  });
+});
+
+describe("replaceTop and onlyPChanged", () => {
+  it("replaceTop rewrites the last entry and seeds an empty trail", () => {
+    expect(replaceTop(["/app", COCINA], COCINA_P)).toEqual(["/app", COCINA_P]);
+    expect(replaceTop([], COCINA_P)).toEqual([COCINA_P]);
+    expect(replaceTop(["/app", COCINA_P], COCINA_P)).toEqual(["/app", COCINA_P]);
+  });
+  it("onlyPChanged is true when the same path differs only by p", () => {
+    expect(onlyPChanged(COCINA, COCINA_P)).toBe(true);
+    expect(onlyPChanged(COCINA_P, `${COCINA}&p=par2`)).toBe(true);
+    expect(onlyPChanged(COCINA_P, COCINA)).toBe(true);
+    expect(onlyPChanged(COCINA, `${OBRA}?tab=planos`)).toBe(false);
+    expect(onlyPChanged(COCINA, COCINA)).toBe(false);
+  });
 });
 
 describe("nextTrail", () => {
@@ -92,6 +111,13 @@ describe("nextTrail", () => {
   });
   it("a push of the previous screen pops (missed popstate / remount after back)", () => {
     expect(nextTrail(["/app", OBRA, PARTIDA], OBRA, { kind: "push" })).toEqual(["/app", OBRA]);
+  });
+  it("a change of only p replaces the top instead of pushing", () => {
+    expect(nextTrail(["/app", OBRA, COCINA], COCINA_P, { kind: "push" })).toEqual(["/app", OBRA, COCINA_P]);
+    expect(nextTrail(["/app", OBRA, COCINA_P], `${COCINA}&p=par2`, { kind: "push" })).toEqual(["/app", OBRA, `${COCINA}&p=par2`]);
+  });
+  it("changing block or tab still pushes", () => {
+    expect(nextTrail(["/app", OBRA], `${OBRA}?tab=planos`, { kind: "push" })).toEqual(["/app", OBRA, `${OBRA}?tab=planos`]);
   });
 });
 
@@ -110,7 +136,7 @@ describe("navigation sequences (quest verification list)", () => {
     const t = replay([["/app"], [OBRA], [COCINA], [COCINA_P], [PARTIDA]]);
     const back = volver(t);
     expect(back.target).toBe(COCINA_P);
-    expect(back.trail).toEqual(["/app", OBRA, COCINA, COCINA_P]);
+    expect(back.trail).toEqual(["/app", OBRA, COCINA_P]);
   });
 
   it("partida opened by direct URL has no previous entry, so the server fallback is used", () => {

@@ -31,6 +31,32 @@ function pathOf(entry: string): string {
   return new URL(entry, "http://trail.invalid").pathname;
 }
 
+/** Search string of an entry with `p` removed, so two URLs that differ only by selection compare equal. */
+function searchWithoutP(entry: string): { pathname: string; rest: string } {
+  const u = new URL(entry, "http://trail.invalid");
+  u.searchParams.delete("p");
+  return { pathname: u.pathname, rest: u.searchParams.toString() };
+}
+
+/** True when `a` and `b` are the same /app path and differ only in the `p` param (including add/remove). */
+export function onlyPChanged(a: string, b: string): boolean {
+  const left = normalizeEntry(a);
+  const right = normalizeEntry(b);
+  if (left === right) return false;
+  const A = searchWithoutP(left);
+  const B = searchWithoutP(right);
+  return A.pathname === B.pathname && A.rest === B.rest;
+}
+
+/** Replaces the top entry (or seeds an empty trail). Used when only the selected partida changes. */
+export function replaceTop(trail: Trail, url: string): Trail {
+  const entry = normalizeEntry(url);
+  if (!isTrailPath(pathOf(entry))) return trail;
+  if (trail.length === 0) return [entry];
+  if (trail[trail.length - 1] === entry) return trail;
+  return [...trail.slice(0, -1), entry];
+}
+
 /** Records a forward navigation. Ignores non-/app URLs and repeats of the current top. */
 export function pushEntry(trail: Trail, url: string): Trail {
   const entry = normalizeEntry(url);
@@ -47,14 +73,17 @@ export function popTo(trail: Trail, entry: string): Trail {
 
 /**
  * Browser back/forward landed on `current`. Back to the previous entry pops it;
- * a popstate that stays on the same screen (only transient params changed)
- * keeps the trail; anything else (forward, or a jump the trail cannot place)
- * starts over from `current`.
+ * a popstate that stays on the same screen (only transient params, or only `p`,
+ * changed) keeps the trail; anything else (forward, or a jump the trail cannot
+ * place) starts over from `current`.
  */
 export function reconcileOnPop(trail: Trail, current: string): Trail {
   const entry = normalizeEntry(current);
   if (trail.length >= 2 && trail[trail.length - 2] === entry) return trail.slice(0, -1);
   if (trail[trail.length - 1] === entry) return trail;
+  // Closing or swapping the partida panel is not a new screen: keep the trail
+  // and rewrite the top so Volver still returns to the page under the list.
+  if (trail.length >= 1 && onlyPChanged(trail[trail.length - 1], entry)) return replaceTop(trail, entry);
   return isTrailPath(pathOf(entry)) ? [entry] : [];
 }
 
@@ -80,6 +109,9 @@ export function nextTrail(trail: Trail, current: string, change: TrailChange): T
   const entry = normalizeEntry(current);
   if (change.kind === "push" && trail.length >= 2 && trail[trail.length - 2] === entry) {
     return trail.slice(0, -1);
+  }
+  if (change.kind === "push" && trail.length >= 1 && onlyPChanged(trail[trail.length - 1], current)) {
+    return replaceTop(trail, current);
   }
   return pushEntry(trail, current);
 }
