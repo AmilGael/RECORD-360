@@ -9,6 +9,7 @@ import { resolveReminder } from "@/app/actions/reminders";
 import { SeverityMarker } from "@/components/severity-marker";
 import { SubmitButton } from "@/components/submit-button";
 import { FiltersSheet } from "@/components/filters-sheet";
+import { BackButton } from "@/components/back-button";
 import { formatRecordTime } from "@/lib/format/datetime";
 import { prisma } from "@/lib/db";
 
@@ -59,6 +60,7 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="reveal" style={{ maxWidth: 720, margin: "0 auto" }}>
+      <BackButton fallbackHref="/app" labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <p className="kicker">{P.title.toUpperCase()}</p>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 20px" }}>{P.title}</h1>
 

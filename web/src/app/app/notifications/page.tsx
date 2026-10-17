@@ -10,6 +10,7 @@ import { EVENT_KEYS, type EventKey } from "@/lib/notifications/events";
 import { buildNotificationWhere } from "@/lib/notifications/query";
 import { SeverityMarker } from "@/components/severity-marker";
 import { FiltersSheet } from "@/components/filters-sheet";
+import { BackButton } from "@/components/back-button";
 import { formatRecordTime } from "@/lib/format/datetime";
 import { parseDayBound } from "@/lib/time/zone";
 
@@ -84,6 +85,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
   return (
     <div className="reveal" style={{ maxWidth: 720, margin: "0 auto" }}>
+      <BackButton fallbackHref="/app" labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <p className="kicker">{N.title.toUpperCase()}</p>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 20px" }}>{N.title}</h1>
 

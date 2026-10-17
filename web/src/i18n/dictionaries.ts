@@ -7,7 +7,7 @@ import { errorsCopy } from "./errors-copy";
 export const dictionaries = {
   es: {
     common: { app: "Raphel", blackBox: "BLACK BOX" },
-    nav: { sites: "Obras", team: "Equipo", signOut: "Salir", notifications: "Notificaciones" },
+    nav: { sites: "Obras", team: "Equipo", signOut: "Salir", notifications: "Notificaciones", back: "Volver", backAria: "Volver a la pantalla anterior" },
     offline: { title: "Sin conexión", body: "No hay conexión a internet. Vuelve a intentarlo cuando recuperes la señal." },
     errors: errorsCopy.es,
     signatures: { title: "Firmas", sign: "Firmar", password: "Contraseña", statement: "Declaración (opcional)", statementPlaceholder: "Doy fe del estado de esta partida…", signed: "Firma registrada.", none: "Aún no hay firmas.", sealLabel: "Sello", boundTo: "Estado del Cuaderno", emptyLedger: "Cuaderno vacío" },
@@ -194,7 +194,6 @@ export const dictionaries = {
       colProgress: "Avance",
       colResident: "Residente",
       colDate: "Creada",
-      backToDash: "Volver al tablero",
       openTable: "Ver tabla",
     },
     sidebar: {
@@ -277,7 +276,6 @@ export const dictionaries = {
       bloquesTitle: "Bloques",
       bloqueCard: "partidas",
       openBloque: "Ver bloque",
-      backToBloques: "Volver a bloques",
       deleteBloque: "Borrar bloque",
       deleteBloqueConfirm: "¿Borrar este bloque definitivamente?",
       bloqueNotEmpty: "Solo se pueden borrar bloques vacíos.",
@@ -531,7 +529,7 @@ export const dictionaries = {
   },
   en: {
     common: { app: "Raphel", blackBox: "BLACK BOX" },
-    nav: { sites: "Sites", team: "Team", signOut: "Sign out", notifications: "Notifications" },
+    nav: { sites: "Sites", team: "Team", signOut: "Sign out", notifications: "Notifications", back: "Back", backAria: "Back to the previous screen" },
     offline: { title: "You're offline", body: "No internet connection. Try again once your signal is back." },
     errors: errorsCopy.en,
     signatures: { title: "Signatures", sign: "Sign", password: "Password", statement: "Statement (optional)", statementPlaceholder: "I attest to the state of this work item…", signed: "Signature recorded.", none: "No signatures yet.", sealLabel: "Seal", boundTo: "Ledger state", emptyLedger: "Empty ledger" },
@@ -718,7 +716,6 @@ export const dictionaries = {
       colProgress: "Progress",
       colResident: "Resident",
       colDate: "Created",
-      backToDash: "Back to dashboard",
       openTable: "Open table",
     },
     sidebar: {
@@ -801,7 +798,6 @@ export const dictionaries = {
       bloquesTitle: "Blocks",
       bloqueCard: "work items",
       openBloque: "Open block",
-      backToBloques: "Back to blocks",
       deleteBloque: "Delete block",
       deleteBloqueConfirm: "Delete this block permanently?",
       bloqueNotEmpty: "Only empty blocks can be deleted.",

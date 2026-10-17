@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { ResetPasswordButton } from "@/components/reset-password-button";
 import { MemberProfileForm } from "@/components/member-profile-form";
 import { ArchiveRestoreButton } from "@/components/archive-restore-button";
+import { BackButton } from "@/components/back-button";
 import type { Lang } from "@/i18n/dictionaries";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { Key, Plus, Upload } from "@/components/icons";
@@ -98,6 +99,7 @@ export default async function AdminPage() {
 
   return (
     <div className="reveal" style={{ maxWidth: 720, margin: "0 auto" }}>
+      <BackButton fallbackHref="/app" labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       {/* Header */}
       <div className="dash-header">
         <div>

@@ -24,6 +24,7 @@ import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel"
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BackButton } from "@/components/back-button";
 import type { DocumentKind, Role } from "@prisma/client";
 import { BloqueCards } from "@/components/bloque-cards";
 import { ProjectSearchResultsPanel } from "@/components/project-search-results";
@@ -415,8 +416,13 @@ export default async function ProjectPage({
       })
     : [];
 
+  // The overview (default tab, no bloque; search and media params included)
+  // is the obra root; every other view of the obra returns to it.
+  const isObraRoot = activeTab === "code" && !inBloqueView;
+
   return (
     <div className="reveal">
+      <BackButton fallbackHref={isObraRoot ? "/app" : `/app/projects/${project.id}`} labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <Breadcrumbs
         ariaLabel={t.breadcrumb.aria}
         items={[
@@ -541,9 +547,6 @@ export default async function ProjectPage({
         />
       ) : inBloqueView ? (
         <>
-          <Link href={`/app/projects/${project.id}`} className="kicker" style={{ textDecoration: "none", display: "inline-block", margin: "12px 0 0" }}>
-            ← {P.backToBloques}
-          </Link>
           <div className="workspace">
             <ProjectFileTree
               projectId={project.id}
