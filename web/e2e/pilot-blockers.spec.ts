@@ -28,6 +28,8 @@ for (const lang of langs) {
     // would break every parallel spec for 15 minutes.
     test(`the 6th failed login shows the lockout message and a reset link (${lang}, ${theme})`, async ({ page }, testInfo) => {
       const email = `lockout-${Date.now()}-${testInfo.project.name}-${lang}-${theme}@raphel.test`;
+      // Reduced motion skips the .reveal fade-in, so screenshots show the settled form.
+      await page.emulateMedia({ reducedMotion: "reduce" });
       await setLang(page, lang);
       await setTheme(page, theme);
       for (let attempt = 1; attempt <= 6; attempt += 1) {
@@ -49,6 +51,7 @@ for (const lang of langs) {
     });
 
     test(`unknown obra and partida ids show the app 404 page (${lang}, ${theme})`, async ({ page }, testInfo) => {
+      await page.emulateMedia({ reducedMotion: "reduce" });
       await setLang(page, lang);
       await setTheme(page, theme);
       await loginAs(page, "admin");
