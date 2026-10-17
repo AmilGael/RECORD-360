@@ -60,6 +60,14 @@ function actionError(e: unknown, fallback: string) {
   return e instanceof Error && e.message ? e.message : fallback;
 }
 
+const PHONE_SHEET = "(max-width: 899px)";
+
+function revealRowAboveSheet(row: HTMLElement) {
+  if (!window.matchMedia(PHONE_SHEET).matches) return;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  row.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reduce ? "auto" : "smooth" });
+}
+
 export function PartidaWorkspace({
   projectId,
   segments: initialSegments,
@@ -172,11 +180,21 @@ export function PartidaWorkspace({
   }, [selectedId, closePanel]);
 
   useEffect(() => {
+    const phoneSheet = Boolean(selectedId) && window.matchMedia(PHONE_SHEET).matches;
+    document.documentElement.classList.toggle("sheet-open", phoneSheet);
+    return () => document.documentElement.classList.remove("sheet-open");
+  }, [selectedId]);
+
+  useEffect(() => {
     if (selectedId && selectedId !== prevSelected.current) {
-      headingEl.current?.focus();
+      headingEl.current?.focus({ preventScroll: true });
+      const row = rowEls.current.get(selectedId);
+      if (row) {
+        requestAnimationFrame(() => revealRowAboveSheet(row));
+      }
     }
     if (!selectedId && prevSelected.current) {
-      rowEls.current.get(prevSelected.current)?.focus();
+      rowEls.current.get(prevSelected.current)?.focus({ preventScroll: true });
     }
     prevSelected.current = selectedId;
   }, [selectedId]);
@@ -251,7 +269,7 @@ export function PartidaWorkspace({
   const shell = findShell(segments, ungrouped, selectedId);
 
   return (
-    <div className="workspace">
+    <div className={`workspace${selectedId ? " is-sheet-open" : ""}`}>
       <div className="workspace-list">
         <ProjectFileTree
           projectId={projectId}

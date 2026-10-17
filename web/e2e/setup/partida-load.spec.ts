@@ -2,10 +2,22 @@ import { PrismaClient } from "@prisma/client";
 import { test, expect } from "../helpers/guards";
 import { loginAs } from "../helpers/auth";
 import { setLang } from "../helpers/prefs";
+import { dictionaries } from "../../src/i18n/dictionaries";
 import { OBRA, follow, selectPartida, startsWith } from "../helpers/partida";
 import { assertLocalDatabase, cargaRemaining, removeCarga, seedCarga } from "./carga-load";
 
 const prisma = new PrismaClient();
+
+async function openCarga(page: Parameters<typeof loginAs>[0], firstName: string) {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await setLang(page, "es");
+  await loginAs(page, "admin");
+  await page.goto("/app");
+  await follow(page, startsWith(OBRA));
+  await follow(page, startsWith("Carga"));
+  await expect(page).toHaveURL(/[?&]block=/);
+  await expect(page.getByRole("button", { name: startsWith(firstName) })).toBeVisible({ timeout: 30_000 });
+}
 
 test("300 partidas in Carga stay scrollable and selectable @load", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "volume check on desktop");
@@ -15,14 +27,7 @@ test("300 partidas in Carga stay scrollable and selectable @load", async ({ page
 
   const seeded = await seedCarga(prisma);
   try {
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await setLang(page, "es");
-    await loginAs(page, "admin");
-    await page.goto("/app");
-    await follow(page, startsWith(OBRA));
-    await follow(page, startsWith("Carga"));
-    await expect(page).toHaveURL(/[?&]block=/);
-    await expect(page.getByRole("button", { name: startsWith(seeded.firstName) })).toBeVisible({ timeout: 30_000 });
+    await openCarga(page, seeded.firstName);
 
     const list = page.locator(".workspace-list");
     await list.evaluate((el) => { el.scrollTop = el.scrollHeight; });
@@ -40,5 +45,40 @@ test("300 partidas in Carga stay scrollable and selectable @load", async ({ page
     expect(removed).toBeGreaterThanOrEqual(300);
     expect(await cargaRemaining(prisma)).toBe(0);
     await prisma.$disconnect();
+  }
+});
+
+test("phone: last row and Volver stay above the open sheet @load", async ({ page }, info) => {
+  test.skip(info.project.name !== "phone", "sheet overlap is phone");
+  test.setTimeout(180_000);
+  const host = assertLocalDatabase();
+  expect(["localhost", "127.0.0.1"]).toContain(host);
+
+  const db = new PrismaClient();
+  const seeded = await seedCarga(db);
+  try {
+    await openCarga(page, seeded.firstName);
+    await selectPartida(page, seeded.firstName);
+    await expect(page.locator(".workspace.is-sheet-open")).toBeVisible();
+
+    const last = page.getByRole("button", { name: startsWith(seeded.lastName) }).first();
+    await last.scrollIntoViewIfNeeded();
+    const sheet = page.locator(".workspace-panel.is-open");
+    await last.click();
+    await expect(page.getByRole("heading", { level: 2, name: seeded.lastName })).toBeVisible();
+    const rowBox = await last.boundingBox();
+    const sheetBox = await sheet.boundingBox();
+    expect(rowBox && sheetBox, "row and sheet on screen").toBeTruthy();
+    expect((rowBox?.y ?? 0) + (rowBox?.height ?? 0), "last row sits above the sheet").toBeLessThanOrEqual((sheetBox?.y ?? 0) + 1);
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.getByRole("button", { name: dictionaries.es.nav.backAria }).click();
+    await expect(page).not.toHaveURL(/[?&]block=/);
+    await page.screenshot({ path: "e2e/artifacts/partida-panel/sheet-space-phone.png", fullPage: true });
+  } finally {
+    const removed = await removeCarga(db);
+    expect(removed).toBeGreaterThanOrEqual(300);
+    expect(await cargaRemaining(db)).toBe(0);
+    await db.$disconnect();
   }
 });

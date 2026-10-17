@@ -26,7 +26,7 @@ export function assertLocalDatabase() {
   return dbHost;
 }
 
-export async function seedCarga(prisma: PrismaClient): Promise<{ projectId: string; segmentId: string; firstName: string }> {
+export async function seedCarga(prisma: PrismaClient): Promise<{ projectId: string; segmentId: string; firstName: string; lastName: string }> {
   const project = await prisma.project.findFirst({ where: { name: OBRA }, select: { id: true } });
   if (!project) throw new Error(`${OBRA} is missing. Run the @setup fixture first.`);
   let segment = await prisma.segment.findFirst({ where: { projectId: project.id, name: BLOQUE }, select: { id: true } });
@@ -44,7 +44,12 @@ export async function seedCarga(prisma: PrismaClient): Promise<{ projectId: stri
       })),
     });
   }
-  return { projectId: project.id, segmentId: segment.id, firstName: `${PREFIX}001` };
+  return {
+    projectId: project.id,
+    segmentId: segment.id,
+    firstName: `${PREFIX}001`,
+    lastName: `${PREFIX}${String(COUNT).padStart(3, "0")}`,
+  };
 }
 
 export async function removeCarga(prisma: PrismaClient): Promise<number> {
