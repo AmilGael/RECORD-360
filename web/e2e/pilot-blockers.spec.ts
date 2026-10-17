@@ -9,6 +9,20 @@ const themes: Theme[] = ["dark", "light"];
 const shot = (name: string, project: string) => `e2e/artifacts/pilot-${name}-${project}.png`;
 const randomCuid = () => `c${randomBytes(16).toString("hex").slice(0, 24)}`;
 
+/**
+ * Drops React #419 page errors raised since `from`. Call it only after the
+ * same page has shown the app's 404 heading; every other problem still fails.
+ * Next 15.5 streams the /app shell through /app/loading.tsx before notFound()
+ * resolves, React recovers the boundary on the client, and Next reports the
+ * recovery as an error. The user-visible result is the correct 404 page.
+ * Revisit when Next is upgraded.
+ */
+function allowNotFoundRecovery(problems: string[], from: number) {
+  for (let i = problems.length - 1; i >= from; i -= 1) {
+    if (problems[i].startsWith("pageerror: ") && problems[i].includes("Minified React error #419")) problems.splice(i, 1);
+  }
+}
+
 for (const lang of langs) {
   const t = dictionaries[lang];
 
@@ -50,14 +64,16 @@ for (const lang of langs) {
       await page.screenshot({ path: shot(`lockout-${lang}-${theme}`, testInfo.project.name), fullPage: true });
     });
 
-    test(`unknown obra and partida ids show the app 404 page (${lang}, ${theme})`, async ({ page }, testInfo) => {
+    test(`unknown obra and partida ids show the app 404 page (${lang}, ${theme})`, async ({ page, consoleGuard }, testInfo) => {
       await page.emulateMedia({ reducedMotion: "reduce" });
       await setLang(page, lang);
       await setTheme(page, theme);
       await loginAs(page, "admin");
       for (const path of [`/app/projects/${randomCuid()}`, `/app/partidas/${randomCuid()}`]) {
+        const firstNew = consoleGuard.problems.length;
         await page.goto(path);
         await expect(page.getByRole("heading", { level: 1, name: t.errors.notFoundTitle })).toBeVisible();
+        allowNotFoundRecovery(consoleGuard.problems, firstNew);
         await expect(page.getByText(t.errors.title)).toHaveCount(0);
         await expect(page.getByRole("link", { name: t.errors.backToApp })).toHaveAttribute("href", "/app");
         const kind = path.includes("partidas") ? "partida" : "obra";
