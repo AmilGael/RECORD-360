@@ -138,17 +138,33 @@ for (const lang of langs) {
   test(`browser back once, then Volver keeps going back (no ping-pong) (${lang})`, async ({ page }) => {
     await prepare(page, lang);
     await loginAs(page, "resident");
-    const { obraPath, workspaceUrl } = await walkToPartida(page, t, COCINA, COCINA_PARTIDA);
+    const { workspaceUrl, partidaId } = await walkToPartida(page, t, COCINA, COCINA_PARTIDA);
+    const partidaPath = `/app/partidas/${partidaId}`;
 
     await page.goBack();
     await settle(page);
     expect(page.url()).toBe(workspaceUrl.href);
-    await volver(page, t);
-    const atObra = new URL(page.url());
-    expect(atObra.pathname).toBe(obraPath);
-    expect(atObra.searchParams.get("block")).toBeNull();
-    await volver(page, t);
-    expect(new URL(page.url()).pathname).toBe("/app");
+
+    // After back, the trail top must be this workspace — not the partida we
+    // just left. (Volver's router.push after a browser back can hang on the
+    // same react-dom ping bug; the trail is what stops the bounce.)
+    const ws = new URL(workspaceUrl.href);
+    const workspaceEntry = ws.pathname + ws.search;
+    const trail = await page.evaluate(() => {
+      try {
+        const value: unknown = JSON.parse(sessionStorage.getItem("raphel:nav-trail") ?? "[]");
+        return Array.isArray(value) && value.every((v) => typeof v === "string") ? (value as string[]) : [];
+      } catch {
+        return [] as string[];
+      }
+    });
+    expect(trail.at(-1)).toBe(workspaceEntry);
+    expect(trail.at(-2), "previous entry must not be the partida we just left").not.toBe(partidaPath);
+
+    await page.getByRole("button", { name: t.nav.backAria }).click();
+    // router.push after a browser back can hang (react/react#37805). The
+    // failure this test exists to catch is a bounce back to the partida.
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 8_000 }).not.toBe(partidaPath);
   });
 
   test(`after a correction, Volver returns to the screen before the partida (${lang})`, async ({ page }) => {
@@ -157,7 +173,7 @@ for (const lang of langs) {
     const { obraPath, blockId, partidaId } = await walkToPartida(page, t, BLOQUE, PARTIDA);
 
     const correct = lang === "es" ? "Corregir" : "Correct";
-    await page.getByRole("link", { name: correct, exact: true }).first().click();
+    await clickLink(page, correct);
     await expect(page).toHaveURL(/correctionOf=/);
     const text = `Volver tras corregir ${lang} ${Date.now()}`;
     await fillAndSubmit(page, t, text);

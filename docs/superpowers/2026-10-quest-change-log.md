@@ -88,7 +88,7 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
 
 - **What users will notice:** every app screen except the dashboard root has Volver (never the browser's Back). It returns to the last in-app screen, or to the page's parent if the tab has no history. Partida crumbs are Obras › Obra › Bloque › Partida. Resolving several reminders in a row no longer leaves Resolver stuck. After queueing a registro the composer says it is on this phone, then "Registrado y sellado." once the server takes it; a refusal shows the error and points at the sync list.
 - **What changed in code:**
-  - `lib/nav/trail.ts` + `nav-trail.tsx` (sessionStorage `raphel:nav-trail`) + `back-button.tsx`. `reconcileOnPop` also keeps the trail when only the top equals current (transient-param popstate).
+  - `lib/nav/trail.ts` + `nav-trail.tsx` (sessionStorage `raphel:nav-trail`) + `back-button.tsx`. `reconcileOnPop` keeps the trail when only the top equals current (transient-param popstate). A push of the previous screen pops (missed popstate / remount after browser back) so Volver cannot bounce forward.
   - Dashboard `page`/`loading` moved to `app/app/(home)/`; `operator/access-requests/loading.tsx` added. The root `/app` loading boundary is gone.
   - `PendingList` hides a resolved row with `useOptimistic` while the action runs; failure restores the row and shows `pendingWork.resolveError`.
   - `lib/offline/capture-status.ts`: `nextCaptureState` and `syncErrorText`. Sync stores `errorCode` `session_expired` / `forbidden` instead of Spanish text. Composer notices use theme tokens.
@@ -99,7 +99,7 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - Do not add timers, retries or forced re-renders to paper over a stuck transition.
 - **How to verify:** unit tests for trail, capture-status and sync codes. `E2E_PROD=1` `pending-resolve`, `volver`, `capture-status` (phone + desktop, es/en, night/day where the UI changed).
 - **Known limits:**
-  - Root cause of the stuck Resolver: bundled react-dom (`19.2.0-canary-0bdb9206-20250818`, Next 15.4 through 16.4) drops a ping that arrives during render (`pingSuspendedRoot` when `executionContext & 2`, [react/react#37805](https://github.com/react/react/issues/37805)). Phone production: **21/40 failed** after only narrowing the loading boundary; **0/40 failed** after optimistic Resolve. The hang can still stall other server actions and `<Link>` navigations; Volver e2e follows hrefs with `goto` for that reason.
+  - Root cause of the stuck Resolver: bundled react-dom (`19.2.0-canary-0bdb9206-20250818`, Next 15.4 through 16.4) drops a ping that arrives during render (`pingSuspendedRoot` when `executionContext & 2`, [react/react#37805](https://github.com/react/react/issues/37805)). Phone production: **21/40 failed** after only narrowing the loading boundary; **0/40 failed** after optimistic Resolve. The hang can still stall `router.push` (Volver after browser back) and `<Link>` clicks; Volver e2e follows setup hrefs with `goto` for that reason. Planos → Analítica → Volver flaked 1/6 on desktop.
   - React #419 on app 404s is gone (0/20 after the route group; Q1's swallow was removed).
   - Server validation messages stay in the language the API sent. The 4xx fallback "No se pudo registrar." is still Spanish.
   - E2E registros stay in "Pruebas automáticas"; their reminders are resolved.

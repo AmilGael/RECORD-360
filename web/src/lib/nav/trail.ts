@@ -74,6 +74,13 @@ export function nextTrail(trail: Trail, current: string, change: TrailChange): T
   if (change.kind === "pop") return reconcileOnPop(trail, current);
   // A Volver whose target redirected elsewhere is recorded like any other move.
   if (change.kind === "back" && normalizeEntry(current) === normalizeEntry(change.target)) return trail;
+  // A remount after browser back (full goto, or a missed popstate) looks like
+  // a push of the previous screen. Treating it as a pop stops Volver bouncing
+  // forward again.
+  const entry = normalizeEntry(current);
+  if (change.kind === "push" && trail.length >= 2 && trail[trail.length - 2] === entry) {
+    return trail.slice(0, -1);
+  }
   return pushEntry(trail, current);
 }
 

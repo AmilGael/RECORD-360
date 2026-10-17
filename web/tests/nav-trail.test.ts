@@ -90,6 +90,9 @@ describe("nextTrail", () => {
   it("back marker whose target redirected elsewhere records the real screen", () => {
     expect(nextTrail(["/app", OBRA], "/app", { kind: "back", target: OBRA })).toEqual(["/app", OBRA, "/app"]);
   });
+  it("a push of the previous screen pops (missed popstate / remount after back)", () => {
+    expect(nextTrail(["/app", OBRA, PARTIDA], OBRA, { kind: "push" })).toEqual(["/app", OBRA]);
+  });
 });
 
 describe("parseTrail", () => {
