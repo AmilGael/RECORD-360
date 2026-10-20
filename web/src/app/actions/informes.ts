@@ -8,6 +8,7 @@ import { requireFreshSession } from "@/lib/auth/session";
 import type { InformeArchetype } from "@prisma/client";
 import { ARCHETYPE_VALUES } from "@/lib/informes/archetypes";
 import { loadCompanySealPng } from "@/lib/report/seal";
+import { parseRangeValue } from "@/lib/report/params";
 import { buildInformeIdempotencyKey } from "@/lib/informes/idempotency";
 import { notifyEvent } from "@/lib/notifications/events";
 import { Prisma } from "@prisma/client";
@@ -103,14 +104,12 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     }
     const scope = { type: scopeType, id: scopeId } as ReportScope;
 
-    const parseDate = (k: string): Date | null | "invalid" => {
+    // Same bounds as the PDF routes: a date-only value is the whole local day in
+    // APP_TIME_ZONE. These Dates also feed the idempotency key below.
+    const parseDate = (k: "from" | "to"): Date | null | "invalid" => {
       const raw = String(formData.get(k) ?? "").trim();
       if (!raw) return null;
-      if (k === "to" && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-        return new Date(`${raw}T23:59:59.999Z`);
-      }
-      const d = new Date(raw);
-      return Number.isNaN(d.getTime()) ? "invalid" : d;
+      return parseRangeValue(raw, k);
     };
     const from = parseDate("from");
     const to = parseDate("to");

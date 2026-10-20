@@ -1,5 +1,5 @@
 import type { Registro, Attachment, Location } from "@prisma/client";
-import { formatTimestamp } from "@/lib/format/datetime";
+import { formatRecordTime, formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
 import Link from "next/link";
 import { Pin, Check } from "@/components/icons";
@@ -37,16 +37,18 @@ export function RecordCard({
   correctionHref?: string;
   replyHref?: string;
 }) {
-  const locale = lang === "es" ? "es-DO" : "en-US";
-  const formatAbsolute = (d: Date) => d.toLocaleString(locale);
-
   const capturedRaw = r.clientCapturedAt ? new Date(r.clientCapturedAt) : null;
   const sealedDate = r.serverCreatedAt;
   const showDual =
     capturedRaw !== null &&
     Math.abs(sealedDate.getTime() - capturedRaw.getTime()) > 60_000;
 
+  // Recent cards keep the relative line ("hace 5 min") above the zoned time;
+  // past a day formatTimestamp would only repeat the absolute time.
+  const ageMs = Date.now() - sealedDate.getTime();
+  const recent = ageMs >= 0 && ageMs < 24 * 60 * 60_000;
   const ts = formatTimestamp(sealedDate, lang);
+  const sealedAt = formatRecordTime(sealedDate, lang);
   const gps =
     r.gpsLat !== null && r.gpsLng !== null
       ? `${Number(r.gpsLat).toFixed(4)} · ${Number(r.gpsLng).toFixed(4)}`
@@ -57,11 +59,14 @@ export function RecordCard({
         <span className="mono" style={{ fontSize: 11, letterSpacing: "0.08em" }}>{r.category ?? "REGISTRO"}</span>
         {showDual && capturedRaw ? (
           <span className="mono" style={{ fontSize: 11, opacity: 0.7, textAlign: "right" }}>
-            <span style={{ display: "block" }}>{t.capturado ?? "Capturado"}: {formatAbsolute(capturedRaw)}</span>
-            <span style={{ display: "block" }}>{t.sellado ?? "Sellado"}: {formatAbsolute(sealedDate)}</span>
+            <span style={{ display: "block" }}>{t.capturado ?? "Capturado"}: {formatRecordTime(capturedRaw, lang)}</span>
+            <span style={{ display: "block" }}>{t.sellado ?? "Sellado"}: {sealedAt}</span>
           </span>
         ) : (
-          <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>{ts}</span>
+          <span className="mono" style={{ fontSize: 11, opacity: 0.7, textAlign: "right" }}>
+            {recent && <span style={{ display: "block" }}>{ts}</span>}
+            <span style={{ display: "block" }}>{sealedAt}</span>
+          </span>
         )}
       </div>
       <div style={{ padding: 14 }}>

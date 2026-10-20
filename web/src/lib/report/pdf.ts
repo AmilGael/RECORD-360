@@ -2,6 +2,7 @@
 // require() at runtime like the existing partida report route does.
 import QRCode from "qrcode";
 import type { ReportData } from "./data";
+import { formatPeriodDate } from "@/lib/format/period";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require("pdfkit") as typeof import("pdfkit");
 
@@ -136,7 +137,7 @@ export async function buildReportPdf(opts: {
   doc.font(FONT_NORMAL).fontSize(10);
   doc.text(`Codigo de Registro: ${data.project.registrationCode}`);
   if (data.from || data.to) {
-    doc.text(`Periodo: ${data.from ? fmt(data.from).slice(0, 10) : "inicio"} - ${data.to ? fmt(data.to).slice(0, 10) : "hoy"}`);
+    doc.text(`Periodo: ${data.from ? formatPeriodDate(data.from) : "inicio"} - ${data.to ? formatPeriodDate(data.to) : "hoy"}`);
   }
   doc.text(`Generado: ${fmt(new Date())}  ·  por ${sanitizePdfText(generatedBy)}`);
   if (informe?.archetypeLabel) {

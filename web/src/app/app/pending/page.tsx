@@ -9,7 +9,7 @@ import { resolveReminder } from "@/app/actions/reminders";
 import { SeverityMarker } from "@/components/severity-marker";
 import { SubmitButton } from "@/components/submit-button";
 import { FiltersSheet } from "@/components/filters-sheet";
-import { formatTimestamp } from "@/lib/format/datetime";
+import { formatRecordTime } from "@/lib/format/datetime";
 import { prisma } from "@/lib/db";
 
 const SEVERITIES = ["IMPORTANT", "CRITICAL"] as const;
@@ -111,7 +111,7 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
             <p className="text-steel" style={{ margin: "3px 0 0", fontSize: "0.76rem" }}>
               {typeLabel(item.kind)} · {item.projectName}
               {item.partidaName ? ` · ${item.partidaName}` : ""}
-              {item.dueAt ? ` · ${P.dueLabel}: ${formatTimestamp(item.dueAt, lang)}` : ""}
+              {item.dueAt ? ` · ${P.dueLabel}: ${formatRecordTime(item.dueAt, lang)}` : ""}
               {item.authorName ? ` · ${P.authorLabel}: ${item.authorName}` : ""}
             </p>
           </div>

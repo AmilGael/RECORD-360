@@ -1,6 +1,8 @@
 import type { ReportData } from "@/lib/report/data";
 import type { InformeArchetype } from "@prisma/client";
 import { ARCHETYPE_LABEL_ES } from "./archetypes";
+import { formatPeriodDate } from "@/lib/format/period";
+import { APP_TIME_ZONE, DEFAULT_APP_TIME_ZONE, zonedTimestamp } from "@/lib/time/zone";
 
 /**
  * Fixed report format (spec R2.2, extended R3 WS7): every informe shares the
@@ -56,17 +58,27 @@ ${spec.emphasis}`;
 
 const MAX_PROMPT_REGISTROS = 400;
 
+/** States once which clock the registro times below are on. */
+function zoneHeader(tz: string): string {
+  if (tz === DEFAULT_APP_TIME_ZONE) return "Horas en hora de República Dominicana (UTC-4)";
+  const offset = new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "shortOffset" })
+    .formatToParts(new Date())
+    .find((p) => p.type === "timeZoneName")?.value;
+  return `Horas en zona ${tz}${offset ? ` (${offset})` : ""}`;
+}
+
 export function buildInformeUserMessage(data: ReportData, brief: string): string {
   const lines: string[] = [];
   lines.push(`OBRA: ${data.project.name} (${data.project.registrationCode}) — ${data.project.companyName}`);
   lines.push(`ALCANCE: ${data.scopeLabel}`);
-  if (data.from || data.to) lines.push(`PERIODO: ${data.from?.toISOString().slice(0, 10) ?? "inicio"} a ${data.to?.toISOString().slice(0, 10) ?? "hoy"}`);
+  if (data.from || data.to) lines.push(`PERIODO: ${data.from ? formatPeriodDate(data.from) : "inicio"} a ${data.to ? formatPeriodDate(data.to) : "hoy"}`);
+  lines.push(zoneHeader(APP_TIME_ZONE));
   lines.push("", "PARTIDAS Y AVANCE:");
   for (const p of data.partidas) lines.push(`- ${p.name}${p.segmentName ? ` (${p.segmentName})` : ""}: ${p.progressPct}%`);
   lines.push("", `REGISTROS DEL PERIODO (${data.registros.length}):`);
   const shown = data.registros.slice(-MAX_PROMPT_REGISTROS);
   for (const r of shown) {
-    lines.push(`- [${r.serverCreatedAt.toISOString().slice(0, 16).replace("T", " ")}] ${r.authorName} @ ${r.partidaName}${r.category ? ` [${r.category}]` : ""}: ${r.text ?? "(solo adjuntos)"}${r.attachmentCount ? ` (${r.attachmentCount} adjuntos)` : ""}`);
+    lines.push(`- [${zonedTimestamp(r.serverCreatedAt)}] ${r.authorName} @ ${r.partidaName}${r.category ? ` [${r.category}]` : ""}: ${r.text ?? "(solo adjuntos)"}${r.attachmentCount ? ` (${r.attachmentCount} adjuntos)` : ""}`);
   }
   if (data.registros.length > MAX_PROMPT_REGISTROS) {
     lines.push(`- (...y ${data.registros.length - MAX_PROMPT_REGISTROS} registros anteriores omitidos por espacio)`);

@@ -2,6 +2,7 @@
 // the browser, but the action must not trust client input (devtools, Postman).
 
 import { RegistroCategory } from "@prisma/client";
+import { parseInstantInput } from "@/lib/time/zone";
 
 /**
  * Parse and validate a progress-percentage form value.
@@ -18,7 +19,8 @@ export function parseProgressPct(raw: unknown): number | null {
 }
 
 /** Parse an optional reminder timestamp. Empty → null; otherwise the date must
- * exist and be in the future (with a small skew buffer for offline capture).
+ * exist and be in the future. An offset-less "YYYY-MM-DDTHH:mm" is a wall time
+ * in APP_TIME_ZONE (see parseInstantInput); ISO with an offset is taken as is (with a small skew buffer for offline capture).
  * This is the ONLINE path's rule — it stays strict. Offline captures that were
  * valid at the moment they were taken go through parseOfflineReminderDueAt
  * instead (see R3 WS10 contracts §5). */
@@ -26,7 +28,7 @@ export function parseReminderDueAt(raw: unknown): Date | null {
   if (raw === null || raw === undefined) return null;
   const v = String(raw).trim();
   if (v === "") return null;
-  const d = new Date(v);
+  const d = parseInstantInput(v);
   if (Number.isNaN(d.getTime())) {
     throw new Error("Recordatorio inválido.");
   }
@@ -51,7 +53,7 @@ export function parseOfflineReminderDueAt(raw: unknown, clientCapturedAt: Date |
   if (raw === null || raw === undefined) return null;
   const v = String(raw).trim();
   if (v === "") return null;
-  const d = new Date(v);
+  const d = parseInstantInput(v);
   if (Number.isNaN(d.getTime())) {
     throw new Error("Recordatorio inválido.");
   }
