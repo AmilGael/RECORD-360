@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { IndexedDbQueue } from "@/lib/offline/queue";
 import { shouldRefreshAfterSync, syncQueue } from "@/lib/offline/sync";
+import { announceAccepted } from "@/lib/offline/capture-status";
 
 let _queue: IndexedDbQueue | null = null;
 function getQueue(): IndexedDbQueue { if (!_queue) _queue = new IndexedDbQueue(); return _queue; }
@@ -13,7 +14,7 @@ export function OfflineProvider() {
   useEffect(() => {
     const onProgress = () => window.dispatchEvent(new Event("raphl:sync-progress"));
     const kick = (retryBlocked = false) => {
-      void syncQueue({ queue: getQueue(), onChange: onProgress, retryBlocked }).then((result) => {
+      void syncQueue({ queue: getQueue(), onChange: onProgress, onAccepted: announceAccepted, retryBlocked }).then((result) => {
         onProgress();
         if (shouldRefreshAfterSync(result)) router.refresh();
       });
