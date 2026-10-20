@@ -2,6 +2,7 @@
 // constrains these in the browser, but the action must not trust client input.
 import type { RequestKind, RequestSeverity } from "@prisma/client";
 import { parseInstantInput } from "@/lib/time/zone";
+import { UserError } from "@/lib/errors/user-error";
 
 /**
  * Parse and validate a change-request title.
@@ -10,8 +11,8 @@ import { parseInstantInput } from "@/lib/time/zone";
  */
 export function parseChangeTitle(raw: unknown): string {
   const v = String(raw ?? "").trim();
-  if (v === "") throw new Error("El título es obligatorio.");
-  if (v.length > 200) throw new Error("El título es demasiado largo (máx. 200 caracteres).");
+  if (v === "") throw new UserError("titleRequired");
+  if (v.length > 200) throw new UserError("titleTooLong");
   return v;
 }
 
@@ -19,17 +20,17 @@ export function parseChangeTitle(raw: unknown): string {
  *  datetime-local value (no-JS form post) is a wall time in APP_TIME_ZONE. */
 export function parseReminderDueAt(raw: unknown): Date {
   const v = String(raw ?? "").trim();
-  if (v === "") throw new Error("El recordatorio es obligatorio en una solicitud de cambio.");
+  if (v === "") throw new UserError("reminderRequiredChange");
   const d = parseInstantInput(v);
-  if (Number.isNaN(d.getTime())) throw new Error("Recordatorio inválido.");
-  if (d.getTime() < Date.now() - 60_000) throw new Error("El recordatorio debe ser una fecha futura.");
+  if (Number.isNaN(d.getTime())) throw new UserError("reminderInvalid");
+  if (d.getTime() < Date.now() - 60_000) throw new UserError("reminderFuture");
   return d;
 }
 
 export function parseResolutionNote(raw: unknown): string {
   const v = String(raw ?? "").trim();
-  if (v === "") throw new Error("Escribe el feedback de la resolución.");
-  if (v.length > 1000) throw new Error("El feedback es demasiado largo (máx. 1000 caracteres).");
+  if (v === "") throw new UserError("resolutionRequired");
+  if (v.length > 1000) throw new UserError("resolutionTooLong");
   return v;
 }
 
@@ -40,7 +41,7 @@ export function parseResolutionNote(raw: unknown): string {
  */
 export function parseRequestKind(raw: unknown): RequestKind {
   const v = String(raw ?? "").trim().toUpperCase();
-  if (v !== "CHANGE" && v !== "ALERT") throw new Error("Selecciona el tipo de solicitud.");
+  if (v !== "CHANGE" && v !== "ALERT") throw new UserError("kindRequired");
   return v as RequestKind;
 }
 
@@ -51,7 +52,7 @@ export function parseRequestKind(raw: unknown): RequestKind {
  */
 export function parseRequestSeverity(raw: unknown): RequestSeverity {
   const v = String(raw ?? "").trim().toUpperCase();
-  if (v !== "IMPORTANT" && v !== "CRITICAL") throw new Error("Selecciona la severidad.");
+  if (v !== "IMPORTANT" && v !== "CRITICAL") throw new UserError("severityRequired");
   return v as RequestSeverity;
 }
 
@@ -65,10 +66,10 @@ export function parseRequestSeverity(raw: unknown): RequestSeverity {
 export function parseRequestGps(latRaw: unknown, lngRaw: unknown): { lat: number; lng: number } {
   const latStr = String(latRaw ?? "").trim();
   const lngStr = String(lngRaw ?? "").trim();
-  if (!latStr || !lngStr) throw new Error("La ubicación GPS es obligatoria para crear una solicitud.");
+  if (!latStr || !lngStr) throw new UserError("gpsRequired");
   const lat = Number(latStr);
   const lng = Number(lngStr);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Coordenadas GPS inválidas.");
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new Error("Coordenadas GPS inválidas.");
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new UserError("gpsInvalid");
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new UserError("gpsInvalid");
   return { lat, lng };
 }

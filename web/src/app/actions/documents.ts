@@ -10,6 +10,9 @@ import { GENERATED_KEY_RE, verifyImageThumbGrant, verifyUploadGrant } from "@/li
 import type { AttachmentType } from "@prisma/client";
 import { attachmentKindForType, contentTypeForKey } from "@/lib/storage/mime";
 import { sanitizeFileName } from "@/lib/storage/filename";
+import { userText } from "@/lib/errors/form-result";
+import { toUserMessage } from "@/lib/errors/user-error";
+import { getDict } from "@/i18n/server";
 
 export type DocResult = { ok: true } | { ok: false; error: string };
 
@@ -49,19 +52,19 @@ export async function createDocument(_prev: DocResult | null, formData: FormData
     const user = await requireFreshSession();
 
     const projectId = String(formData.get("projectId"));
-    if (!(await canAccessProject({ id: user.id, companyId: user.companyId, role: user.role }, projectId))) return { ok: false, error: "No autorizado." };
+    if (!(await canAccessProject({ id: user.id, companyId: user.companyId, role: user.role }, projectId))) return { ok: false, error: await userText("unauthorized") };
     const segmentRaw = formData.get("segmentId");
     const segmentId = typeof segmentRaw === "string" && segmentRaw.trim() ? segmentRaw.trim() : null;
     if (segmentId) {
       const segment = await prisma.segment.findFirst({ where: { id: segmentId, projectId }, select: { id: true } });
-      if (!segment) return { ok: false, error: "Bloque inválido." };
+      if (!segment) return { ok: false, error: await userText("invalidBlock") };
     }
 
     const title = (String(formData.get("title") ?? "").trim()) || null;
     const kind = parseDocumentKind(formData.get("kind"));
     const files = formData.getAll("file").filter((f): f is File => f instanceof File && f.size > 0);
     const prepared = await prepareAttachments(files, storage);
-    if (prepared.length === 0) return { ok: false, error: "Selecciona un archivo." };
+    if (prepared.length === 0) return { ok: false, error: await userText("fileRequired") };
 
     const thumbKey = prepared.length === 1 ? await storeFallbackThumb(formData.get("thumb")) : null;
 
@@ -77,7 +80,8 @@ export async function createDocument(_prev: DocResult | null, formData: FormData
     revalidatePath(`/app/projects/${projectId}`);
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo subir." };
+    const { t } = await getDict();
+    return { ok: false, error: toUserMessage(e, t, "createDocument") };
   }
 }
 
@@ -94,12 +98,12 @@ export async function registerDocument(_prev: DocResult | null, formData: FormDa
     const user = await requireFreshSession();
 
     const projectId = String(formData.get("projectId"));
-    if (!(await canAccessProject({ id: user.id, companyId: user.companyId, role: user.role }, projectId))) return { ok: false, error: "No autorizado." };
+    if (!(await canAccessProject({ id: user.id, companyId: user.companyId, role: user.role }, projectId))) return { ok: false, error: await userText("unauthorized") };
     const segmentRaw = formData.get("segmentId");
     const segmentId = typeof segmentRaw === "string" && segmentRaw.trim() ? segmentRaw.trim() : null;
     if (segmentId) {
       const segment = await prisma.segment.findFirst({ where: { id: segmentId, projectId }, select: { id: true } });
-      if (!segment) return { ok: false, error: "Bloque inválido." };
+      if (!segment) return { ok: false, error: await userText("invalidBlock") };
     }
 
     const title = (String(formData.get("title") ?? "").trim()) || null;
@@ -112,16 +116,16 @@ export async function registerDocument(_prev: DocResult | null, formData: FormDa
     const fileName = sanitizeFileName(String(formData.get("fileName") ?? ""));
 
     const fileType = ATTACHMENT_TYPES.includes(fileTypeRaw as AttachmentType) ? (fileTypeRaw as AttachmentType) : null;
-    if (!fileType || !GENERATED_KEY_RE.test(key) || !/^[0-9a-f]{64}$/.test(sha256)) return { ok: false, error: "Solicitud inválida." };
+    if (!fileType || !GENERATED_KEY_RE.test(key) || !/^[0-9a-f]{64}$/.test(sha256)) return { ok: false, error: await userText("invalidRequest") };
     // The stored extension must map back to an allowed type — media serving
     // derives Content-Type from it.
-    if (!contentTypeForKey(key)) return { ok: false, error: "Solicitud inválida." };
-    if (!verifyUploadGrant(user.id, { key, fileType, exp, token })) return { ok: false, error: "No autorizado." };
+    if (!contentTypeForKey(key)) return { ok: false, error: await userText("invalidRequest") };
+    if (!verifyUploadGrant(user.id, { key, fileType, exp, token })) return { ok: false, error: await userText("unauthorized") };
 
     const thumb = readThumbGrant(formData);
     let thumbKey: string | null = null;
     if (thumb) {
-      if (!verifyImageThumbGrant(user.id, thumb)) return { ok: false, error: "No autorizado." };
+      if (!verifyImageThumbGrant(user.id, thumb)) return { ok: false, error: await userText("unauthorized") };
       thumbKey = thumb.key;
     }
 
@@ -131,7 +135,8 @@ export async function registerDocument(_prev: DocResult | null, formData: FormDa
     revalidatePath(`/app/projects/${projectId}`);
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo subir." };
+    const { t } = await getDict();
+    return { ok: false, error: toUserMessage(e, t, "registerDocument") };
   }
 }
 
@@ -149,18 +154,18 @@ export async function setDocumentThumbnail(_prev: DocResult | null, formData: Fo
       where: { id: documentId, project: projectAccessWhere(sessionUser) },
       select: { id: true, projectId: true },
     });
-    if (!doc) return { ok: false, error: "No autorizado." };
+    if (!doc) return { ok: false, error: await userText("unauthorized") };
     await requireProjectStructureAccess(sessionUser, doc.projectId);
 
     const grant = readThumbGrant(formData);
     let thumbKey: string | null = null;
     if (grant) {
-      if (!verifyImageThumbGrant(user.id, grant)) return { ok: false, error: "No autorizado." };
+      if (!verifyImageThumbGrant(user.id, grant)) return { ok: false, error: await userText("unauthorized") };
       thumbKey = grant.key;
     } else {
       thumbKey = await storeFallbackThumb(formData.get("thumb"));
     }
-    if (!thumbKey) return { ok: false, error: "Solicitud inválida." };
+    if (!thumbKey) return { ok: false, error: await userText("invalidRequest") };
 
     await prisma.document.updateMany({
       where: { id: doc.id, thumbKey: null },
@@ -168,6 +173,7 @@ export async function setDocumentThumbnail(_prev: DocResult | null, formData: Fo
     });
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo subir." };
+    const { t } = await getDict();
+    return { ok: false, error: toUserMessage(e, t, "setDocumentThumbnail") };
   }
 }

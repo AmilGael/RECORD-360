@@ -19,6 +19,8 @@ import { notifyEvent } from "@/lib/notifications/events";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
 import { storage } from "@/lib/storage";
 import { uploadBrandedImage } from "@/lib/storage/image-upload";
+import { UserError } from "@/lib/errors/user-error";
+import { formResult, type FormError } from "@/lib/errors/form-result";
 
 /** Cookie name shared with the admin page to flash the reset-link-sent confirmation. */
 const RESET_SENT_COOKIE = "r360_reset_sent";
@@ -45,7 +47,7 @@ async function requireAdmin() {
 function parseOwnerName(raw: FormDataEntryValue | null): string | null {
   const v = String(raw ?? "").trim().replace(/\s+/g, " ");
   if (!v) return null;
-  if (v.length > 120) throw new Error("El nombre del propietario es demasiado largo (máx. 120 caracteres).");
+  if (v.length > 120) throw new UserError("ownerNameTooLong");
   return v;
 }
 
@@ -82,7 +84,7 @@ export async function createPartida(formData: FormData) {
   // itself must re-check closedAt atomically at insert time).
   if (segmentId) {
     const segment = await prisma.segment.findUnique({ where: { id: segmentId }, select: { closedAt: true } });
-    if (segment?.closedAt) throw new Error("El bloque está cerrado: reábrelo para crear partidas.");
+    if (segment?.closedAt) throw new UserError("blockClosedCreate");
   }
   const name = String(formData.get("name"));
   const partidaId = randomUUID();
@@ -93,7 +95,7 @@ export async function createPartida(formData: FormData) {
       WHERE NOT EXISTS (
         SELECT 1 FROM "Segment" s WHERE s."id" = ${segmentId} AND s."closedAt" IS NOT NULL
       )`;
-    if (inserted === 0) throw new Error("El bloque está cerrado: reábrelo para crear partidas.");
+    if (inserted === 0) throw new UserError("blockClosedCreate");
   } else {
     await prisma.partida.create({ data: { id: partidaId, projectId, name, segmentId } });
   }
@@ -155,7 +157,7 @@ export async function deleteSegment(formData: FormData) {
     prisma.changeRequestSegment.count({ where: { segmentId } }),
   ]);
   if (partidas > 0 || documents > 0 || crLinks > 0) {
-    throw new Error("No se puede borrar: el bloque contiene partidas, documentos o cambios. Muevelos o borralos primero.");
+    throw new UserError("cannotDeleteBlock");
   }
 
   const [staff, assignments, actor] = await Promise.all([
@@ -219,7 +221,7 @@ export async function updateProjectCover(formData: FormData) {
   const project = await prisma.project.findFirst({ where: { id, companyId } });
   if (!project) throw new Error("Forbidden");
   const cover = formData.get("cover");
-  if (!(cover instanceof File) || cover.size === 0) throw new Error("Selecciona una imagen.");
+  if (!(cover instanceof File) || cover.size === 0) throw new UserError("selectImage");
   const coverImageKey = await uploadBrandedImage(cover, storage);
   await prisma.project.update({ where: { id }, data: { coverImageKey } });
   revalidatePath("/app");
@@ -233,7 +235,7 @@ export async function purgeProject(formData: FormData) {
   const id = String(formData.get("projectId"));
   const project = await prisma.project.findFirst({ where: { id, companyId } });
   if (!project) throw new Error("Forbidden");
-  if (!project.archivedAt) throw new Error("Archiva la obra antes de eliminarla definitivamente.");
+  if (!project.archivedAt) throw new UserError("archiveBeforePurge");
 
   const [partidas, changes, documents] = await Promise.all([
     prisma.partida.count({ where: { projectId: id } }),
@@ -241,7 +243,7 @@ export async function purgeProject(formData: FormData) {
     prisma.document.count({ where: { projectId: id } }),
   ]);
   if (partidas > 0 || changes > 0 || documents > 0) {
-    throw new Error("No se puede borrar definitivamente: la obra aún contiene partidas, cambios o documentos.");
+    throw new UserError("cannotPurgeObra");
   }
 
   const [staff, assignments, actor] = await Promise.all([
@@ -368,7 +370,7 @@ export async function archiveUser(formData: FormData) {
   if (actor.role !== Role.ADMIN) throw new Error("Forbidden");
 
   const userId = String(formData.get("userId"));
-  if (userId === actor.id) throw new Error("No puedes archivar tu propia cuenta.");
+  if (userId === actor.id) throw new UserError("cannotArchiveSelf");
 
   const target = await prisma.user.findFirst({ where: { id: userId, companyId: actor.companyId } });
   if (!target || target.role === Role.SUPERADMIN) throw new Error("Forbidden");
@@ -456,4 +458,12 @@ export async function restoreUser(formData: FormData) {
   });
 
   revalidatePath("/app/admin");
+}
+
+export async function createProjectForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("createProject", () => createProject(formData));
+}
+
+export async function updateProjectCoverForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("updateProjectCover", () => updateProjectCover(formData));
 }

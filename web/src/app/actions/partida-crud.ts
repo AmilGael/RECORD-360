@@ -5,6 +5,7 @@ import { Role } from "@prisma/client";
 import { writeAudit } from "@/lib/audit/log";
 import { requireFreshSession } from "@/lib/auth/session";
 import { createNotifications } from "@/lib/notifications/create";
+import { UserError } from "@/lib/errors/user-error";
 
 async function requireSession() {
   const user = await requireFreshSession();
@@ -68,7 +69,7 @@ export async function purgePartida(formData: FormData) {
   if (role !== Role.ADMIN) throw new Error("Forbidden");
   const p = await ownedPartida(String(formData.get("partidaId")), companyId);
   const records = await prisma.registro.count({ where: { partidaId: p.id } });
-  if (records > 0) throw new Error("No se puede borrar definitivamente: contiene registros inalterables.");
+  if (records > 0) throw new UserError("cannotPurgePartida");
 
   const [staff, assignments, actor] = await Promise.all([
     prisma.user.findMany({ where: { companyId, role: { in: [Role.ADMIN, Role.MANAGER] }, disabledAt: null }, select: { id: true } }),

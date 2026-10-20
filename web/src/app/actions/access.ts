@@ -11,6 +11,7 @@ import { requireSuperAdmin } from "@/lib/auth/operator";
 import { normalizeEmail } from "@/lib/auth/email";
 import { writeAudit } from "@/lib/audit/log";
 import { Role } from "@prisma/client";
+import { userText } from "@/lib/errors/form-result";
 
 export type RequestAccessState = { status: "idle" | "sent" | "error"; message?: string };
 
@@ -26,7 +27,7 @@ function reviewUrl(): string | undefined {
 export async function requestAccess(_prev: RequestAccessState, formData: FormData): Promise<RequestAccessState> {
   const ip = clientIp(await headers());
   if (await rateLimit(`request:${ip}`, MAX_PER_IP, WINDOW_MS)) {
-    return { status: "error", message: "Demasiados intentos. Inténtalo más tarde." };
+    return { status: "error", message: await userText("tooManyAttempts") };
   }
 
   // Honeypot: real users never fill this hidden field.
@@ -40,7 +41,7 @@ export async function requestAccess(_prev: RequestAccessState, formData: FormDat
   const message = String(formData.get("message") ?? "").trim() || null;
 
   if (!businessName || !contactName || !email || !phone) {
-    return { status: "error", message: "Completa los campos obligatorios." };
+    return { status: "error", message: await userText("accessFieldsRequired") };
   }
 
   // Enumeration-safe: if the email already has an account or a pending request,

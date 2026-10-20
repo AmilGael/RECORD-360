@@ -229,7 +229,7 @@ describe("createInforme", () => {
     // reason — visible and retryable, never a downloadable/usable informe.
     const failed = await prisma.informe.findFirst({ where: { projectId, brief: "saldo" } });
     expect(failed).toMatchObject({ status: "FAILED" });
-    expect(failed?.errorMessage).toMatch(/saldo/i);
+    expect(failed?.errorMessage).toBe("informeNoCredit");
     expect(await prisma.informe.count({ where: { projectId, brief: "saldo", status: "READY" } })).toBe(0);
   });
   it("returns a missing-key error immediately when ANTHROPIC_API_KEY is absent", async () => {
@@ -239,7 +239,7 @@ describe("createInforme", () => {
       authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
       const res = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "z", archetype: "OWNER" }));
       expect(res).toMatchObject({ ok: false });
-      expect((res as { error?: string }).error).toMatch(/clave de API/i);
+      expect((res as { error?: string }).error).toBe("El generador de informes no está configurado.");
     } finally {
       process.env.ANTHROPIC_API_KEY = saved;
     }

@@ -9,6 +9,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 import { deletePartida, restorePartida, purgePartida } from "@/app/actions/partida-crud";
+import { rejectedText } from "./helpers/user-message";
 
 let companyId = "", adminId = "", managerId = "", projectId = "";
 
@@ -63,7 +64,7 @@ describe("partida soft delete (ADMIN only)", () => {
     asAdmin();
     const p = await prisma.partida.create({ data: { projectId, name: "with records" } });
     await appendRegistro({ partidaId: p.id, authorId: adminId, category: null, text: "x", progressPct: null, gpsLat: null, gpsLng: null, locationId: null, attachments: [] });
-    await expect(purgePartida(fd(p.id))).rejects.toThrow(/inalterable|registros/i);
+    expect(await rejectedText(purgePartida(fd(p.id)))).toMatch(/inalterable|registros/i);
     expect(await prisma.partida.count({ where: { id: p.id } })).toBe(1);
   });
 

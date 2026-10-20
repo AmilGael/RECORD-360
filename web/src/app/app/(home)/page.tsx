@@ -2,7 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { getDict } from "@/i18n/server";
-import { createProject, restoreProject } from "@/app/actions/admin";
+import { createProjectForm, restoreProject } from "@/app/actions/admin";
+import { InlineActionForm } from "@/components/inline-action-form";
 import { PurgeProjectButton } from "@/components/purge-project-button";
 import { SubmitButton } from "@/components/submit-button";
 import { ArchiveButton } from "@/components/archive-button";
@@ -298,7 +299,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="panel-create-chevron" aria-hidden="true">⌄</span>
               </span>
             </summary>
-            <form action={createProject} className="panel-create-body">
+            <InlineActionForm action={createProjectForm} className="panel-create-body">
               <p className="panel-create-required">{D.requiredHint}</p>
               <div className="form-group">
                 <label className="form-label" htmlFor="dash-name">{D.newSite} *</label>
@@ -322,7 +323,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <SubmitButton className="btn btn-accent" style={{ width: "100%", marginTop: 4 }}>
                 {D.create} <span className="arrow">→</span>
               </SubmitButton>
-            </form>
+            </InlineActionForm>
           </details>
         )}
       </div>

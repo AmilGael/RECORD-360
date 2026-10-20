@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getDict } from "@/i18n/server";
 import { createUser, resendInvite } from "@/app/actions/admin";
-import { updateCompanySeal } from "@/app/actions/profile";
+import { updateCompanySealForm } from "@/app/actions/profile";
+import { InlineActionForm } from "@/components/inline-action-form";
 import { SubmitButton } from "@/components/submit-button";
 import { ResetPasswordButton } from "@/components/reset-password-button";
 import { MemberProfileForm } from "@/components/member-profile-form";
@@ -253,10 +254,10 @@ export default async function AdminPage() {
             ) : (
               <span className="mono text-steel" style={{ fontSize: "0.74rem" }}>{A.noSeal}</span>
             )}
-            <form action={updateCompanySeal} style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap", maxWidth: "100%" }}>
+            <InlineActionForm action={updateCompanySealForm} style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap", maxWidth: "100%" }}>
               <input type="file" name="seal" required accept="image/png" style={{ maxWidth: "100%", minWidth: 0 }} />
               <SubmitButton className="btn btn-ghost"><Upload size={12} style={{ verticalAlign: -1, marginRight: 5 }} />{A.sealUpload}</SubmitButton>
-            </form>
+            </InlineActionForm>
           </div>
         </div>
       )}

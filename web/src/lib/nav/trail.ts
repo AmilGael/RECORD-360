@@ -15,8 +15,13 @@ export const TRAIL_CAP = 50;
 // reply that was already sent or cancelled.
 const TRANSIENT_PARAMS = ["correctionOf", "replyTo"];
 
-/** Query params that rewrite the current screen instead of pushing a trail entry. */
-export const IN_PLACE_PARAMS = ["p", "pq"] as const;
+/**
+ * Query params that rewrite the current screen instead of pushing a trail entry.
+ * `q` is the obra search and the Notificaciones filter: a change of only `q`
+ * replaces the current entry, so Volver leaves the screen rather than walking
+ * back through each query.
+ */
+export const IN_PLACE_PARAMS = ["p", "pq", "q"] as const;
 
 export function isTrailPath(pathname: string): boolean {
   return pathname === "/app" || pathname.startsWith("/app/");
@@ -41,7 +46,7 @@ function searchWithoutInPlace(entry: string): { pathname: string; rest: string }
   return { pathname: u.pathname, rest: u.searchParams.toString() };
 }
 
-/** True when `a` and `b` are the same /app path and differ only in in-place params (`p`, `pq`). */
+/** True when `a` and `b` are the same /app path and differ only in in-place params (`p`, `pq`, `q`). */
 export function onlyPChanged(a: string, b: string): boolean {
   const left = normalizeEntry(a);
   const right = normalizeEntry(b);

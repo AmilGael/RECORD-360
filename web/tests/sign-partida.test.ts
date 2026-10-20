@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { dictionaries } from "@/i18n/dictionaries";
+import { rejectedText } from "./helpers/user-message";
 import { appendRegistro } from "@/lib/registro/append";
 import bcrypt from "bcryptjs";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
@@ -146,9 +148,9 @@ describe("signPartida", () => {
   it("wrong password → throws 'Contraseña incorrecta.', no row created", async () => {
     const before = await prisma.signature.count({ where: { partidaId } });
     asUser();
-    await expect(
-      signPartida(fd({ partidaId, password: "wrong-password" }))
-    ).rejects.toThrow("Contraseña incorrecta.");
+    expect(await rejectedText(
+      signPartida(fd({ partidaId, password: "wrong-password" })),
+    )).toBe(dictionaries.es.serverErrors.wrongPassword);
     expect(await prisma.signature.count({ where: { partidaId } })).toBe(before);
   });
 

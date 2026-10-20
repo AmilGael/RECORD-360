@@ -16,7 +16,10 @@ import { PartidaRecycle } from "@/components/partida-recycle";
 import { RenameProjectForm } from "@/components/project-edit-controls";
 import { ArchiveButton } from "@/components/archive-button";
 import { PurgeProjectButton } from "@/components/purge-project-button";
-import { restoreProject, updateProjectCover } from "@/app/actions/admin";
+import { restoreProject, updateProjectCoverForm } from "@/app/actions/admin";
+import { informeErrorText } from "@/lib/informes/error-text";
+import { InlineActionForm } from "@/components/inline-action-form";
+import { ObraSearch } from "@/components/obra-search";
 import { registrationQrDataUrl } from "@/lib/project/qr";
 import { SubmitButton } from "@/components/submit-button";
 import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel";
@@ -26,7 +29,6 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { BackButton } from "@/components/back-button";
 import type { DocumentKind, Role } from "@prisma/client";
 import { BloqueCards } from "@/components/bloque-cards";
-import { ProjectSearchResultsPanel } from "@/components/project-search-results";
 import { MediaGalleries, isMediaTab, type MediaItem, type MediaTab } from "@/components/media-galleries";
 import { searchProject } from "@/lib/project/search";
 import { projectHrefWithParams } from "@/lib/project/space-links";
@@ -478,11 +480,11 @@ export default async function ProjectPage({
       </div>
       {isOwner && (
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
-          <form action={updateProjectCover} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <InlineActionForm action={updateProjectCoverForm} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <input type="hidden" name="projectId" value={project.id} />
             <input type="file" name="cover" required accept="image/jpeg,image/png,image/webp" aria-label={t.dash.cover} style={{ maxWidth: 220 }} />
             <SubmitButton className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{P.changeCover}</SubmitButton>
-          </form>
+          </InlineActionForm>
           {project.archivedAt ? (
             <>
               <form action={restoreProject} style={{ display: "inline" }}>
@@ -596,7 +598,7 @@ export default async function ProjectPage({
               : i.archetype === "PERSONAL_FEEDBACK" ? t.archetypes.personal
               : t.archetypes.legacy,
             status: i.status,
-            errorMessage: i.errorMessage,
+            errorMessage: informeErrorText(i.errorMessage, t),
           }))}
           t={t.informes}
           archetypes={t.archetypes}
@@ -706,13 +708,16 @@ export default async function ProjectPage({
               blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
             }}
           />
-          <form action={`/app/projects/${project.id}`} style={{ display: "flex", gap: 8, marginTop: 16 }}>
-            <input name="q" defaultValue={partidaFilters.q} placeholder={P.searchObra} className="search-input" style={{ flex: 1 }} />
-            <SubmitButton className="btn btn-ghost" style={{ fontSize: "0.78rem" }}>{P.filter}</SubmitButton>
-          </form>
-          {partidaFilters.q && searchResults && (
-            <ProjectSearchResultsPanel projectId={project.id} results={searchResults} t={{ searchResults: P.searchResults, searchNoResults: P.searchNoResults, searchInPartidas: P.searchInPartidas, searchInRegistros: P.searchInRegistros, searchInDocumentos: P.searchInDocumentos, searchInCambios: P.searchInCambios }} />
-          )}
+          <ObraSearch
+            projectId={project.id}
+            initialQuery={partidaFilters.q}
+            initialResults={searchResults}
+            t={{
+              searchObra: P.searchObra, filter: P.filter, searchLoading: P.searchLoading, searchError: P.searchError,
+              searchResults: P.searchResults, searchNoResults: P.searchNoResults, searchInPartidas: P.searchInPartidas,
+              searchInRegistros: P.searchInRegistros, searchInDocumentos: P.searchInDocumentos, searchInCambios: P.searchInCambios,
+            }}
+          />
           <MediaGalleries
             projectId={project.id}
             tab={mediaTab}

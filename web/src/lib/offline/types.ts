@@ -27,15 +27,36 @@ export interface QueuedRegistro {
   // changing something. Old persisted records only ever used "error"; they
   // remain valid values (no migration needed for IndexedDB-stored rows).
   status: "pending" | "syncing" | "blocked" | "error";
-  // Errors the client itself detects carry a code that the UI maps to the
-  // user's language. `error` is the server's own validation message, or the
-  // Spanish text that items queued by older builds still hold (no errorCode).
+  // New failures store a code the UI maps to the user's language. `error` is
+  // legacy text only: items queued by older builds, with no errorCode.
   errorCode?: SyncErrorCode;
   error?: string;
   attempts: number;
 }
 
-export type SyncErrorCode = "session_expired" | "forbidden";
+export const SYNC_ERROR_CODES = [
+  "session_expired",
+  "forbidden",
+  "generic",
+  "reminder_invalid",
+  "reminder_future",
+  "location_too_long",
+  "category_invalid",
+  "file_type",
+  "file_too_big",
+  "file_too_many",
+  "file_total",
+  "file_save",
+  "correction_target",
+  "reply_target",
+  "captured_at",
+] as const;
+
+export type SyncErrorCode = (typeof SYNC_ERROR_CODES)[number];
+
+export function isSyncErrorCode(value: unknown): value is SyncErrorCode {
+  return typeof value === "string" && (SYNC_ERROR_CODES as readonly string[]).includes(value);
+}
 
 export interface OfflineQueue {
   enqueue(item: QueuedRegistro): Promise<void>;

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { nextCaptureState, syncErrorText, type CaptureState } from "@/lib/offline/capture-status";
-import type { QueuedRegistro } from "@/lib/offline/types";
+import { nextCaptureState, syncErrorText, type CaptureState, type SyncErrorLabels } from "@/lib/offline/capture-status";
+import { SYNC_ERROR_CODES, type QueuedRegistro } from "@/lib/offline/types";
 
-const labels = { sessionExpired: "Session expired.", forbidden: "No access." };
+const labels = Object.fromEntries(SYNC_ERROR_CODES.map((code) => [code, code])) as SyncErrorLabels;
+labels.session_expired = "Session expired.";
+labels.forbidden = "No access.";
 
 const item = (id: string, patch: Partial<QueuedRegistro> = {}): QueuedRegistro => ({
   id, partidaId: "p", text: "x", category: null, gpsLat: null, gpsLng: null, locationLabel: null,
@@ -15,7 +17,10 @@ describe("syncErrorText", () => {
     expect(syncErrorText({ errorCode: "session_expired" }, labels)).toBe("Session expired.");
     expect(syncErrorText({ errorCode: "forbidden" }, labels)).toBe("No access.");
   });
-  it("shows the server's validation message as sent", () => {
+  it("maps a stored code to its label", () => {
+    expect(syncErrorText({ errorCode: "reminder_future" }, labels)).toBe("reminder_future");
+  });
+  it("shows a legacy row's stored text when it has no code", () => {
     expect(syncErrorText({ error: "La fecha del recordatorio no es válida." }, labels)).toBe("La fecha del recordatorio no es válida.");
   });
   it("renders a legacy item's stored text as-is when it has no code", () => {

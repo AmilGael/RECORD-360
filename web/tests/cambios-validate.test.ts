@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseChangeTitle, parseReminderDueAt, parseResolutionNote, parseRequestGps, parseRequestKind, parseRequestSeverity } from "@/lib/cambios/validate";
 import { zonedTimestamp } from "@/lib/time/zone";
+import { thrownText } from "./helpers/user-message";
 
 describe("parseChangeTitle", () => {
   it("trims and returns", () => { expect(parseChangeTitle("  Refuerzo  ")).toBe("Refuerzo"); });
@@ -11,11 +12,11 @@ describe("parseChangeTitle", () => {
 
 describe("parseReminderDueAt", () => {
   it("throws when empty — reminders are mandatory on change requests", () => {
-    expect(() => parseReminderDueAt("")).toThrow(/obligatorio/i);
-    expect(() => parseReminderDueAt(null)).toThrow(/obligatorio/i);
+    expect(thrownText(() => parseReminderDueAt(""))).toMatch(/obligatorio/i);
+    expect(thrownText(() => parseReminderDueAt(null))).toMatch(/obligatorio/i);
   });
   it("throws on garbage dates", () => {
-    expect(() => parseReminderDueAt("not-a-date")).toThrow(/inválido/i);
+    expect(thrownText(() => parseReminderDueAt("not-a-date"))).toMatch(/inválido/i);
   });
   it("parses a datetime-local value", () => {
     const d = parseReminderDueAt("2027-01-15T10:00");
@@ -23,7 +24,7 @@ describe("parseReminderDueAt", () => {
     expect(d.getFullYear()).toBe(2027);
   });
   it("rejects past dates — a mandatory reminder must be in the future", () => {
-    expect(() => parseReminderDueAt("2020-01-01T10:00")).toThrow(/futura/i);
+    expect(thrownText(() => parseReminderDueAt("2020-01-01T10:00"))).toMatch(/futura/i);
   });
   it("reads an offset-less value (no-JS post) as Santo Domingo wall time", () => {
     expect(parseReminderDueAt("2027-01-15T10:00").toISOString()).toBe("2027-01-15T14:00:00.000Z");
@@ -47,7 +48,7 @@ describe("parseResolutionNote", () => {
     expect(parseResolutionNote("  Aprobado con observaciones  ")).toBe("Aprobado con observaciones");
   });
   it("rejects notes over 1000 chars", () => {
-    expect(() => parseResolutionNote("x".repeat(1001))).toThrow(/largo/i);
+    expect(thrownText(() => parseResolutionNote("x".repeat(1001)))).toMatch(/largo/i);
   });
 });
 
@@ -60,9 +61,9 @@ describe("parseRequestKind", () => {
     expect(parseRequestKind("change")).toBe("CHANGE");
   });
   it("rejects missing or unknown values — no preselection", () => {
-    expect(() => parseRequestKind(null)).toThrow(/tipo/i);
-    expect(() => parseRequestKind("")).toThrow(/tipo/i);
-    expect(() => parseRequestKind("BOGUS")).toThrow(/tipo/i);
+    expect(thrownText(() => parseRequestKind(null))).toMatch(/tipo/i);
+    expect(thrownText(() => parseRequestKind(""))).toMatch(/tipo/i);
+    expect(thrownText(() => parseRequestKind("BOGUS"))).toMatch(/tipo/i);
   });
 });
 
@@ -72,9 +73,9 @@ describe("parseRequestSeverity", () => {
     expect(parseRequestSeverity("CRITICAL")).toBe("CRITICAL");
   });
   it("rejects missing or unknown values — no preselection", () => {
-    expect(() => parseRequestSeverity(null)).toThrow(/severidad/i);
-    expect(() => parseRequestSeverity("")).toThrow(/severidad/i);
-    expect(() => parseRequestSeverity("BOGUS")).toThrow(/severidad/i);
+    expect(thrownText(() => parseRequestSeverity(null))).toMatch(/severidad/i);
+    expect(thrownText(() => parseRequestSeverity(""))).toMatch(/severidad/i);
+    expect(thrownText(() => parseRequestSeverity("BOGUS"))).toMatch(/severidad/i);
   });
 });
 
@@ -83,21 +84,21 @@ describe("parseRequestGps", () => {
     expect(parseRequestGps("18.4861", "-69.9312")).toEqual({ lat: 18.4861, lng: -69.9312 });
   });
   it("rejects both coordinates missing", () => {
-    expect(() => parseRequestGps(null, null)).toThrow(/ubicación|obligatoria/i);
+    expect(thrownText(() => parseRequestGps(null, null))).toMatch(/ubicación|obligatoria/i);
   });
   it("rejects a one-sided coordinate (lat only)", () => {
-    expect(() => parseRequestGps("18.4861", null)).toThrow(/ubicación|obligatoria/i);
+    expect(thrownText(() => parseRequestGps("18.4861", null))).toMatch(/ubicación|obligatoria/i);
   });
   it("rejects a one-sided coordinate (lng only)", () => {
-    expect(() => parseRequestGps(null, "-69.9312")).toThrow(/ubicación|obligatoria/i);
+    expect(thrownText(() => parseRequestGps(null, "-69.9312"))).toMatch(/ubicación|obligatoria/i);
   });
   it("rejects non-numeric coordinates", () => {
-    expect(() => parseRequestGps("abc", "-69.9312")).toThrow(/inválid/i);
+    expect(thrownText(() => parseRequestGps("abc", "-69.9312"))).toMatch(/inválid/i);
   });
   it("rejects out-of-range latitude/longitude", () => {
-    expect(() => parseRequestGps("91", "0")).toThrow(/inválid/i);
-    expect(() => parseRequestGps("0", "181")).toThrow(/inválid/i);
-    expect(() => parseRequestGps("-91", "0")).toThrow(/inválid/i);
-    expect(() => parseRequestGps("0", "-181")).toThrow(/inválid/i);
+    expect(thrownText(() => parseRequestGps("91", "0"))).toMatch(/inválid/i);
+    expect(thrownText(() => parseRequestGps("0", "181"))).toMatch(/inválid/i);
+    expect(thrownText(() => parseRequestGps("-91", "0"))).toMatch(/inválid/i);
+    expect(thrownText(() => parseRequestGps("0", "-181"))).toMatch(/inválid/i);
   });
 });

@@ -89,7 +89,7 @@ describe("reconcileOnPop", () => {
 
 describe("IN_PLACE_PARAMS", () => {
   it("lists p and pq so Volver treats them as the same screen", () => {
-    expect(IN_PLACE_PARAMS).toEqual(["p", "pq"]);
+    expect(IN_PLACE_PARAMS).toEqual(["p", "pq", "q"]);
   });
 });
 
@@ -105,6 +105,11 @@ describe("replaceTop and onlyPChanged", () => {
     expect(onlyPChanged(COCINA_P, COCINA)).toBe(true);
     expect(onlyPChanged(COCINA, `${OBRA}?tab=planos`)).toBe(false);
     expect(onlyPChanged(COCINA, COCINA)).toBe(false);
+  });
+  it("onlyPChanged is true when the same path differs only by q", () => {
+    expect(onlyPChanged(OBRA, `${OBRA}?q=cocina`)).toBe(true);
+    expect(onlyPChanged(`${OBRA}?q=cocina`, `${OBRA}?q=sala`)).toBe(true);
+    expect(onlyPChanged(`${OBRA}?q=cocina`, `${OBRA}?tab=planos&q=cocina`)).toBe(false);
   });
   it("onlyPChanged is true when the same path differs only by pq", () => {
     const planos = `${OBRA}?tab=planos`;

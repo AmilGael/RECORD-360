@@ -3,6 +3,7 @@
 
 import { RegistroCategory } from "@prisma/client";
 import { parseInstantInput } from "@/lib/time/zone";
+import { UserError } from "@/lib/errors/user-error";
 
 /**
  * Parse and validate a progress-percentage form value.
@@ -13,7 +14,7 @@ export function parseProgressPct(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === "") return null;
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 0 || n > 100) {
-    throw new Error("El avance debe ser un número entero entre 0 y 100.");
+    throw new UserError("progressRange");
   }
   return n;
 }
@@ -30,10 +31,10 @@ export function parseReminderDueAt(raw: unknown): Date | null {
   if (v === "") return null;
   const d = parseInstantInput(v);
   if (Number.isNaN(d.getTime())) {
-    throw new Error("Recordatorio inválido.");
+    throw new UserError("reminderInvalid");
   }
   if (d.getTime() < Date.now() - 60 * 1000) {
-    throw new Error("El recordatorio debe ser una fecha futura.");
+    throw new UserError("reminderFuture");
   }
   return d;
 }
@@ -55,18 +56,18 @@ export function parseOfflineReminderDueAt(raw: unknown, clientCapturedAt: Date |
   if (v === "") return null;
   const d = parseInstantInput(v);
   if (Number.isNaN(d.getTime())) {
-    throw new Error("Recordatorio inválido.");
+    throw new UserError("reminderInvalid");
   }
   const SKEW_MS = 60 * 1000;
   if (clientCapturedAt && !Number.isNaN(clientCapturedAt.getTime())) {
     if (d.getTime() >= clientCapturedAt.getTime() - SKEW_MS) return d;
-    throw new Error("El recordatorio debe ser una fecha futura.");
+    throw new UserError("reminderFuture");
   }
   // No (valid) clientCapturedAt to anchor against — fall back to the strict
   // online rule so a malformed/omitted capture time can't be used to sneak an
   // arbitrarily old reminder past validation.
   if (d.getTime() < Date.now() - SKEW_MS) {
-    throw new Error("El recordatorio debe ser una fecha futura.");
+    throw new UserError("reminderFuture");
   }
   return d;
 }
@@ -78,7 +79,7 @@ export function parseLocation(raw: unknown): string | null {
   const v = String(raw).trim();
   if (v === "") return null;
   if (v.length > 200) {
-    throw new Error("La ubicación es demasiado larga (máx. 200 caracteres).");
+    throw new UserError("locationTooLong");
   }
   return v;
 }
@@ -91,7 +92,7 @@ export function parseCategory(raw: unknown): RegistroCategory | null {
   if (raw === null || raw === undefined || raw === "") return null;
   const v = String(raw);
   if (!VALID_CATEGORIES.has(v)) {
-    throw new Error("Categoría inválida.");
+    throw new UserError("categoryInvalid");
   }
   return v as RegistroCategory;
 }
@@ -103,7 +104,7 @@ export function parseSegment(raw: unknown): string | null {
   const v = String(raw).trim().replace(/\s+/g, " ");
   if (v === "") return null;
   if (v.length > 80) {
-    throw new Error("El nombre del bloque es demasiado largo (máx. 80 caracteres).");
+    throw new UserError("blockNameTooLong");
   }
   return v;
 }

@@ -6,6 +6,27 @@ import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 import { projectAccessWhere } from "@/lib/authz/projects";
 import { requireFreshSession } from "@/lib/auth/session";
+import { UserError, type ServerErrorKey } from "@/lib/errors/user-error";
+import type { SyncErrorCode } from "@/lib/offline/types";
+
+const USER_ERROR_CODES: Partial<Record<ServerErrorKey, SyncErrorCode>> = {
+  reminderInvalid: "reminder_invalid",
+  reminderFuture: "reminder_future",
+  locationTooLong: "location_too_long",
+  categoryInvalid: "category_invalid",
+  fileType: "file_type",
+  fileTooBig: "file_too_big",
+  fileTooMany: "file_too_many",
+  fileTotalTooBig: "file_total",
+  fileSaveFailed: "file_save",
+  correctionTarget: "correction_target",
+  replyTarget: "reply_target",
+  capturedAtInvalid: "captured_at",
+};
+
+function rejected(code: SyncErrorCode, status: number) {
+  return Response.json({ errorCode: code }, { status });
+}
 
 export async function POST(request: Request) {
   try {
@@ -13,12 +34,12 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const partidaId = String(form.get("partidaId") ?? "");
     const idempotencyKey = String(form.get("idempotencyKey") ?? "").trim();
-    if (!idempotencyKey) return Response.json({ error: "idempotencyKey requerido" }, { status: 400 });
+    if (!idempotencyKey) return rejected("generic", 400);
 
     const partida = await prisma.partida.findFirst({
       where: { id: partidaId, deletedAt: null, project: projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) },
     });
-    if (!partida) return Response.json({ error: "Not found" }, { status: 404 });
+    if (!partida) return rejected("generic", 404);
 
     // Idempotency lookup SCOPED to the access-checked partida.
     // NEVER look up by idempotencyKey alone — that would allow cross-tenant replay (IDOR-via-dedup).
@@ -47,17 +68,17 @@ export async function POST(request: Request) {
     const corrRaw = form.get("correctionOfId");
     const correctionOfId = typeof corrRaw === "string" && corrRaw.trim() ? corrRaw.trim() : null;
     if (correctionOfId && !(await prisma.registro.findFirst({ where: { id: correctionOfId, partidaId }, select: { id: true } })))
-      return Response.json({ error: "Destino de corrección inválido." }, { status: 400 });
+      return rejected("correction_target", 400);
 
     const repRaw = form.get("replyToId");
     const replyToId = typeof repRaw === "string" && repRaw.trim() ? repRaw.trim() : null;
     if (replyToId && !(await prisma.registro.findFirst({ where: { id: replyToId, partidaId }, select: { id: true } })))
-      return Response.json({ error: "Destino de respuesta inválido." }, { status: 400 });
+      return rejected("reply_target", 400);
 
     const capRaw = String(form.get("clientCapturedAt") ?? "").trim();
     const clientCapturedAt = capRaw ? new Date(capRaw) : null;
     if (clientCapturedAt && Number.isNaN(clientCapturedAt.getTime()))
-      return Response.json({ error: "Fecha de captura inválida." }, { status: 400 });
+      return rejected("captured_at", 400);
 
     // Offline-specific reminder rule (R3 WS10 §5): a reminder that was still in
     // the future when the device captured it is accepted even if it is past
@@ -74,9 +95,14 @@ export async function POST(request: Request) {
     revalidatePath("/app");
     return Response.json({ id: rec.id }, { status: 200 });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "No se pudo registrar.";
-    if (message === "Unauthorized") return Response.json({ error: message }, { status: 401 });
-    if (message === "Forbidden") return Response.json({ error: message }, { status: 403 });
-    return Response.json({ error: message }, { status: 400 });
+    if (e instanceof Error && e.message === "Unauthorized") return rejected("session_expired", 401);
+    if (e instanceof Error && e.message === "Forbidden") return rejected("forbidden", 403);
+    if (e instanceof UserError) {
+      const code = USER_ERROR_CODES[e.key] ?? "generic";
+      if (code === "generic") console.error("[offline registro]", e);
+      return rejected(code, 400);
+    }
+    console.error("[offline registro]", e);
+    return rejected("generic", 400);
   }
 }

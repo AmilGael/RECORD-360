@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireProjectStructureAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { revalidatePath } from "next/cache";
 import { requireFreshSession } from "@/lib/auth/session";
+import { formResult, type FormError } from "@/lib/errors/form-result";
 
 function parseTagList(raw: unknown) {
   return [...new Set(
@@ -38,4 +39,8 @@ export async function setPartidaTags(formData: FormData) {
   });
   revalidatePath(`/app/projects/${partida.projectId}`);
   revalidatePath(`/app/partidas/${partidaId}`);
+}
+
+export async function setPartidaTagsForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("setPartidaTags", () => setPartidaTags(formData));
 }

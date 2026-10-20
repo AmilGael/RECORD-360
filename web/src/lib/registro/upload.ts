@@ -2,6 +2,7 @@ import type { Storage } from "@/lib/storage/types";
 import { attachmentKindForType } from "@/lib/storage/mime";
 import type { AttachmentType } from "@prisma/client";
 import { createHash } from "node:crypto";
+import { UserError } from "@/lib/errors/user-error";
 
 export type PreparedAttachment = { fileType: AttachmentType; url: string; sha256: string };
 
@@ -27,21 +28,21 @@ export const SIZE_CAP: Record<AttachmentType, number> = {
  */
 export async function prepareAttachments(files: File[], storage: Storage): Promise<PreparedAttachment[]> {
   if (files.length > MAX_FILES) {
-    throw new Error(`Demasiados archivos (máx. ${MAX_FILES}).`);
+    throw new UserError("fileTooMany", { max: MAX_FILES });
   }
   const totalBytes = files.reduce((sum, file) => sum + (file?.size ?? 0), 0);
   if (totalBytes > MAX_TOTAL_BYTES) {
-    throw new Error("El tamaño total de los archivos supera el límite permitido.");
+    throw new UserError("fileTotalTooBig");
   }
   const out: PreparedAttachment[] = [];
   for (const file of files) {
     if (!file || file.size === 0) continue;
     const kind = attachmentKindForType(file.type);
     if (!kind) {
-      throw new Error("Tipo de archivo no permitido. Usa imagen, PDF, video o audio.");
+      throw new UserError("fileType");
     }
     if (file.size > SIZE_CAP[kind]) {
-      throw new Error("Archivo demasiado grande.");
+      throw new UserError("fileTooBig");
     }
     const buffer = Buffer.from(await file.arrayBuffer());
     const sha256 = createHash("sha256").update(buffer).digest("hex");
@@ -49,7 +50,7 @@ export async function prepareAttachments(files: File[], storage: Storage): Promi
     try {
       saved = await storage.put({ buffer, filename: file.name, contentType: file.type });
     } catch {
-      throw new Error("No se pudo guardar el archivo. Inténtalo de nuevo.");
+      throw new UserError("fileSaveFailed");
     }
     out.push({ fileType: kind, url: saved.url, sha256 });
   }

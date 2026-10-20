@@ -6,6 +6,7 @@ import { buildReportPdf } from "@/lib/report/pdf";
 import { missingSealResponse, sanitizeFilename } from "@/lib/report/params";
 import { storage } from "@/lib/storage";
 import { requireFreshSession } from "@/lib/auth/session";
+import { getDict } from "@/i18n/server";
 import { ARCHETYPE_LABEL_ES } from "@/lib/informes/archetypes";
 
 async function keyToBuffer(key: string | null): Promise<Buffer | null> {
@@ -87,8 +88,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       },
     });
   } catch (e) {
-    if (e instanceof Error && e.message === "Unauthorized") return new Response("Unauthorized", { status: 401 });
-    if (e instanceof Error && e.message === "Forbidden") return new Response("Forbidden", { status: 403 });
-    return new Response("Error", { status: 500 });
+    const { t } = await getDict();
+    if (e instanceof Error && (e.message === "Unauthorized" || e.message === "Forbidden")) {
+      return new Response(t.serverErrors.unauthorized, { status: e.message === "Forbidden" ? 403 : 401 });
+    }
+    console.error("[informe pdf]", e);
+    return new Response(t.serverErrors.generic, { status: 500 });
   }
 }

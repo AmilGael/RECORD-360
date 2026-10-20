@@ -1,11 +1,10 @@
-import type { QueuedRegistro } from "./types";
+import type { QueuedRegistro, SyncErrorCode } from "./types";
 
-export type SyncErrorLabels = { sessionExpired: string; forbidden: string };
+export type SyncErrorLabels = Record<SyncErrorCode, string>;
 
-/** The text for a queued item's sync error, in the user's language when the client made it. */
+/** The text for a queued item's sync error. A code wins; legacy rows still show their stored sentence. */
 export function syncErrorText(item: Pick<QueuedRegistro, "errorCode" | "error">, labels: SyncErrorLabels): string {
-  if (item.errorCode === "session_expired") return labels.sessionExpired;
-  if (item.errorCode === "forbidden") return labels.forbidden;
+  if (item.errorCode && labels[item.errorCode]) return labels[item.errorCode];
   return item.error ?? "";
 }
 

@@ -1,4 +1,4 @@
-import type { OfflineQueue, QueuedRegistro } from "./types";
+import { isSyncErrorCode, type OfflineQueue, type QueuedRegistro, type SyncErrorCode } from "./types";
 import { toFormData } from "./serialize";
 
 export interface SyncDeps {
@@ -87,11 +87,14 @@ async function sendItem(queue: OfflineQueue, item: QueuedRegistro, fetchFn: type
       // Server-side failure — transient by nature, keep retrying.
       await queue.update(item.id, { status: "pending", attempts: item.attempts + 1 });
     } else {
-      // 400 and other 4xx: the server rejected the payload itself
-      // (validation). Terminal — surface the server's own message.
-      let msg = "No se pudo registrar.";
-      try { msg = (await res.json())?.error ?? msg; } catch {}
-      await queue.update(item.id, { status: "error", errorCode: undefined, error: msg });
+      // 400 and other 4xx: the server rejected the payload. Terminal. Store the
+      // code only — a raw body string can be a database message.
+      let code: SyncErrorCode = "generic";
+      try {
+        const body = await res.json();
+        if (isSyncErrorCode(body?.errorCode)) code = body.errorCode;
+      } catch { /* body was not JSON; generic is the safe label */ }
+      await queue.update(item.id, { status: "error", errorCode: code, error: undefined });
     }
   } catch {
     // Network failure (offline, DNS, timeout…) — retryable.

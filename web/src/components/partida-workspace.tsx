@@ -1,10 +1,10 @@
 "use client";
 import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { concludePartida, reopenPartida } from "@/app/actions/lifecycle";
-import { updatePartidaProgress } from "@/app/actions/partida-progress";
-import { movePartida, renamePartida } from "@/app/actions/project-edit";
-import { setPartidaTags } from "@/app/actions/partida-tags";
+import { concludePartidaForm, reopenPartidaForm } from "@/app/actions/lifecycle";
+import { updatePartidaProgressForm } from "@/app/actions/partida-progress";
+import { movePartidaForm, renamePartidaForm } from "@/app/actions/project-edit";
+import { setPartidaTagsForm } from "@/app/actions/partida-tags";
 import type { Lang } from "@/i18n/dictionaries";
 import type { PartidaPreview } from "@/lib/partida/preview";
 import { PartidaPanelView, type PanelCopy, type PartidaPanelShell } from "@/components/partida-panel";
@@ -54,10 +54,6 @@ function findShell(segments: SegmentGroup[], ungrouped: PartidaTreeRow[], id: st
     segmentName: null,
     segmentClosedAt: null,
   };
-}
-
-function actionError(e: unknown, fallback: string) {
-  return e instanceof Error && e.message ? e.message : fallback;
 }
 
 const PHONE_SHEET = "(max-width: 899px)";
@@ -258,7 +254,7 @@ export function PartidaWorkspace({
     });
   }
 
-  async function run(id: string, previewPatch: Partial<PartidaPreview>, rowPatch: RowPatch, fn: () => Promise<void>) {
+  async function run(id: string, previewPatch: Partial<PartidaPreview>, rowPatch: RowPatch, fn: () => Promise<{ error: string } | null | void>) {
     setFormError(null);
     setBusy(true);
     startTransition(() => {
@@ -266,11 +262,16 @@ export function PartidaWorkspace({
       applyRowPatch(id, rowPatch);
     });
     try {
-      await fn();
+      const result = await fn();
+      if (result && result.error) {
+        setFormError(result.error);
+        return;
+      }
       await refetch(id);
       router.refresh();
-    } catch (e) {
-      setFormError(actionError(e, panelT.panelOffline));
+    } catch {
+      // A throw here is unexpected: the wrappers already turn UserError into a sentence.
+      setFormError(panelT.panelOffline);
     } finally {
       setBusy(false);
     }
@@ -316,36 +317,36 @@ export function PartidaWorkspace({
           const fd = new FormData();
           fd.set("partidaId", id);
           fd.set("progressPct", String(progressPct));
-          void run(id, { progressPct }, { progressPct }, () => updatePartidaProgress(fd));
+          void run(id, { progressPct }, { progressPct }, () => updatePartidaProgressForm(null, fd));
         }}
         onConclude={(id) => {
           const fd = new FormData();
           fd.set("partidaId", id);
-          void run(id, { completedAt: new Date().toISOString(), progressPct: 100 }, { completedAt: new Date().toISOString(), progressPct: 100 }, () => concludePartida(fd));
+          void run(id, { completedAt: new Date().toISOString(), progressPct: 100 }, { completedAt: new Date().toISOString(), progressPct: 100 }, () => concludePartidaForm(null, fd));
         }}
         onReopen={(id) => {
           const fd = new FormData();
           fd.set("partidaId", id);
-          void run(id, { completedAt: null }, { completedAt: null }, () => reopenPartida(fd));
+          void run(id, { completedAt: null }, { completedAt: null }, () => reopenPartidaForm(null, fd));
         }}
         onRename={(id, name) => {
           const fd = new FormData();
           fd.set("partidaId", id);
           fd.set("name", name);
-          void run(id, { name }, { name }, () => renamePartida(fd));
+          void run(id, { name }, { name }, () => renamePartidaForm(null, fd));
         }}
         onMove={(id, segmentId) => {
           const fd = new FormData();
           fd.set("partidaId", id);
           fd.set("segmentId", segmentId);
-          void run(id, {}, { segmentId: segmentId || null }, () => movePartida(fd));
+          void run(id, {}, { segmentId: segmentId || null }, () => movePartidaForm(null, fd));
         }}
         onTags={(id, tags) => {
           const fd = new FormData();
           fd.set("partidaId", id);
           fd.set("tags", tags);
           const names = tags.split(",").map((x) => x.trim()).filter(Boolean);
-          void run(id, { tags: names }, { tags: names.map((name) => ({ tag: { name } })) }, () => setPartidaTags(fd));
+          void run(id, { tags: names }, { tags: names.map((name) => ({ tag: { name } })) }, () => setPartidaTagsForm(null, fd));
         }}
       />
     </div>

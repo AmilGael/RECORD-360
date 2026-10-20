@@ -25,14 +25,24 @@ describe("syncQueue", () => {
     const [it0] = await q.all();
     expect(it0.status).toBe("pending"); expect(it0.attempts).toBe(1);
   });
-  it("marks error (terminal, no retry) on 400 with the server's message", async () => {
+  it("marks a 400 without a known code as generic and does not store the raw string", async () => {
     await q.enqueue(item("a"));
     const bad = () => Promise.resolve(new Response(JSON.stringify({ error: "malo" }), { status: 400 }));
     await syncQueue({ queue: q, fetchFn: bad, isOnline: () => true });
     const [it0] = await q.all();
     expect(it0.status).toBe("error");
-    expect(it0.error).toBe("malo");
-    expect(it0.errorCode).toBeUndefined();
+    expect(it0.error).toBeUndefined();
+    expect(it0.errorCode).toBe("generic");
+    expect(JSON.stringify(it0)).not.toContain("malo");
+  });
+  it("stores a known errorCode and clears any raw body text", async () => {
+    await q.enqueue(item("b"));
+    const bad = () => Promise.resolve(new Response(JSON.stringify({ errorCode: "reminder_future", error: "prisma: secret" }), { status: 400 }));
+    await syncQueue({ queue: q, fetchFn: bad, isOnline: () => true });
+    const [it0] = await q.all();
+    expect(it0.status).toBe("error");
+    expect(it0.errorCode).toBe("reminder_future");
+    expect(it0.error).toBeUndefined();
   });
   it("marks 'blocked' (not terminal error) on 401 with the session_expired code, no text", async () => {
     await q.enqueue(item("a"));

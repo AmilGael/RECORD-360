@@ -8,10 +8,11 @@ import { sendBestEffort } from "@/lib/email";
 import { passwordResetLinkEmail } from "@/lib/email/templates";
 import { rateLimit, clientIp } from "@/lib/auth/rate-limit";
 import { createToken, verifyToken, consumeTokens, resetUrl } from "@/lib/auth/tokens";
-import { validatePassword } from "@/lib/auth/password-policy";
+import { MIN_PASSWORD_LENGTH, validatePassword } from "@/lib/auth/password-policy";
 import { normalizeEmail } from "@/lib/auth/email";
 import { writeAudit } from "@/lib/audit/log";
 import { TokenPurpose } from "@prisma/client";
+import { userText } from "@/lib/errors/form-result";
 
 export type ForgotPasswordState = { status: "idle" | "sent" | "error"; message?: string };
 export type ResetPasswordState = { status: "idle" | "error"; message?: string };
@@ -27,14 +28,14 @@ export async function requestPasswordReset(
 ): Promise<ForgotPasswordState> {
   const ip = clientIp(await headers());
   if (await rateLimit(`reset:${ip}`, REQUEST_MAX, WINDOW_MS)) {
-    return { status: "error", message: "Demasiados intentos. Inténtalo más tarde." };
+    return { status: "error", message: await userText("tooManyAttempts") };
   }
 
   // Honeypot: real users never fill this hidden field.
   if (String(formData.get("company_site") ?? "").trim() !== "") return NEUTRAL;
 
   const email = normalizeEmail(formData.get("email"));
-  if (!email) return { status: "error", message: "Ingresa tu correo." };
+  if (!email) return { status: "error", message: await userText("emailRequired") };
 
   // Enumeration-safe: unknown, unactivated, or disabled accounts get the same
   // neutral answer and no token. Unactivated users must use their activation link.
@@ -55,7 +56,7 @@ export async function resetPassword(
 ): Promise<ResetPasswordState> {
   const ip = clientIp(await headers());
   if (await rateLimit(`resetpw:${ip}`, RESET_MAX, WINDOW_MS)) {
-    return { status: "error", message: "Demasiados intentos. Inténtalo más tarde." };
+    return { status: "error", message: await userText("tooManyAttempts") };
   }
 
   const token = String(formData.get("token") ?? "");
@@ -63,17 +64,17 @@ export async function resetPassword(
   const confirm = String(formData.get("confirm") ?? "");
 
   const policy = validatePassword(password);
-  if (!policy.ok) return { status: "error", message: policy.error };
-  if (password !== confirm) return { status: "error", message: "Las contraseñas no coinciden." };
+  if (!policy.ok) return { status: "error", message: await userText(policy.key, { min: MIN_PASSWORD_LENGTH }) };
+  if (password !== confirm) return { status: "error", message: await userText("passwordMismatch") };
 
   const valid = await verifyToken(token, TokenPurpose.PASSWORD_RESET);
-  if (!valid) return { status: "error", message: "El enlace es inválido o expiró." };
+  if (!valid) return { status: "error", message: await userText("linkInvalid") };
 
   // Disable is the system's revocation primitive: a token minted while the account
   // was active must not stay redeemable after the account is disabled. Same generic
   // message as an invalid token — indistinguishable from the outside.
   const user = await prisma.user.findUnique({ where: { id: valid.userId } });
-  if (!user || user.disabledAt) return { status: "error", message: "El enlace es inválido o expiró." };
+  if (!user || user.disabledAt) return { status: "error", message: await userText("linkInvalid") };
 
   const passwordHash = await bcrypt.hash(password, 10);
   await prisma.$transaction(async (tx) => {

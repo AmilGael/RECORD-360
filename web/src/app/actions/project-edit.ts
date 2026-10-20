@@ -6,6 +6,8 @@ import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireProjectStructureAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { requireFreshSession } from "@/lib/auth/session";
+import { UserError } from "@/lib/errors/user-error";
+import { formResult, type FormError } from "@/lib/errors/form-result";
 
 const MANAGER_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
 
@@ -20,17 +22,17 @@ async function requireManager() {
   return user;
 }
 
-function parseName(raw: FormDataEntryValue | null, label: string, max = 120) {
+function parseName(raw: FormDataEntryValue | null, kind: "project" | "partida", max = 120) {
   const value = String(raw ?? "").trim().replace(/\s+/g, " ");
-  if (!value) throw new Error(`${label} es obligatorio.`);
-  if (value.length > max) throw new Error(`${label} es demasiado largo.`);
+  if (!value) throw new UserError(kind === "project" ? "projectNameRequired" : "partidaNameRequired");
+  if (value.length > max) throw new UserError(kind === "project" ? "projectNameTooLong" : "partidaNameTooLong");
   return value;
 }
 
 export async function renameProject(formData: FormData) {
   const user = await requireManager();
   const projectId = String(formData.get("projectId"));
-  const name = parseName(formData.get("name"), "El nombre de la obra");
+  const name = parseName(formData.get("name"), "project");
 
   const project = await prisma.project.findFirst({
     where: { id: projectId, companyId: user.companyId },
@@ -59,7 +61,7 @@ export async function renameSegment(formData: FormData) {
   const user = await requireSession();
   const segmentId = String(formData.get("segmentId"));
   const name = parseSegment(formData.get("name"));
-  if (!name) throw new Error("El nombre del bloque es obligatorio.");
+  if (!name) throw new UserError("blockNameRequired");
 
   const segment = await prisma.segment.findFirst({
     where: { id: segmentId, project: projectAccessWhere(user) },
@@ -77,7 +79,7 @@ export async function renameSegment(formData: FormData) {
     },
     select: { id: true },
   });
-  if (duplicate) throw new Error("Ya existe un bloque con ese nombre.");
+  if (duplicate) throw new UserError("blockNameDuplicate");
 
   await prisma.$transaction(async (tx) => {
     await tx.segment.update({ where: { id: segment.id }, data: { name } });
@@ -97,7 +99,7 @@ export async function renameSegment(formData: FormData) {
 export async function renamePartida(formData: FormData) {
   const user = await requireSession();
   const partidaId = String(formData.get("partidaId"));
-  const name = parseName(formData.get("name"), "El nombre de la partida");
+  const name = parseName(formData.get("name"), "partida");
 
   const partida = await prisma.partida.findFirst({
     where: { id: partidaId, deletedAt: null, project: projectAccessWhere(user) },
@@ -142,7 +144,7 @@ export async function movePartida(formData: FormData) {
       where: { id: segmentId, projectId: partida.projectId },
       select: { id: true },
     });
-    if (!segment) throw new Error("Bloque inválido.");
+    if (!segment) throw new UserError("invalidBlock");
   }
 
   await prisma.$transaction(async (tx) => {
@@ -158,4 +160,20 @@ export async function movePartida(formData: FormData) {
     });
   });
   revalidatePath(`/app/projects/${partida.projectId}`);
+}
+
+export async function renameProjectForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("renameProject", () => renameProject(formData));
+}
+
+export async function renameSegmentForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("renameSegment", () => renameSegment(formData));
+}
+
+export async function renamePartidaForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("renamePartida", () => renamePartida(formData));
+}
+
+export async function movePartidaForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("movePartida", () => movePartida(formData));
 }
