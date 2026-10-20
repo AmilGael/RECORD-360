@@ -62,6 +62,20 @@ describe("markNotificationRead", () => {
     expect(after.readAt).toBeNull(); // still unread
   });
 
+  it("keeps the first readAt on a second call", async () => {
+    authMock.mockResolvedValue({ user: { id: userAId, companyId, role: "SUPERVISOR" } });
+    const n = await seedNotification(userAId);
+    const fd = new FormData();
+    fd.set("id", n.id);
+    await markNotificationRead(fd);
+    const first = await prisma.notification.findUniqueOrThrow({ where: { id: n.id } });
+    expect(first.readAt).not.toBeNull();
+    await new Promise((r) => setTimeout(r, 25));
+    await markNotificationRead(fd);
+    const second = await prisma.notification.findUniqueOrThrow({ where: { id: n.id } });
+    expect(second.readAt?.getTime()).toBe(first.readAt!.getTime());
+  });
+
   it("throws Unauthorized when not logged in", async () => {
     authMock.mockResolvedValue(null);
     const fd = new FormData();
