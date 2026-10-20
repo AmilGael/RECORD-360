@@ -50,6 +50,30 @@ describe("resetPassword", () => {
     expect(log).not.toBeNull();
   });
 
+  it("clears that email's login lockout keys and no others", async () => {
+    const co = await prisma.company.create({ data: { name: `${tag}-throttle` } });
+    // The underscore proves the prefix match is literal (LIKE wildcards escaped).
+    const u = await prisma.user.create({
+      data: {
+        email: `${tag}-reset_me@example.com`, name: "T", role: Role.ADMIN, companyId: co.id,
+        passwordHash: await bcrypt.hash("old-password-123", 10), emailVerifiedAt: new Date("2026-01-01"),
+      },
+    });
+    const own = [`${u.email}|1.1.1.1`, `${u.email}|2.2.2.2`];
+    const kept = [`${tag}-resetXme@example.com|1.1.1.1`, `${tag}-other@example.com|1.1.1.1`, `resetpw:${tag}`];
+    for (const key of [...own, ...kept]) {
+      await prisma.loginAttempt.create({ data: { key, failures: 5, windowStartedAt: new Date(), lastFailureAt: new Date(), blockedUntil: new Date(Date.now() + 900_000) } });
+    }
+    try {
+      const raw = await createToken(u.id, TokenPurpose.PASSWORD_RESET);
+      await expect(call(raw, "brand-new-password-1")).rejects.toThrow("REDIRECT:/login?reset=1");
+      expect(await prisma.loginAttempt.count({ where: { key: { in: own } } })).toBe(0);
+      expect(await prisma.loginAttempt.count({ where: { key: { in: kept } } })).toBe(kept.length);
+    } finally {
+      await prisma.loginAttempt.deleteMany({ where: { key: { in: [...own, ...kept] } } });
+    }
+  });
+
   it("rejects reusing a consumed token", async () => {
     const u = await activatedUser("reuse");
     const raw = await createToken(u.id, TokenPurpose.PASSWORD_RESET);

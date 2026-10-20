@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getDict } from "@/i18n/server";
 import { ProjectFileTree } from "@/components/project-file-tree";
 import { PartidaSummary } from "@/components/partida-summary";
@@ -60,7 +61,8 @@ export default async function ProjectPage({
   };
 
   // Tenant scoping: only return the project if it belongs to the caller's company.
-  const project = await prisma.project.findFirstOrThrow({
+  // A missing id and another tenant's id both render the same 404.
+  const project = await prisma.project.findFirst({
     where: { id, ...projectAccessWhere(sessionUser) },
     include: {
       company: { select: { name: true } },
@@ -85,6 +87,7 @@ export default async function ProjectPage({
       },
     },
   });
+  if (!project) notFound();
 
   const allPartidas = [...project.segments.flatMap((s) => s.partidas), ...project.partidas];
   const canEditStructure = isAdmin || project.assignments.some((a) => a.userId === sessionUser.id);

@@ -18,8 +18,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         password: formData.get("password"),
         redirect: false,
       });
-    } catch {
-      redirect("/login?error=1");
+    } catch (e) {
+      redirect((e as { code?: unknown }).code === "locked" ? "/login?error=locked" : "/login?error=1");
     }
     redirect("/app");
   }
@@ -42,7 +42,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div style={{ padding: "26px 22px 24px" }}>
             <h1 className="h-md" style={{ fontSize: "1.7rem", marginBottom: 20 }}>{T.title}</h1>
             {error && (
-              <p style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.error}</p>
+              <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>
+                {error === "locked" ? (
+                  <>{T.locked} <Link href="/forgot-password" style={{ color: "inherit", textDecoration: "underline" }}>{T.forgot}</Link></>
+                ) : T.error}
+              </p>
             )}
             {activated && (
               <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.activated}</p>
@@ -50,7 +54,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             {reset && (
               <p style={{ background: "rgba(40,140,60,0.08)", border: "1px solid var(--line-strong)", color: "var(--ink)", padding: "9px 11px", borderRadius: 0, fontSize: "0.84rem", marginBottom: 14 }}>{T.resetDone}</p>
             )}
-            <input name="email" type="email" placeholder={T.email} required className="input" style={{ marginBottom: 10 }} autoComplete="email" autoFocus />
+            <input name="email" type="email" placeholder={T.email} required className="input" style={{ marginBottom: 10 }} autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" autoFocus />
             <input name="password" type="password" placeholder={T.password} required className="input" style={{ marginBottom: 8 }} autoComplete="current-password" />
             <div style={{ textAlign: "right", marginBottom: 18 }}>
               <Link href="/forgot-password" className="mono text-steel" style={{ fontSize: "0.66rem", textDecoration: "none" }}>{T.forgot}</Link>
