@@ -99,7 +99,7 @@ State is carried by **marks, not hues**: the active plane takes the light, pendi
 - Flat hard-edged planes; zero border radius everywhere; one chamfered corner on actions
 - Hard offset shadows only (the raking light) — never blurred halos
 - Night-native, day-derived; both shifts share one token vocabulary
-- Rust `#C24A2A`/`#C9502E` used as painted bands and commitments, never as ambient wash
+- Rust `#C34E2D` night / `#C24A2A` day used as painted bands and commitments, never as ambient wash
 - Stencil numerals as the display device; condensed Archivo caps as signage; mono as the data voice
 - State grammar of marks (outline / plane / band / unlit), not color-coding alone
 - No emoji anywhere in the UI — monochrome SVG line icons or text only (owner rule, PRODUCT.md)
