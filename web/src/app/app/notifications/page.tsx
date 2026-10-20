@@ -3,23 +3,26 @@ import { prisma } from "@/lib/db";
 import { getDict } from "@/i18n/server";
 import Link from "next/link";
 import type { NotificationSeverity, Role } from "@prisma/client";
-import { markNotificationRead, markAllNotificationsRead } from "@/app/actions/notifications";
+import { markAllNotificationsRead } from "@/app/actions/notifications";
 import { projectAccessWhere } from "@/lib/authz/projects";
-import { pageWindow } from "@/lib/feed/paginate";
 import { EVENT_KEYS, type EventKey } from "@/lib/notifications/events";
-import { buildNotificationWhere } from "@/lib/notifications/query";
-import { SeverityMarker } from "@/components/severity-marker";
+import { getNotificationSections } from "@/lib/notifications/sections";
 import { FiltersSheet } from "@/components/filters-sheet";
 import { BackButton } from "@/components/back-button";
-import { formatRecordTime } from "@/lib/format/datetime";
+import { NotificationsBoard } from "@/components/notifications-board";
 import { parseDayBound } from "@/lib/time/zone";
 
 const SEVERITIES = ["SUCCESS", "IMPORTANT", "CRITICAL"] as const;
 const PAGE_SIZE = 25;
 
 type SearchParams = {
-  q?: string; status?: string; projectId?: string; type?: string; severity?: string; from?: string; to?: string; page?: string;
+  q?: string; status?: string; projectId?: string; type?: string; severity?: string; from?: string; to?: string; up?: string; rp?: string;
 };
+
+function parsePage(raw: string | undefined): number {
+  const n = parseInt(raw ?? "1", 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
 
 export default async function NotificationsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const session = await auth();
@@ -38,50 +41,22 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const type: EventKey | undefined = sp.type && (EVENT_KEYS as readonly string[]).includes(sp.type) ? (sp.type as EventKey) : undefined;
   const severity: NotificationSeverity | undefined =
     sp.severity && (SEVERITIES as readonly string[]).includes(sp.severity) ? (sp.severity as NotificationSeverity) : undefined;
-  // Date inputs pick whole local days in APP_TIME_ZONE, not UTC days.
   const from = parseDayBound(sp.from, "start");
   const to = parseDayBound(sp.to, "end");
-  const rawPage = parseInt(sp.page ?? "1", 10);
+  const unreadPage = parsePage(sp.up);
+  const readPage = parsePage(sp.rp);
   const hasActiveFilters = Boolean(q || status || projectId || type || severity || from || to);
+  const hasExtraFilters = Boolean(q || projectId || type || severity || from || to);
 
-  // Server-side (DB-level) filtering — never fetch-all-then-filter in memory.
-  const where = buildNotificationWhere(userId, { q: q || undefined, status, projectId, type, severity, from, to });
-
-  // Project filter options come from the user's ACCESSIBLE project set
-  // (projectAccessWhere), not from distinct notification rows — reading
-  // options off notification rows would leak the names of projects the user
-  // has since lost access to (e.g. after an assignment change).
-  const [total, unreadTotal, projects] = await Promise.all([
-    prisma.notification.count({ where }),
-    // Sidebar unread badge parity: this is the SAME unread definition used in
-    // app/app/layout.tsx (readAt: null for the user), intentionally unaffected
-    // by the filters above.
+  const [sections, unreadTotal, projects] = await Promise.all([
+    getNotificationSections(
+      userId,
+      { q: q || undefined, status, projectId, type, severity, from, to },
+      { unreadPage, readPage, pageSize: PAGE_SIZE },
+    ),
     prisma.notification.count({ where: { userId, readAt: null } }),
     prisma.project.findMany({ where: projectAccessWhere(sessionUser), select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
-
-  const pagination = pageWindow(total, isNaN(rawPage) ? 1 : rawPage, PAGE_SIZE);
-
-  const notifications = await prisma.notification.findMany({
-    where,
-    orderBy: [{ createdAt: "desc" }],
-    take: PAGE_SIZE,
-    skip: pagination.skip,
-  });
-
-  function pageHref(page: number) {
-    const params = new URLSearchParams();
-    if (sp.q) params.set("q", sp.q);
-    if (sp.status) params.set("status", sp.status);
-    if (sp.projectId) params.set("projectId", sp.projectId);
-    if (sp.type) params.set("type", sp.type);
-    if (sp.severity) params.set("severity", sp.severity);
-    if (sp.from) params.set("from", sp.from);
-    if (sp.to) params.set("to", sp.to);
-    if (page > 1) params.set("page", String(page));
-    const s = params.toString();
-    return s ? `/app/notifications?${s}` : "/app/notifications";
-  }
 
   return (
     <div className="reveal" style={{ maxWidth: 720, margin: "0 auto" }}>
@@ -132,92 +107,37 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         </form>
       )}
 
-      {notifications.length === 0 && (
-        <p className="text-steel">{hasActiveFilters ? F.noResults : N.empty}</p>
-      )}
-
-      {notifications.map((n) => {
-        const isUnread = n.readAt === null;
-        return (
-          <div
-            key={n.id}
-            className="row"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              gap: 4,
-              borderLeft: isUnread ? "3px solid var(--accent)" : "3px solid transparent",
-              paddingLeft: 12,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", width: "100%", gap: 8 }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  {n.link ? (
-                    <Link href={n.link} className="row-link" style={{ fontWeight: isUnread ? 700 : 400 }}>
-                      {n.title}
-                    </Link>
-                  ) : (
-                    <span style={{ fontWeight: isUnread ? 700 : 400 }}>{n.title}</span>
-                  )}
-                  <SeverityMarker severity={n.severity} t={t.severity} />
-                </div>
-                {n.body && <p className="text-soft" style={{ margin: "2px 0 0", fontSize: "0.88rem" }}>{n.body}</p>}
-                <p className="text-steel" style={{ margin: "3px 0 0", fontSize: "0.76rem" }}>
-                  {formatRecordTime(n.createdAt, lang)}
-                  {isUnread && (
-                    <span style={{ marginLeft: 6, fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent)" }}>
-                      {t.notifications.unread}
-                    </span>
-                  )}
-                </p>
-              </div>
-              {isUnread && (
-                <form action={markNotificationRead}>
-                  <input type="hidden" name="id" value={n.id} />
-                  <button type="submit" className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem" }}>
-                    {t.notifications.markRead}
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        );
-      })}
-
-      {total > 0 && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            marginTop: 24,
-            paddingTop: 16,
-            borderTop: "1px solid var(--line)",
-            flexWrap: "wrap",
-          }}
-        >
-          {pagination.hasNewer ? (
-            <Link href={pageHref(pagination.page - 1)} className="btn btn-ghost" style={{ fontSize: "0.82rem", padding: "0.42rem 0.9rem" }}>
-              {t.pager.newer}
-            </Link>
-          ) : (
-            <span style={{ minWidth: 80 }} />
-          )}
-          <span className="kicker" style={{ color: "var(--steel)" }}>
-            {t.pager.pageLabel} {pagination.page} {t.pager.ofLabel} {pagination.totalPages}
-          </span>
-          {pagination.hasOlder ? (
-            <Link href={pageHref(pagination.page + 1)} className="btn btn-ghost" style={{ fontSize: "0.82rem", padding: "0.42rem 0.9rem" }}>
-              {t.pager.older}
-            </Link>
-          ) : (
-            <span style={{ minWidth: 80 }} />
-          )}
-        </div>
-      )}
+      <NotificationsBoard
+        data={sections}
+        pageSize={PAGE_SIZE}
+        query={{
+          q: q || undefined,
+          status,
+          projectId,
+          type,
+          severity,
+          from: sp.from || undefined,
+          to: sp.to || undefined,
+          up: unreadPage,
+          rp: readPage,
+        }}
+        status={status}
+        hasExtraFilters={hasExtraFilters}
+        lang={lang}
+        labels={{
+          unreadSection: N.unreadSection,
+          readSection: N.readSection,
+          unreadCaughtUp: N.unreadCaughtUp,
+          readEmpty: N.readEmpty,
+          noResults: F.noResults,
+          markRead: N.markRead,
+          unread: N.unread,
+          unreadPager: N.unreadPager,
+          readPager: N.readPager,
+          pager: t.pager,
+          severity: t.severity,
+        }}
+      />
     </div>
   );
 }

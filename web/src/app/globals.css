@@ -208,7 +208,8 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 @media (pointer: coarse) {
   .btn, .tab, .sidebar-link, .sidebar-icon-button, .sidebar-signout,
   .space-link, .space-block, .input, select.input, .drawer-toggle,
-  .tree-file, .panel-close, .planos-card, .planos-backfill, .planos-search-clear {
+  .tree-file, .panel-close, .planos-card, .planos-backfill, .planos-search-clear,
+  .notif-title, .notif-mark-read {
     min-height: 44px;
   }
   .tab { align-items: center; }
@@ -429,6 +430,30 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .row:hover > * { transform: translateX(6px); }
 .row-link { color: var(--ink); text-decoration: none; font-weight: 700; transition: color 0.18s var(--ease); }
 .row:hover .row-link { color: var(--accent); }
+
+.notif-section { margin-top: 8px; }
+.notif-section + .notif-section { margin-top: 28px; }
+.notif-section-title {
+  font-family: var(--font-archivo), sans-serif; font-stretch: 86%; text-transform: uppercase;
+  font-size: 1.05rem; font-weight: 800; letter-spacing: 0.015em; line-height: 1.1; margin: 0 0 8px;
+}
+.notif-row { padding-left: 12px; gap: 8px; }
+.notif-row.is-unread { border-left: 3px solid var(--accent); }
+.notif-row.is-read { border-left: 3px solid transparent; }
+.notif-row-main { min-width: 0; flex: 1; }
+.notif-row-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.notif-title { color: var(--ink); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; }
+.notif-row.is-read .notif-title { font-weight: 400; color: var(--ink-soft); }
+.notif-row.is-read:hover .notif-title { color: var(--ink); }
+.notif-unread-tag {
+  margin-left: 6px; font-family: var(--font-mono), monospace; font-size: 0.62rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+}
+.notif-mark-read { font-size: 0.76rem; padding: 0.3rem 0.65rem; }
+.notif-pager {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); flex-wrap: wrap;
+}
 
 /* generic card */
 .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); box-shadow: var(--shadow-card); }

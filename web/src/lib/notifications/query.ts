@@ -1,7 +1,7 @@
 // R3 WS3: server-side (DB-level) search/filter for the notifications page.
 // NEVER fetch-all-then-filter — every clause here narrows the Prisma query
-// itself; app/app/notifications/page.tsx paginates with `take`/`skip` on top
-// of this where-clause.
+// itself; getNotificationSections paginates each section with `take`/`skip`
+// on top of this where-clause.
 import type { NotificationSeverity, Prisma } from "@prisma/client";
 import { LEGACY_TYPE_ALIASES, type EventKey } from "./events";
 
