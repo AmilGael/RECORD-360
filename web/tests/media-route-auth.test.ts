@@ -149,4 +149,31 @@ describe("GET /api/media/[key]", () => {
     expect(storageGet).not.toHaveBeenCalled();
     await prisma.document.deleteMany({ where: { id: doc.id } });
   });
+
+  it("serves a document thumbnail to a member", async () => {
+    const doc = await prisma.document.create({
+      data: {
+        projectId: projectAId, kind: "PLANO", url: "/api/media/plano-thumb.pdf",
+        sha256: "f".repeat(64), fileType: "PDF", uploadedById: userAId, thumbKey: "thumb-a.webp",
+      },
+    });
+    authMock.mockResolvedValue({ user: { id: userAId, companyId: companyAId, role: "ADMIN" } });
+    const res = await GET(new Request("http://test.local/api/media/thumb-a.webp"), { params: Promise.resolve({ key: "thumb-a.webp" }) });
+    expect(res.status).toBe(200);
+    expect(storageGet).toHaveBeenCalledWith("thumb-a.webp");
+    await prisma.document.deleteMany({ where: { id: doc.id } });
+  });
+  it("does not serve another tenant's document thumbnail", async () => {
+    const doc = await prisma.document.create({
+      data: {
+        projectId: projectAId, kind: "PLANO", url: "/api/media/plano-thumb-x.pdf",
+        sha256: "f".repeat(64), fileType: "PDF", uploadedById: userAId, thumbKey: "thumb-x.webp",
+      },
+    });
+    authMock.mockResolvedValue({ user: { id: userBId, companyId: companyBId, role: "ADMIN" } });
+    const res = await GET(new Request("http://test.local/api/media/thumb-x.webp"), { params: Promise.resolve({ key: "thumb-x.webp" }) });
+    expect(res.status).toBe(404);
+    expect(storageGet).not.toHaveBeenCalled();
+    await prisma.document.deleteMany({ where: { id: doc.id } });
+  });
 });

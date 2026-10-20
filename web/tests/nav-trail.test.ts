@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  TRAIL_CAP, isTrailPath, nextTrail, normalizeEntry, onlyPChanged, parseTrail, popTo, previousEntry,
+  IN_PLACE_PARAMS, TRAIL_CAP, isTrailPath, nextTrail, normalizeEntry, onlyPChanged, parseTrail, popTo, previousEntry,
   pushEntry, reconcileOnPop, replaceTop, type Trail, type TrailChange,
 } from "@/lib/nav/trail";
 
@@ -87,6 +87,12 @@ describe("reconcileOnPop", () => {
   });
 });
 
+describe("IN_PLACE_PARAMS", () => {
+  it("lists p and pq so Volver treats them as the same screen", () => {
+    expect(IN_PLACE_PARAMS).toEqual(["p", "pq"]);
+  });
+});
+
 describe("replaceTop and onlyPChanged", () => {
   it("replaceTop rewrites the last entry and seeds an empty trail", () => {
     expect(replaceTop(["/app", COCINA], COCINA_P)).toEqual(["/app", COCINA_P]);
@@ -99,6 +105,13 @@ describe("replaceTop and onlyPChanged", () => {
     expect(onlyPChanged(COCINA_P, COCINA)).toBe(true);
     expect(onlyPChanged(COCINA, `${OBRA}?tab=planos`)).toBe(false);
     expect(onlyPChanged(COCINA, COCINA)).toBe(false);
+  });
+  it("onlyPChanged is true when the same path differs only by pq", () => {
+    const planos = `${OBRA}?tab=planos`;
+    expect(onlyPChanged(planos, `${planos}&pq=electr`)).toBe(true);
+    expect(onlyPChanged(`${planos}&pq=electr`, planos)).toBe(true);
+    expect(onlyPChanged(`${planos}&p=par1`, `${planos}&p=par1&pq=x`)).toBe(true);
+    expect(onlyPChanged(planos, `${OBRA}?tab=analitica&pq=x`)).toBe(false);
   });
 });
 
@@ -115,6 +128,11 @@ describe("nextTrail", () => {
   it("a change of only p replaces the top instead of pushing", () => {
     expect(nextTrail(["/app", OBRA, COCINA], COCINA_P, { kind: "push" })).toEqual(["/app", OBRA, COCINA_P]);
     expect(nextTrail(["/app", OBRA, COCINA_P], `${COCINA}&p=par2`, { kind: "push" })).toEqual(["/app", OBRA, `${COCINA}&p=par2`]);
+  });
+  it("a change of only pq replaces the top instead of pushing", () => {
+    const planos = `${OBRA}?tab=planos`;
+    expect(nextTrail(["/app", planos], `${planos}&pq=electr`, { kind: "push" })).toEqual(["/app", `${planos}&pq=electr`]);
+    expect(nextTrail(["/app", `${planos}&pq=electr`], planos, { kind: "push" })).toEqual(["/app", planos]);
   });
   it("changing block or tab still pushes", () => {
     expect(nextTrail(["/app", OBRA], `${OBRA}?tab=planos`, { kind: "push" })).toEqual(["/app", OBRA, `${OBRA}?tab=planos`]);

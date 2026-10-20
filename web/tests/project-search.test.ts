@@ -16,6 +16,7 @@ beforeAll(async () => {
   partidaId = (await prisma.partida.create({ data: { projectId, name: "Plomeria nivel 3" } })).id;
   await appendRegistro({ partidaId, authorId: managerId, text: "Fuga de agua reparada en plomeria", category: null, progressPct: null, gpsLat: null, gpsLng: null, locationId: null, attachments: [] } as Parameters<typeof appendRegistro>[0]);
   await prisma.document.create({ data: { projectId, kind: "PLANO", title: "Plano plomeria sanitaria", url: "/api/media/ps-doc.pdf", sha256: "x", fileType: "PDF", uploadedById: managerId } });
+  await prisma.document.create({ data: { projectId, kind: "PLANO", title: null, fileName: "Planta Eléctrica.pdf", url: "/api/media/ps-elec.pdf", sha256: "y", fileType: "PDF", uploadedById: managerId } });
   await prisma.changeRequest.create({ data: { projectId, code: "SC-PS1", title: "Cambiar tuberia de plomeria", authorId: managerId, reminderDueAt: new Date("2027-01-01") } });
 });
 
@@ -46,6 +47,10 @@ describe("searchProject", () => {
   it("blank query → empty groups (no full dump)", async () => {
     const r = await searchProject(mgr(), projectId, "   ");
     expect(r).toEqual({ partidas: [], registros: [], documentos: [], cambios: [] });
+  });
+  it("matches a document by fileName when title is empty", async () => {
+    const r = await searchProject(mgr(), projectId, "Planta");
+    expect(r!.documentos.some((d) => d.title === null)).toBe(true);
   });
   it("cross-tenant → null", async () => {
     const r = await searchProject({ id: outsiderId, companyId: outCompanyId, role: "MANAGER" }, projectId, "plomeria");
