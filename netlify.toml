@@ -21,7 +21,7 @@
   command = "npx prisma generate && npm run build"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
 
 # Migrations run ONLY on the production deploy (post-merge to the production
 # branch = a trusted context). For defense in depth, scope DATABASE_URL and
