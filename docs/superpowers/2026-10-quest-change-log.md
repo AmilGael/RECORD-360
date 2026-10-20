@@ -186,9 +186,9 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - `lib/notifications/sections.ts`: `getNotificationSections` — independent count/pagination; unread `orderBy` severity desc + `nulls: last`, then `createdAt` desc.
   - `lib/notifications/sections-state.ts`: `moveNotificationToRead` (pure); insert into the visible Leídas window only, cap `pageSize`.
   - `lib/notifications/link.ts`: `isSafeNotificationLink` — `/app`, `/app/…`, `/app?…`; reject `/apple`, whitespace, controls, `//`, `\`, schemes.
-  - `lib/notifications/read-overlay.ts`: module-level id set so back/swipe of the cached page still shows the row under Leídas.
+  - `lib/notifications/read-overlay.ts`: module-level id set so back/swipe of the cached page still shows the row under Leídas. The overlay is the single source for instant moves (not `useOptimistic`).
   - `notification-title-link.tsx`: `prefetch={false}`; primary unmodified click marks read; middle-click and new-tab do not.
-  - `notifications-board.tsx`: overlay + `useOptimistic`; title-click fires `markNotificationRead` without await; `.then` `router.refresh()` only if pathname left `/app/notifications`; `.catch` drops the overlay id.
+  - `notifications-board.tsx`: renders `applyReadOverlay(data, overlayIds, pageSize)`; title-click fires `markNotificationRead` without await; `.then` `router.refresh()` only if pathname left `/app/notifications`; `.catch` drops the overlay id.
   - `actions/notifications.ts`: `where: { id, userId, readAt: null }` so the first readAt is kept.
   - Pagination params `up` / `rp`; filter submit omits them (page 1). Legacy `page` ignored. Sidebar unread query unchanged.
 - **Migrations:** none.
@@ -196,9 +196,9 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - Do not `orderBy` severity asc: Postgres enum declaration is SUCCESS, IMPORTANT, CRITICAL, so desc + nulls last is the product order. Proved in `tests/notification-sections.test.ts`.
   - Prefetching a notification title must never mark read (`prefetch={false}`, mark only on primary click).
   - Next 15.5.18 discards a pending server-action result when a Link navigation starts (`needsRefresh`). Title-click must not rely on the action's revalidation payload; refresh the destination after the write if you already left `/app/notifications`.
-  - Overlay ids live in a client-only module. Drop an id once server data shows it read. Do not put the Set in a server file.
+  - Overlay ids live in a client-only module and are the single source for instant unread→Leídas moves. Drop an id once server data shows it read. Do not put the Set in a server file. Do not wrap overlay updates in `useOptimistic` — a transition with no async work reverts on the same render.
   - Safe links: exact `/app` or prefix `/app/` / `/app?`. `/apple` is not safe.
-- **How to verify:** `npm test` (743). `E2E_PROD=1 npx playwright test e2e/notifications-sections.spec.ts --workers=1` phone 390×844 + desktop 1280×800, es/en, night/day (8 passed). Screenshots in `web/e2e/artifacts/notifications-sections/`.
+- **How to verify:** `npm test` (743). `E2E_PROD=1 npx playwright test e2e/notifications-sections.spec.ts --workers=1` phone 390×844 + desktop 1280×800: open→goBack (es/en, night/day), Volver after open (es/en), middle-click does not mark read (es/en). Screenshots in `web/e2e/artifacts/notifications-sections/`.
 - **Known limits:**
   - E2E uses `reminder.resolved` (admin registro + resolve in "Pruebas automáticas"); the stored title is Spanish in both locales. Spec marks the resident inbox read first so leftover identical titles do not fill page 1.
   - Those registros stay in "Pruebas automáticas" (append-only); their reminders are resolved.

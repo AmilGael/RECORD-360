@@ -59,6 +59,45 @@ async function markAllRead(page: Page, t: (typeof dictionaries)["es"]) {
   await expect(page.getByRole("heading", { name: sectionName(t.notifications.unreadSection, 0) })).toBeVisible();
 }
 
+async function seedResidentReminders(
+  page: Page,
+  t: (typeof dictionaries)["es"],
+  stamp: string,
+  count: number,
+) {
+  await loginAs(page, "resident");
+  await markAllRead(page, t);
+  await signOut(page);
+
+  await loginAs(page, "admin");
+  await openTestPartida(page, t);
+  const texts = Array.from({ length: count }, (_, i) => `Q6 aviso ${i + 1} ${stamp}`);
+  for (const [i, text] of texts.entries()) {
+    await fillAndSubmit(page, t, text, sdLocalInput(2 + i));
+    await expect(sealedCard(page, text)).toBeVisible({ timeout: 30_000 });
+  }
+  await page.goto("/app/pending?kind=reminder");
+  await settle(page);
+  for (const text of texts) {
+    await resolvePendingRow(page, t, page.locator(".row").filter({ hasText: text }));
+  }
+
+  await signOut(page);
+  await loginAs(page, "resident");
+  await page.goto("/app/notifications?type=reminder.resolved");
+  await settle(page);
+}
+
+async function stampWindow(page: Page) {
+  await page.evaluate(() => {
+    (window as unknown as { __r360Keep?: number }).__r360Keep = 1;
+  });
+}
+
+async function windowKept(page: Page) {
+  expect(await page.evaluate(() => (window as unknown as { __r360Keep?: number }).__r360Keep)).toBe(1);
+}
+
 for (const lang of langs) {
   const t = dictionaries[lang];
 
@@ -72,28 +111,7 @@ for (const lang of langs) {
       const shot = (name: string) =>
         `e2e/artifacts/notifications-sections/${lang}-${theme}-${info.project.name}-${name}.png`;
 
-      await loginAs(page, "resident");
-      await markAllRead(page, t);
-      await signOut(page);
-
-      await loginAs(page, "admin");
-      await openTestPartida(page, t);
-      const run = `${info.project.name} ${lang} ${theme} ${Date.now()}`;
-      const texts = [1, 2].map((n) => `Q6 aviso ${n} ${run}`);
-      for (const [i, text] of texts.entries()) {
-        await fillAndSubmit(page, t, text, sdLocalInput(2 + i));
-        await expect(sealedCard(page, text)).toBeVisible({ timeout: 30_000 });
-      }
-      await page.goto("/app/pending?kind=reminder");
-      await settle(page);
-      for (const text of texts) {
-        await resolvePendingRow(page, t, page.locator(".row").filter({ hasText: text }));
-      }
-
-      await signOut(page);
-      await loginAs(page, "resident");
-      await page.goto("/app/notifications?type=reminder.resolved");
-      await settle(page);
+      await seedResidentReminders(page, t, `${info.project.name} ${lang} ${theme} ${Date.now()}`, 2);
 
       const unreadTwo = page.getByRole("region", { name: sectionName(t.notifications.unreadSection, 2) });
       await expect(unreadTwo).toBeVisible({ timeout: 30_000 });
@@ -108,14 +126,12 @@ for (const lang of langs) {
       const badgeBefore = await sidebarUnread(page, t);
       expect(badgeBefore).toBeGreaterThanOrEqual(2);
 
-      await page.evaluate(() => {
-        (window as unknown as { __r360Keep?: number }).__r360Keep = 1;
-      });
+      await stampWindow(page);
       const markReadPost = page.waitForResponse((r) => r.request().method() === "POST" && Boolean(r.request().headers()["next-action"]));
       await unreadLink.first().click();
       await expect(page).toHaveURL(/\/app\/partidas\//);
       await expect(page.getByRole("heading", { level: 1, name: PARTIDA })).toBeVisible();
-      expect(await page.evaluate(() => (window as unknown as { __r360Keep?: number }).__r360Keep)).toBe(1);
+      await windowKept(page);
       await markReadPost;
 
       await page.goBack();
@@ -130,4 +146,61 @@ for (const lang of langs) {
       await expect.poll(async () => sidebarUnread(page, t)).toBe(badgeBefore - 1);
     });
   }
+
+  test(`Volver after opening puts the row under Leídas (${lang})`, async ({ page }, info) => {
+    test.setTimeout(180_000);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await setLang(page, lang);
+    await setTheme(page, "dark");
+
+    await seedResidentReminders(page, t, `volver ${info.project.name} ${lang} ${Date.now()}`, 1);
+
+    const unread = page.getByRole("region", { name: sectionName(t.notifications.unreadSection, 1) });
+    await expect(unread).toBeVisible({ timeout: 30_000 });
+    const unreadLink = unread.getByRole("link", { name: TITLE });
+    await expect(unreadLink).toHaveCount(1);
+    const badgeBefore = await sidebarUnread(page, t);
+
+    await stampWindow(page);
+    const markReadPost = page.waitForResponse((r) => r.request().method() === "POST" && Boolean(r.request().headers()["next-action"]));
+    await unreadLink.click();
+    await expect(page).toHaveURL(/\/app\/partidas\//);
+    await expect(page.getByRole("heading", { level: 1, name: PARTIDA })).toBeVisible();
+    await windowKept(page);
+    await markReadPost;
+
+    await page.getByRole("button", { name: t.nav.backAria }).click();
+    await expect(page).toHaveURL(/\/app\/notifications/);
+    await expect(page.getByRole("heading", { level: 1, name: t.notifications.title })).toBeVisible();
+    await windowKept(page);
+    const readRegion = page.getByRole("region", { name: sectionName(t.notifications.readSection) });
+    await expect(page.getByRole("region", { name: sectionName(t.notifications.unreadSection, 0) })).toBeVisible();
+    await expect(readRegion.getByRole("link", { name: TITLE }).first()).toBeVisible();
+    await expect.poll(async () => sidebarUnread(page, t)).toBe(badgeBefore - 1);
+  });
+
+  test(`middle-click does not mark an unread title read (${lang})`, async ({ page }, info) => {
+    test.setTimeout(180_000);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await setLang(page, lang);
+    await setTheme(page, "dark");
+
+    await seedResidentReminders(page, t, `middle ${info.project.name} ${lang} ${Date.now()}`, 1);
+
+    const unread = page.getByRole("region", { name: sectionName(t.notifications.unreadSection, 1) });
+    await expect(unread).toBeVisible({ timeout: 30_000 });
+    const unreadLink = unread.getByRole("link", { name: TITLE });
+    await expect(unreadLink).toHaveCount(1);
+    const badgeBefore = await sidebarUnread(page, t);
+
+    const extraPage = page.context().waitForEvent("page", { timeout: 5_000 }).catch(() => null);
+    await unreadLink.click({ button: "middle" });
+    const opened = await extraPage;
+    if (opened) await opened.close();
+
+    await page.reload();
+    await settle(page);
+    await expect(page.getByRole("region", { name: sectionName(t.notifications.unreadSection, 1) }).getByRole("link", { name: TITLE })).toHaveCount(1);
+    expect(await sidebarUnread(page, t)).toBe(badgeBefore);
+  });
 }
