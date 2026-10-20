@@ -29,6 +29,37 @@ function normalize(value: string | null | undefined) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+/**
+ * Name match used by the bloque list. Trimmed, case-insensitive substring.
+ * Accents are compared as written: "mamposteria" does not match "Mampostería".
+ */
+export function partidaNameMatches(name: string, query: string | null | undefined): boolean {
+  const q = normalize(query);
+  if (!q) return true;
+  return name.toLowerCase().includes(q);
+}
+
+/** Applies the name query to rows that already passed the facet filters. */
+export function applyPartidaNameFilter<TSegment extends SegmentGroup<PartidaLike>, TUngrouped extends PartidaLike>(
+  segments: TSegment[],
+  ungrouped: TUngrouped[],
+  query: string | null | undefined,
+  hasFilters: boolean,
+) {
+  const q = normalize(query);
+  const nextSegments = segments
+    .map((s) => ({ ...s, partidas: s.partidas.filter((p) => partidaNameMatches(p.name, q)) }))
+    .filter((s) => s.partidas.length > 0);
+  const nextUngrouped = ungrouped.filter((p) => partidaNameMatches(p.name, q));
+  const total = nextUngrouped.length + nextSegments.reduce((sum, s) => sum + s.partidas.length, 0);
+  return {
+    segments: nextSegments,
+    ungrouped: nextUngrouped,
+    total,
+    hasFilters: hasFilters || Boolean(q),
+  };
+}
+
 // TSegment and TUngrouped are independent so that each argument is its own inference
 // site: tying both to one parameter let an empty `ungrouped` literal collapse it to
 // `never` and poison the segment constraint.
@@ -37,11 +68,9 @@ export function filterPartidaGroups<TSegment extends SegmentGroup<PartidaLike>, 
   ungrouped: TUngrouped[],
   filters: PartidaFilterInput,
 ) {
-  const query = normalize(filters.query);
   const segmentId = String(filters.segmentId ?? "");
   const tags = (filters.tags ?? []).filter(Boolean);
   const matches = (p: PartidaLike) => {
-    if (query && !p.name.toLowerCase().includes(query)) return false;
     if (tags.length && !tags.some((tg) => (p.tagNames ?? []).includes(tg))) return false;
     if (filters.progressMin != null && !(typeof p.progressPct === "number" && p.progressPct >= filters.progressMin)) return false;
     if (filters.progressMax != null && !(typeof p.progressPct === "number" && p.progressPct <= filters.progressMax)) return false;
@@ -62,11 +91,10 @@ export function filterPartidaGroups<TSegment extends SegmentGroup<PartidaLike>, 
         .filter((s) => s.partidas.length > 0)
     : [];
   const filteredUngrouped = includeUngrouped ? filterPartidas(ungrouped) : [];
-  const total = filteredUngrouped.length + filteredSegments.reduce((sum, s) => sum + s.partidas.length, 0);
   const hasFilters = Boolean(
-    query || segmentId || tags.length || filters.progressMin != null || filters.progressMax != null ||
+    segmentId || tags.length || filters.progressMin != null || filters.progressMax != null ||
     filters.openCambios || filters.createdFrom || filters.createdTo,
   );
 
-  return { segments: filteredSegments, ungrouped: filteredUngrouped, total, hasFilters };
+  return applyPartidaNameFilter(filteredSegments, filteredUngrouped, filters.query, hasFilters);
 }

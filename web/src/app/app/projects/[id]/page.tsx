@@ -169,8 +169,8 @@ export default async function ProjectPage({
           partidas: s.partidas.map(enrich),
         }));
         const enrichedUngrouped = project.partidas.map(enrich);
+        // The name query is applied in ProjectFileTree, including on the first render.
         return filterPartidaGroups(enrichedSegments, enrichedUngrouped, {
-          query: partidaFilters.q,
           segmentId: partidaFilters.block,
           tags: partidaFilters.tags,
           progressMin: partidaFilters.progressMin,
