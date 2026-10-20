@@ -7,8 +7,8 @@ colors:
   slate-plane-raised: "#343C44"
   chalk: "#F2F1EC"
   chalk-soft: "#C9CCC9"
-  steel: "#8D979E"
-  rust: "#C9502E"
+  steel: "#A0AAB1"
+  rust: "#C34E2D"
   rust-deep: "#C24A2A"
   mark-active: "#7fae90"
   mark-merged: "#8d9ac4"
@@ -109,7 +109,7 @@ State is carried by **marks, not hues**: the active plane takes the light, pendi
 One slate ramp, one chalk voice, one rust paint — the palette of a painted-steel yard at night, with three quiet advisory marks.
 
 ### Primary
-- **Rust** (`--accent`, #C9502E night / #C24A2A day): the painted band. Primary action fill, progress bands inset on plate bottom edges, active-tab underline, active language, selection background, the sync-pulse lamp. Rust is applied like paint on steel — bands, edges, stamps — never as tinted backgrounds for whole regions.
+- **Rust** (`--accent`, #C34E2D night / #C24A2A day): the painted band. Primary action fill, progress bands inset on plate bottom edges, active-tab underline, active-language underline, selection background, the sync-pulse lamp. Night rust is dark enough that white type on the button clears 4.5:1. Rust is applied like paint on steel — bands, edges, stamps — never as tinted backgrounds for whole regions. The new-obra toggle and the active state badge use chalk type; the rust icon and the green border stay the marks.
 - **Rust Deep** (`--accent-deep`, #C24A2A night / #A83D20 day): the pressed/hover state of rust, and rust legible on chalk planes (the sealed plate's hash, cost figures).
 
 ### Neutral
@@ -118,7 +118,7 @@ One slate ramp, one chalk voice, one rust paint — the palette of a painted-ste
 - **Slate Plane Raised** (`--paper-3`, #343C44 night / #DDDAD1 day): hover/active surface and track fills — the plane that has taken the light.
 - **Chalk** (`--ink`, #F2F1EC night / #1E2328 day): primary type, and the fill of concluded/sealed planes (`.lp-plate--sealed`, `.invite-panel-head`, `.seg-toggle-item.is-on` invert to ink-on-paper).
 - **Chalk Soft** (`--ink-soft`, #C9CCC9 night / #3C444C day): secondary type, nav links at rest.
-- **Steel** (`--steel`, #8D979E night / #5C666D day): the meta voice — kickers, mono metadata, stencil numerals at rest, placeholders, archived state.
+- **Steel** (`--steel`, #A0AAB1 night / #545E65 day): the meta voice — kickers, mono metadata, stencil numerals at rest, placeholders, archived state. Shifted just far enough from the slate planes to clear 4.5:1 on `--paper-3`.
 - **Hairline / Hairline Strong** (`--line` chalk at 14% / `--line-strong` chalk at 30%; ink-based in day): every border and divider. Structure is drawn with hairlines, not with elevation.
 
 ### State Marks (advisory colors — always paired with a mark or text label, never the only carrier)

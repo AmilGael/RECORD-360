@@ -57,7 +57,7 @@ export function BloqueSpacesPanel({
   preserved: PreservedParams;
   lang: Lang;
   t: {
-    emptyDocs: string; upload: string; uploadByKind: Record<DocumentKind, string>; title: string; error: string; uploadedBy: string; view: string; resolve: string;
+    emptyDocs: string; upload: string; file: string; uploadByKind: Record<DocumentKind, string>; title: string; error: string; uploadedBy: string; view: string; resolve: string;
     blockClosed: string; closeBlock: string; reopenBlock: string;
     remindersOpen: string; remindersResolved: string; remindersResolvedEmpty: string; reminderResolvedAt: string;
   };
@@ -111,7 +111,7 @@ export function BloqueSpacesPanel({
 
         {space.kind && (
           <>
-            {canUpload && <PlanosUpload projectId={projectId} segmentId={selected.id} kind={space.kind} t={{ upload: t.uploadByKind[space.kind] ?? t.upload, title: t.title, error: t.error }} />}
+            {canUpload && <PlanosUpload projectId={projectId} segmentId={selected.id} kind={space.kind} t={{ upload: t.uploadByKind[space.kind] ?? t.upload, file: t.file, title: t.title, error: t.error }} />}
             <DocList docs={docs} lang={lang} t={t} />
           </>
         )}

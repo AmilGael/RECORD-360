@@ -27,7 +27,7 @@ outline, concluded = chalk plane, danger = rust band).
   --paper-3: #DDDAD1;
   --ink: #1E2328;
   --ink-soft: #3C444C;
-  --steel: #5C666D;
+  --steel: #545E65;
   --accent: #C24A2A;
   --accent-deep: #A83D20;
   --state-active: #2f6d52;
@@ -58,8 +58,8 @@ body[data-theme="dark"] {
   --paper-3: #343C44;
   --ink: #F2F1EC;
   --ink-soft: #C9CCC9;
-  --steel: #8D979E;
-  --accent: #C9502E;
+  --steel: #A0AAB1;
+  --accent: #C34E2D;
   --accent-deep: #C24A2A;
   --state-active: #7fae90;
   --state-active-bg: rgba(127, 174, 144, 0.14);
@@ -231,7 +231,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .lang-switch { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono), monospace; font-size: 0.72rem; letter-spacing: 0.08em; }
 .lang-switch button { background: none; border: none; cursor: pointer; color: var(--steel); padding: 2px; font-family: inherit; font-size: inherit; transition: color 0.18s var(--ease); }
 .lang-switch button:hover { color: var(--ink); }
-.lang-switch button[data-active="true"] { color: var(--accent); font-weight: 700; }
+.lang-switch button[data-active="true"] { color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
 .lang-switch .lang-sep { color: var(--line-strong); }
 .lang-switch[data-pending="true"] { opacity: 0.45; }
 
@@ -385,7 +385,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .sidebar-pill {
   margin-left: auto;
   font-family: var(--font-mono), monospace; font-size: 0.62rem; letter-spacing: 0.08em;
-  color: var(--accent); border: 1px solid var(--line-strong); border-radius: 0; padding: 2px 7px;
+  color: var(--ink); border: 1px solid var(--line-strong); border-radius: 0; padding: 2px 7px;
   flex: 0 0 auto;
 }
 .sidebar-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -473,7 +473,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
      to the next line of its wrapping flex row instead. */
   line-height: 1.25; text-align: center;
 }
-.state-badge.is-active { color: var(--state-active); background: var(--state-active-bg); border: 1px solid rgba(47,125,91,0.35); }
+.state-badge.is-active { color: var(--ink); background: var(--state-active-bg); border: 1px solid rgba(47,125,91,0.35); }
 .state-badge.is-archived { color: var(--steel); background: var(--paper-2); border: 1px solid var(--line-strong); }
 .state-badge.is-concluded { color: var(--ink); background: var(--paper-3); border: 1px solid var(--line-strong); }
 
@@ -861,7 +861,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .panel-create-copy strong { color: var(--ink); font-size: 0.98rem; line-height: 1.25; }
 .panel-create-copy > span { color: var(--ink-soft); font-size: 0.78rem; line-height: 1.4; overflow-wrap: anywhere; }
 .panel-create-toggle {
-  display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; color: var(--accent-deep);
+  display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; color: var(--ink);
   font-family: var(--font-mono), monospace; font-size: 0.67rem; font-weight: 700; line-height: 1.25; text-align: right;
 }
 .panel-create-chevron { font-family: inherit; font-size: 1rem; transition: transform 0.18s var(--ease); }
@@ -1301,8 +1301,8 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
    override — keep in sync with body[data-theme="dark"] above. */
 .lp-night {
   --paper: #1E2328; --paper-2: #2A3138; --paper-3: #343C44;
-  --ink: #F2F1EC; --ink-soft: #C9CCC9; --steel: #8D979E;
-  --accent: #C9502E; --accent-deep: #C24A2A;
+  --ink: #F2F1EC; --ink-soft: #C9CCC9; --steel: #A0AAB1;
+  --accent: #C34E2D; --accent-deep: #C24A2A;
   --line: rgba(242, 241, 236, 0.14); --line-strong: rgba(242, 241, 236, 0.30);
   --grid: rgba(242, 241, 236, 0.035);
   --shadow-soft: 2px 2px 0 rgba(0, 0, 0, 0.30);

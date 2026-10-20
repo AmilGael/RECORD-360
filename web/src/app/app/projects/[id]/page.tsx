@@ -480,7 +480,7 @@ export default async function ProjectPage({
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
           <form action={updateProjectCover} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <input type="hidden" name="projectId" value={project.id} />
-            <input type="file" name="cover" required accept="image/jpeg,image/png,image/webp" style={{ maxWidth: 220 }} />
+            <input type="file" name="cover" required accept="image/jpeg,image/png,image/webp" aria-label={t.dash.cover} style={{ maxWidth: 220 }} />
             <SubmitButton className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{P.changeCover}</SubmitButton>
           </form>
           {project.archivedAt ? (
@@ -504,7 +504,7 @@ export default async function ProjectPage({
         t={{
           title: P.assignmentsTitle, supervisor: P.supervisor, resident: P.resident,
           noAssigned: P.noAssigned, assign: P.assign, remove: P.remove,
-          chooseUser: P.chooseUser,
+          chooseUser: P.chooseUser, selectRole: t.admin.selectRole,
         }}
       />
 
@@ -538,7 +538,7 @@ export default async function ProjectPage({
             canEdit={canEditStructure}
             initialQuery={typeof pq === "string" ? pq : ""}
             t={{
-              empty: t.planos.empty, upload: t.planos.uploadByKind.PLANO, title: t.planos.title,
+              empty: t.planos.empty, upload: t.planos.uploadByKind.PLANO, file: t.planos.file, title: t.planos.title,
               error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view,
               search: t.planos.search, searchCount: t.planos.searchCount, searchEmpty: t.planos.searchEmpty,
               searchClear: t.planos.searchClear, updated: t.planos.updated, defaultName: t.planos.defaultName,
@@ -679,7 +679,7 @@ export default async function ProjectPage({
             preserved={remindersPreserved}
             lang={lang}
             t={{
-              emptyDocs: t.planos.empty, upload: t.planos.upload, uploadByKind: t.planos.uploadByKind, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder,
+              emptyDocs: t.planos.empty, upload: t.planos.upload, file: t.planos.file, uploadByKind: t.planos.uploadByKind, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder,
               blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
               remindersOpen: P.remindersOpen, remindersResolved: P.remindersResolved,
               remindersResolvedEmpty: P.remindersResolvedEmpty, reminderResolvedAt: P.reminderResolvedAt,
