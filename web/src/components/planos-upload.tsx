@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { createDocument, registerDocument, type DocResult } from "@/app/actions/documents";
 import { Upload } from "@/components/icons";
 import type { DocumentKind } from "@prisma/client";
+import { putViaPresign, thumbFile } from "@/lib/thumbs/presign-put";
 
 type T = { upload: string; title: string; error: string };
 
@@ -22,14 +23,15 @@ function hex(buf: ArrayBuffer): string {
  * bucket and registerDocument records only metadata. When presign isn't
  * available (local disk storage in dev) or fails (e.g. missing bucket CORS),
  * fall back to the original server-action upload, which still works for files
- * under the platform ceiling.
+ * under the platform ceiling. Thumbnails are generated in the browser first;
+ * a failed miniature never blocks the file.
  */
 export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { projectId: string; segmentId?: string | null; kind?: DocumentKind; t: T }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function uploadDirect(file: File, fd: FormData): Promise<DocResult | null> {
+  async function uploadDirect(file: File, fd: FormData, thumb: Blob | null): Promise<DocResult | null> {
     let presign: PresignResponse;
     try {
       const res = await fetch("/api/uploads/presign", {
@@ -63,11 +65,22 @@ export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { proj
     if (typeof seg === "string" && seg) rfd.set("segmentId", seg);
     rfd.set("kind", String(fd.get("kind") ?? "PLANO"));
     rfd.set("title", String(fd.get("title") ?? ""));
+    rfd.set("fileName", file.name);
     rfd.set("key", presign.key);
     rfd.set("fileType", presign.fileType);
     rfd.set("exp", String(presign.exp));
     rfd.set("token", presign.token);
     rfd.set("sha256", hex(await crypto.subtle.digest("SHA-256", bytes)));
+
+    if (thumb) {
+      const grant = await putViaPresign(thumb, thumb.type || "image/jpeg");
+      if (grant) {
+        rfd.set("thumbKey", grant.key);
+        rfd.set("thumbFileType", grant.fileType);
+        rfd.set("thumbExp", String(grant.exp));
+        rfd.set("thumbToken", grant.token);
+      }
+    }
     return registerDocument(null, rfd);
   }
 
@@ -80,9 +93,21 @@ export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { proj
     setPending(true);
     setError(null);
     try {
+      let thumb: Blob | null = null;
+      if (file instanceof File && file.size > 0) {
+        try {
+          const { generateThumbnail } = await import("@/lib/thumbs/generate");
+          thumb = await generateThumbnail(file);
+        } catch {
+          thumb = null;
+        }
+      }
       let result: DocResult | null = null;
-      if (file instanceof File && file.size > 0) result = await uploadDirect(file, fd);
-      result ??= await createDocument(null, fd);
+      if (file instanceof File && file.size > 0) result = await uploadDirect(file, fd, thumb);
+      if (!result) {
+        if (thumb) fd.set("thumb", thumbFile(thumb));
+        result = await createDocument(null, fd);
+      }
       if (result.ok) form.reset();
       else setError(result.error || t.error);
     } catch {
@@ -97,7 +122,10 @@ export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { proj
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="kind" value={kind} />
       {segmentId && <input type="hidden" name="segmentId" value={segmentId} />}
-      <input name="title" placeholder={t.title} className="input" style={{ marginBottom: 10 }} />
+      <label className="planos-label">
+        {t.title}
+        <input name="title" className="input" />
+      </label>
       {error && (
         <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
           {error}
