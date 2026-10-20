@@ -228,3 +228,27 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - E2E is read-only on E2E Obra Demo; it creates no rows.
   - Stacked on #25. Review only the commits after `71f3a27`.
 
+## Q10: Demo hardening (chore/demo-hardening, 2026-10-20)
+
+- **What users will notice:** night rust buttons and steel metadata clear 4.5:1. The new-obra toggle and active badges use chalk type; the rust icon and green border stay the marks. File pickers and the assignment selects have names.
+- **What changed in code:**
+  - `--steel` #A0AAB1 night / #545E65 day. Night `--accent` #C34E2D. `.panel-create-toggle` and `.state-badge.is-active` use `--ink`. Sidebar count is chalk; the active language is chalk with a rust underline. DESIGN.md matches.
+  - Names: cover file `dash.cover`, plano file new `planos.file`, role select `admin.selectRole`, user select `project.chooseUser`.
+  - Unused keys removed in both locales: `lifecycle.blockHasOpenPartidas`, `progressRange`, `reopenBlockFirst`; `landing.ctaStart`; `dash.emptyArchived`, `analyticsProgress`, `analyticsPartidas`, `analyticsOpenChanges`, `analyticsOverdue`, `analyticsHealth`, `analyticsRisk`, `analyticsNoRisk`; `project.tabChanges`, `lastUpdate`, `openLog`, `dangerArchiveHint`, `dangerArchivedHint`, `analitica.byPerson`, `bloqueNotEmpty`; `changes.itemPlural`, `impactCost`, `impactTime`; `partida.exportPdf`; `admin.archivedEmpty`.
+  - `e2e/journey-resident.spec.ts` (phone), `e2e/journey-manager.spec.ts` (desktop), `e2e/a11y.spec.ts`, `e2e/helpers/watch.ts`. `@axe-core/playwright` 4.13.0.
+- **Migrations:** none.
+- **Rules for future work:**
+  - Click Nuevo registro. Do not goto its href.
+  - Offline window may drop only `ERR_INTERNET_DISCONNECTED` and Next's `Failed to fetch RSC payload` lines.
+  - After sync, each registro text is once, and the pending-on-this-phone copy is gone.
+  - Volver reaches the obra in at most 3 taps and stays under `/app`.
+  - E2E alerts are Rechazar, never Integrar (that writes a registro on every partida in the bloque).
+  - File inputs are buttons. Their accessible name must not match the submit button. Do not disable axe rules.
+  - Do not move `--steel` or night `--accent` back; small text on a slate plane cannot be rust or the green mark.
+- **How to verify:** lint, `tsc --noEmit`, `npm test` (763). `E2E_PROD=1 npx playwright test e2e/journey-resident.spec.ts e2e/journey-manager.spec.ts e2e/a11y.spec.ts --workers=1`. Screenshots in `web/e2e/artifacts/journey-resident/` and `journey-manager/`. Moderate axe findings: none. Production checklist is in the PR body.
+- **Known limits:**
+  - Local upload is the server-action fallback. A PDF over 5 MB on raphel360.com still needs the R2 check.
+  - Leftovers in E2E Obra Demo, registros only in "Pruebas automáticas": `Q10 en línea` / `Q10 sin señal` for 1792501009502, 1792501475637, 1792502071846. Planos `Q10-plano-1792501033838.pdf`, `Q10-plano-1792502095853.pdf`. Alerts `Q10 alerta 1792501033838` and `1792502095853`, both REJECTED. `Q10-plano-1792501500675.pdf` was written on disk and not uploaded.
+  - `dash.analyticsGreen/Yellow/Red` are only read by `dictionary-labels.test.ts`. No unused component or lib file. Operator scripts left.
+  - Stacked on #26. Review only the commits after `eb6d7c8`.
+
