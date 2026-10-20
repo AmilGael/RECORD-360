@@ -155,3 +155,26 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
 - **Known limits:**
   - Phone: with a partida panel open, Volver is under the sheet. Follow-up, not this patch.
   - Q4 leftover `Q4 concluida …` / `Q4 avance …` rows in Cocina are left in place; new e2e writes go only to "Pruebas automáticas".
+
+## Q5: Planos file names, thumbnails and search (feat/planos-thumbs-search, 2026-10-19)
+
+- **What users will notice:** Planos cards show the real file name and a miniature (4:3, contain). Search filters instantly (`?pq=`). Editors see "Generar miniaturas (N)" when older documents have no miniature. Evidence (`url`, `sha256`) does not change.
+- **What changed in code:**
+  - `Document.fileName` and `Document.thumbKey` (nullable). `sanitizeFileName` is display-only — never a storage key or Content-Disposition.
+  - Browser `generateThumbnail` (`pdfjs-dist@4.10.38` exact, `isEvalSupported: false`, worker via `new URL(..., import.meta.url)`). Images: longest side 480. PDFs: page 1 at 480px wide. webp 0.8, else jpeg 0.82. Failures never block upload.
+  - Direct path: PUT file, PUT thumb (IMAGE grant), one `registerDocument`. Fallback: `thumb` File on `createDocument` (image, <2 MB, `storage.put`).
+  - `setDocumentThumbnail`: structure access, atomic `updateMany` where `thumbKey` is null. No `revalidatePath` (would remount and abort the backfill loop); the client `router.refresh()`s at the end.
+  - `/api/media/[key]` also looks up `Document.thumbKey` with the same project access filter.
+  - Planos card grid + client search (fold NFD/diacritics). `?pq=` via `history.replaceState`, debounced 250 ms, skipped when unchanged. NavTrail sees it through Next's patched replaceState; the grid does not call `writeTrail`.
+  - `IN_PLACE_PARAMS = ["p", "pq"]` in `lib/nav/trail.ts`. Obra search matches document `title` OR `fileName`. Documentos gallery uses `thumbKey` when present.
+- **Migrations:** `20261019233800_document_filename_thumb` — nullable `fileName`/`thumbKey` + `Document_thumbKey_idx`. No new table, no RLS line.
+- **Rules for future work:**
+  - Do not add `pdfjs-dist` to `transpilePackages`: SWC injects `@swc/helpers` specifiers and the worker/fake-worker path dies ("Failed to resolve module specifier").
+  - pdfjs 4.10.38 `page.render` needs the `canvas` element; the pin's types omit it.
+  - Thumbnail grants: generated-key regex, `IMAGE` type, `verifyUploadGrant` for this user. Never write `url`/`sha256` from a thumb.
+  - In-place trail params live in `IN_PLACE_PARAMS`. Add new ones there, do not special-case `p`.
+- **How to verify:** `npm test` (728). `E2E_PROD=1` `e2e/planos-thumbs.spec.ts` phone 390×844 + desktop 1280×800, es/en, night/day (10 passed). **Post-merge on production:** upload a PDF over 5 MB on raphel360.com and confirm its thumbnail appears (direct R2 path; local e2e only covers `direct:false`).
+- **Known limits:**
+  - NavTrail `writeTrail` from the grid was not added; if a spec proves `?pq=` is dropped on Volver, add `replaceTop` then.
+  - E2E leftover Planos uploads (`Planta Eléctrica <stamp>.pdf`, `Q5-detalle-*.png`) stay on E2E Obra Demo. Backfill Prisma rows and their files are deleted in spec cleanup.
+  - Direct-path thumbnail PUT is unit-tested (`registerDocument` grant cases); the browser PUT to R2 is the post-merge check above.
