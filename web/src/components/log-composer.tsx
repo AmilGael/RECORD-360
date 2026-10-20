@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mic } from "@/components/icons";
 import { IndexedDbQueue } from "@/lib/offline/queue";
 import type { QueuedRegistro } from "@/lib/offline/types";
-import { nextCaptureState, syncErrorText, type CaptureState, type SyncErrorLabels } from "@/lib/offline/capture-status";
+import { SYNC_ACCEPTED_EVENT, nextCaptureState, syncErrorText, type CaptureState, type SyncErrorLabels } from "@/lib/offline/capture-status";
 import type { Lang } from "@/i18n/dictionaries";
 import { classifyDictationError, mergeTranscript } from "@/lib/dictation";
 import { datetimeLocalToIso, useDatetimeLocalMin } from "@/lib/time/local-input";
@@ -117,6 +117,18 @@ export function LogComposer({
     if (window.location.hash !== "#composer") return;
     formRef.current?.scrollIntoView({ block: "start" });
     textRef.current?.focus();
+  }, []);
+
+  // Sealed only on the server's acceptance. Mounted for the composer's whole
+  // life, not per capture: an online sync can accept the item before the
+  // per-capture effect below has subscribed.
+  useEffect(() => {
+    const onAccepted = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      setCapture((c) => (c && c.id === id ? { id, state: { kind: "sealed" } } : c));
+    };
+    window.addEventListener(SYNC_ACCEPTED_EVENT, onAccepted);
+    return () => window.removeEventListener(SYNC_ACCEPTED_EVENT, onAccepted);
   }, []);
 
   // Follow the registro just queued until the server seals it or refuses it.

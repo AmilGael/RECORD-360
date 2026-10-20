@@ -36,8 +36,12 @@ describe("nextCaptureState", () => {
     expect(nextCaptureState(onDevice, "a", [item("a")])).toEqual({ kind: "on-device" });
     expect(nextCaptureState(onDevice, "a", [item("a", { status: "syncing" })])).toEqual({ kind: "on-device" });
   });
-  it("is sealed once the item leaves the queue", () => {
-    expect(nextCaptureState(onDevice, "a", [item("b")])).toEqual({ kind: "sealed" });
+  it("never infers a seal from the item leaving the queue", () => {
+    expect(nextCaptureState(onDevice, "a", [item("b")])).toEqual({ kind: "gone" });
+    expect(nextCaptureState(onDevice, "a", [])).toEqual({ kind: "gone" });
+  });
+  it("keeps a seal against a stale queue read that still holds the item", () => {
+    expect(nextCaptureState({ kind: "sealed" }, "a", [item("a", { status: "syncing" })])).toEqual({ kind: "sealed" });
     expect(nextCaptureState({ kind: "sealed" }, "a", [])).toEqual({ kind: "sealed" });
   });
   it("fails with the item when the server blocks or rejects it", () => {
@@ -51,18 +55,14 @@ describe("nextCaptureState", () => {
     expect(nextCaptureState(failed, "a", [])).toEqual({ kind: "gone" });
     expect(nextCaptureState({ kind: "gone" }, "a", [])).toEqual({ kind: "gone" });
   });
-  it("follows a retried item back to the device and then to sealed", () => {
+  it("follows a retried item back to the device", () => {
     const failed: CaptureState = { kind: "failed", item: item("a", { status: "error" }) };
-    const retried = nextCaptureState(failed, "a", [item("a")]);
-    expect(retried).toEqual({ kind: "on-device" });
-    expect(nextCaptureState(retried, "a", [])).toEqual({ kind: "sealed" });
+    expect(nextCaptureState(failed, "a", [item("a")])).toEqual({ kind: "on-device" });
   });
-  it("covers the offline sequence: queued, still queued after a failed attempt, then accepted", () => {
+  it("covers the offline sequence: queued, still queued after a failed attempt", () => {
     let s: CaptureState = onDevice;
     s = nextCaptureState(s, "a", [item("a")]);
     s = nextCaptureState(s, "a", [item("a", { attempts: 1 })]);
     expect(s).toEqual({ kind: "on-device" });
-    s = nextCaptureState(s, "a", []);
-    expect(s).toEqual({ kind: "sealed" });
   });
 });
