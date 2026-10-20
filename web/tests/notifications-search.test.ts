@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { buildNotificationWhere } from "@/lib/notifications/query";
+import { getNotificationSections } from "@/lib/notifications/sections";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
 import { parseDayBound } from "@/lib/time/zone";
 
@@ -55,12 +56,19 @@ describe("buildNotificationWhere", () => {
     expect(rows.every((r) => r.userId === userId)).toBe(true);
   });
 
-  it("matches free text across title AND body (q)", async () => {
-    const byTitle = await prisma.notification.findMany({ where: buildNotificationWhere(userId, { q: "Bloque Norte" }) });
-    expect(byTitle.map((r) => r.title)).toEqual(["Bloque Norte creado"]);
+  it("matches free text across title and body, including an unaccented query", async () => {
+    const page = { unreadPage: 1, readPage: 1, pageSize: 25 };
+    const byTitle = await getNotificationSections(userId, { q: "Bloque Norte" }, page);
+    expect(byTitle.unread.items.map((r) => r.title)).toEqual(["Bloque Norte creado"]);
+    expect(byTitle.read.total).toBe(0);
 
-    const byBody = await prisma.notification.findMany({ where: buildNotificationWhere(userId, { q: "cimentación" }) });
-    expect(byBody.map((r) => r.title)).toEqual(["Partida X concluida"]);
+    const byBody = await getNotificationSections(userId, { q: "cimentación" }, page);
+    expect(byBody.unread.items.map((r) => r.title)).toEqual(["Partida X concluida"]);
+    expect(byBody.read.total).toBe(0);
+
+    const unaccented = await getNotificationSections(userId, { q: "cimentacion" }, page);
+    expect(unaccented.unread.items.map((r) => r.title)).toEqual(["Partida X concluida"]);
+    expect(unaccented.read.total).toBe(0);
   });
 
   it("filters by unread/read status", async () => {

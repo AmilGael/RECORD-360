@@ -1,3 +1,5 @@
+import { foldForSearch } from "@/lib/text/fold";
+
 export const UNGROUPED_FILTER = "__ungrouped";
 
 export type PartidaFilterInput = {
@@ -29,14 +31,11 @@ function normalize(value: string | null | undefined) {
   return String(value ?? "").trim().toLowerCase();
 }
 
-/**
- * Name match used by the bloque list. Trimmed, case-insensitive substring.
- * Accents are compared as written: "mamposteria" does not match "Mampostería".
- */
+/** Name match used by the bloque list. Trimmed, case- and accent-insensitive substring. */
 export function partidaNameMatches(name: string, query: string | null | undefined): boolean {
-  const q = normalize(query);
+  const q = foldForSearch(String(query ?? "").trim());
   if (!q) return true;
-  return name.toLowerCase().includes(q);
+  return foldForSearch(name).includes(q);
 }
 
 /** Applies the name query to rows that already passed the facet filters. */

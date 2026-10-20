@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useRef } from "react";
 import { Search } from "@/components/icons";
+import { foldForSearch } from "@/lib/text/fold";
 
 /**
  * Client-side live-filter for project cards on the dashboard.
@@ -10,7 +11,7 @@ export function DashboardSearch({ placeholder }: { placeholder: string }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value.toLowerCase().trim();
+    const query = foldForSearch(e.target.value.trim());
 
     // Debounce for performance
     if (timerRef.current) clearTimeout(timerRef.current);

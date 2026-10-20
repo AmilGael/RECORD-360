@@ -11,6 +11,7 @@ import { projectProgress } from "@/lib/project/progress";
 import { formatDate, formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
 import { DashboardSearch } from "@/components/dashboard-search";
+import { foldForSearch } from "@/lib/text/fold";
 import { BackButton } from "@/components/back-button";
 import { Folder, Plus } from "@/components/icons";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
@@ -197,7 +198,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <div className="repo-list-empty">{D.empty}</div>
             )}
             {projectRows.map((p, i) => (
-              <div key={p.id} className="repo-card" data-name={p.name.toLowerCase()}>
+              <div key={p.id} className="repo-card" data-name={foldForSearch(p.name)}>
                 {/* The plate's painted index — position in the yard, not an id. */}
                 <span className="plate-index" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
                 <Link href={`/app/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit", minWidth: 0 }}>

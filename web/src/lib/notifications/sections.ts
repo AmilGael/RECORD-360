@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { pageWindow } from "@/lib/feed/paginate";
-import { buildNotificationWhere, type NotificationFilters } from "@/lib/notifications/query";
+import { buildNotificationWhere, notificationIdsMatching, type NotificationFilters } from "@/lib/notifications/query";
 import type { NotificationListItem, NotificationSection, NotificationSectionsState } from "@/lib/notifications/sections-state";
 
 export type { NotificationListItem, NotificationSection, NotificationSectionsState };
@@ -36,13 +36,22 @@ export async function getNotificationSections(
   filters: NotificationFilters,
   opts: { unreadPage: number; readPage: number; pageSize: number },
 ): Promise<NotificationSectionsState> {
-  const { status, ...rest } = filters;
+  const { status, q, ...rest } = filters;
   const showUnread = status !== "read";
   const showRead = status !== "unread";
   const { unreadPage, readPage, pageSize } = opts;
+  const textIds = q ? await notificationIdsMatching(userId, q) : null;
+  if (textIds && textIds.length === 0) {
+    return {
+      unread: emptySection(unreadPage, pageSize),
+      read: emptySection(readPage, pageSize),
+    };
+  }
+  const scoped = (where: Prisma.NotificationWhereInput): Prisma.NotificationWhereInput =>
+    textIds ? { AND: [where, { id: { in: textIds } }] } : where;
 
-  const unreadWhere = buildNotificationWhere(userId, { ...rest, status: "unread" });
-  const readWhere = buildNotificationWhere(userId, { ...rest, status: "read" });
+  const unreadWhere = scoped(buildNotificationWhere(userId, { ...rest, status: "unread" }));
+  const readWhere = scoped(buildNotificationWhere(userId, { ...rest, status: "read" }));
 
   const [unreadTotal, readTotal] = await Promise.all([
     showUnread ? prisma.notification.count({ where: unreadWhere }) : Promise.resolve(0),

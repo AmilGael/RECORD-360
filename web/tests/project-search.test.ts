@@ -52,6 +52,10 @@ describe("searchProject", () => {
     const r = await searchProject(mgr(), projectId, "Planta");
     expect(r!.documentos.some((d) => d.title === null)).toBe(true);
   });
+  it("matches an unaccented query against an accented file name", async () => {
+    const r = await searchProject(mgr(), projectId, "electrica");
+    expect(r!.documentos.some((d) => d.title === null)).toBe(true);
+  });
   it("cross-tenant → null", async () => {
     const r = await searchProject({ id: outsiderId, companyId: outCompanyId, role: "MANAGER" }, projectId, "plomeria");
     expect(r).toBeNull();

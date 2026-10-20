@@ -120,10 +120,11 @@ function clientResult(filters: Parameters<typeof filterPartidaGroups>[2]) {
 }
 
 describe("partida name filter parity", () => {
-  it("keeps accents in the comparison", () => {
-    expect(partidaNameMatches("Mampostería norte", "mamposteria")).toBe(false);
+  it("folds accents in the comparison", () => {
+    expect(partidaNameMatches("Mampostería norte", "mamposteria")).toBe(true);
     expect(partidaNameMatches("Mampostería norte", "NORTE")).toBe(true);
     expect(partidaNameMatches("Vaciado losa", "  LOSA ")).toBe(true);
+    expect(partidaNameMatches("Mampostería norte", "tejado")).toBe(false);
   });
 
   it("matches the server result, including percents, totals, and the empty state", () => {
@@ -143,7 +144,13 @@ describe("partida name filter parity", () => {
       },
       {
         filters: { query: "mamposteria" },
-        expected: { total: 0, hasFilters: true, empty: true, segments: [], ungrouped: [] },
+        expected: {
+          total: 1,
+          hasFilters: true,
+          empty: false,
+          segments: [{ id: "a", ids: ["p2"], percent: 40 }],
+          ungrouped: [],
+        },
       },
       {
         filters: { query: "Mampostería" },

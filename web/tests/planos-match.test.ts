@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { foldQuery, matchesPlanosQuery } from "@/lib/planos/match";
+import { foldForSearch } from "@/lib/text/fold";
+import { matchesPlanosQuery } from "@/lib/planos/match";
 
 describe("matchesPlanosQuery", () => {
   it("finds Planta Eléctrica.pdf from electrica", () => {
@@ -9,7 +10,7 @@ describe("matchesPlanosQuery", () => {
       uploader: "Ada",
       dateText: "19 oct 2026, 15:05 GMT-4",
     }, "electrica")).toBe(true);
-    expect(foldQuery("Eléctrica")).toBe("electrica");
+    expect(foldForSearch("Eléctrica")).toBe("electrica");
   });
   it("matches uploader and date text and is blank-tolerant", () => {
     const doc = { name: "A", fileName: null, uploader: "María", dateText: "19 oct 2026" };
