@@ -295,3 +295,20 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - Because `q` is in-place, Volver from a name-only filter leaves the bloque list for the screen that opened it, not the unfiltered list. Facet submits still push, and they keep `q`.
   - Stacked on #28. Review only the commits after `542c9d6`.
 
+## Q11b: Node 22 (chore/node-22, 2026-10-20)
+
+- **What users will notice:** nothing. The app runs on Node 22 instead of Node 20.
+- **What changed in code:**
+  - `NODE_VERSION` is `"22"` in `netlify.toml`. GitHub Actions `node-version` is `22`. `web/package.json` `engines` is `>=22 <23`. `web/.nvmrc` is `22`. `@types/node` is pinned at `22.20.5`. `web/README.md` asks for Node.js 22.
+  - No other dependency moved. `pdfjs-dist` stays `4.10.38`. `pdfjs-dist` 5.x can be evaluated later now that Node 22 is the floor.
+  - Lockfile native surface on this install: `bcryptjs` (pure JavaScript, not native `bcrypt`), no `canvas`, `sharp` `0.34.5` as an optional dependency of Next (its engines allow Node 22), `@prisma/engines` `6.19.3`. `npm ci` on Node 22.23.3 still applies `patches/next+15.5.18.patch`.
+- **Migrations:** none.
+- **Rules for future work:**
+  - Do not add `AWS_LAMBDA_JS_RUNTIME` to `netlify.toml`. Netlify ignores that variable in the config file. Functions follow the build Node version unless that variable is set in the Netlify UI, CLI, or API.
+  - Stay on Node 22 until a later quest. Do not bump `pdfjs-dist` in a drive-by.
+- **How to verify:** on Node v22.23.3: lint, `tsc --noEmit`, `npm test` (784), `npm run build`. `E2E_PROD=1 npx playwright test e2e/obra-search.spec.ts e2e/journey-resident.spec.ts e2e/journey-manager.spec.ts --workers=1`: 10 passed, 2 skipped (resident is the phone project, manager is the desktop project).
+- **Known limits:**
+  - If the Netlify site already has `AWS_LAMBDA_JS_RUNTIME` set to `nodejs20.x`, that override keeps functions on Node 20 after this change. Remove it or set `nodejs22.x`, then redeploy. It is not in the repo.
+  - `nodejs22.x` on Lambda is scheduled to deprecate on 30 April 2027. Netlify falls back to Node 24 if the build Node is not a valid Lambda runtime within two months of deprecation.
+  - Stacked on #29. Review only the commits after `2e3afef`.
+
