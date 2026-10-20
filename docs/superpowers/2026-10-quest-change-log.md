@@ -312,3 +312,20 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - `nodejs22.x` on Lambda is scheduled to deprecate on 30 April 2027. Netlify falls back to Node 24 if the build Node is not a valid Lambda runtime within two months of deprecation.
   - Stacked on #29. Review only the commits after `2e3afef`.
 
+## Q11d: Accent-insensitive search (feat/accent-insensitive-search, 2026-10-20)
+
+- **What users will notice:** a query without accents finds the accented name. "mamposteria" finds "Mampostería" in a bloque, "demolicion" finds "Demolición de revestimientos" in the bloque list and in the obra search, "electrica" finds "Planta Eléctrica" in Planos, and "cimentacion" finds a notification whose text says "cimentación". The dashboard search does the same. Matching stays a case-insensitive "contains".
+- **What changed in code:**
+  - `foldForSearch` in `web/src/lib/text/fold.ts`: NFD, strip combining marks, lower case. The bloque name filter, Planos, and the dashboard fold both sides with it.
+  - Obra search no longer uses Prisma `contains`. It asks Postgres for the matching ids with `translate(lower(column), …)` and `LIKE`, then loads those rows. Same access check, same ten-per-group limit, same order.
+  - `buildNotificationWhere` no longer matches `q`. Its only app caller is `getNotificationSections`, which resolves `q` through the same fold, scoped to `userId`, and then applies the other filters. Counts and pages stay separate. The "Bloque Norte" / "cimentación" assertions go through `getNotificationSections`, plus "cimentacion".
+- **Migrations:** none. No extension, no column, no index.
+- **Rules for future work:**
+  - New search boxes use `foldForSearch` on the client and `foldedLike` on the server. Do not add a second `contains` path for notification text.
+  - Escape `\`, `%`, and `_` after folding, then bind the pattern. The SQL adds the wildcards.
+  - Do not add `unaccent` or an index for this fold unless a later measurement is over 100 ms.
+- **How to verify:** lint, `tsc --noEmit`, `npm test` (789, was 784). On the local database (`datctype` `en_US.UTF-8`; `SHOW lc_ctype` is not a parameter on this PostgreSQL 16.15): obra search over the 300-partida Carga set was 1.9 ms with `contains` and 11.2 ms with `searchProject`. One user with 5,000 notifications, 2,000 matching `pano`: the old `contains` page was 2.7 ms and `getNotificationSections` for unread page 1 and read page 1 was 29.7 ms, with 2,000 ids, 1,000 unread and 1,000 read. Those rows and the Carga partidas were deleted in the same script, and the script was removed. `E2E_PROD=1 npx playwright test e2e/accent-search.spec.ts --workers=1`: 4 passed (phone and desktop, es and en). The planos step found an existing "Planta Eléctrica" card.
+- **Known limits:**
+  - JavaScript strips every combining mark. The SQL `translate` covers only ÁÀÄÂÉÈËÊÍÌÏÎÓÒÖÔÚÙÜÛÑÇ and the same letters in lower case. The parity fixture is that set. A character outside it can match in the browser and miss in Postgres, or the reverse.
+  - Stacked on #30. Review only the commits after `54fb00f`.
+
