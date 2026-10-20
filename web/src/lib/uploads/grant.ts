@@ -1,5 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { AttachmentType } from "@prisma/client";
+import { contentTypeForKey } from "@/lib/storage/mime";
+
+// Object keys are minted server-side as `${randomUUID()}${ext}` — anything else
+// was never issued by our presign route and is rejected before the grant check.
+export const GENERATED_KEY_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z0-9]+$/i;
 
 // Direct-to-storage uploads bypass the server, so the finalize action can't
 // trust a client-supplied object key on its own: registering an arbitrary key
@@ -37,4 +42,17 @@ export function verifyUploadGrant(
   const expected = Buffer.from(sign(`${userId}:${grant.key}:${grant.fileType}:${grant.exp}`));
   const got = Buffer.from(String(grant.token ?? ""));
   return expected.length === got.length && timingSafeEqual(expected, got);
+}
+
+/** Thumbnail grants: generated key, IMAGE type, HMAC for this user. */
+export function verifyImageThumbGrant(
+  userId: string,
+  grant: { key: string; fileType: string; exp: number; token: string },
+  now = Date.now(),
+): boolean {
+  if (grant.fileType !== "IMAGE") return false;
+  if (!GENERATED_KEY_RE.test(grant.key)) return false;
+  const ct = contentTypeForKey(grant.key);
+  if (!ct?.startsWith("image/")) return false;
+  return verifyUploadGrant(userId, { key: grant.key, fileType: "IMAGE", exp: grant.exp, token: grant.token }, now);
 }
