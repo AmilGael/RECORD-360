@@ -33,6 +33,7 @@ import { projectHrefWithParams } from "@/lib/project/space-links";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 import { parseDayBound } from "@/lib/time/zone";
 import { getPartidaPreview, lastActivityByPartidaIds } from "@/lib/partida/preview";
+import { getProjectAnalytics } from "@/lib/analytics/project";
 
 export default async function ProjectPage({
   params, searchParams,
@@ -276,21 +277,25 @@ export default async function ProjectPage({
       })).map((a) => ({ id: a.id, url: a.url, fileType: a.fileType, text: a.registro.text, createdAt: a.registro.serverCreatedAt }))
     : [];
   const now = new Date();
-  const openCambios = activeTab === "analitica"
-    ? await prisma.changeRequest.count({ where: { projectId: id, status: "OPEN" } })
-    : 0;
   const overdueReminders = activeTab === "analitica"
     ? await prisma.registro.count({ where: { partida: { projectId: id, deletedAt: null }, reminderDueAt: { lt: now }, reminderResolvedAt: null } })
     : 0;
+  const analytics = activeTab === "analitica"
+    ? await getProjectAnalytics(sessionUser, id)
+    : null;
+  if (activeTab === "analitica" && !analytics) notFound();
   // WS6: `completed` (Partida.completedAt != null) threads the real lifecycle
   // state through so the analítica progress bar only shows green ("is-done")
   // for an actually-concluded partida, never for an aggregate that happens to
   // read 100%.
   const analiticaBloques = project.segments.map((s) => ({
-    id: s.id, name: s.name, progress: projectProgress(s.partidas),
+    id: s.id, name: s.name, progress: projectProgress(s.partidas), closedAt: s.closedAt,
     partidas: s.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct, completed: p.completedAt != null })),
   }));
   const analiticaUngrouped = project.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct, completed: p.completedAt != null }));
+  const concludedCount = analytics
+    ? analytics.status.reduce((s, r) => s + r.concluded, 0)
+    : 0;
   // Resolving a reminder used to make it disappear from every surface at once
   // (it leaves both the pending queue and this space), so there was no way to
   // confirm what had been dealt with. `?rem=resolved` is the history view of
@@ -541,12 +546,39 @@ export default async function ProjectPage({
             }}
           />
         </div>
-      ) : activeTab === "analitica" ? (
+      ) : activeTab === "analitica" && analytics ? (
         <AnaliticaTab
-          general={{ progress: avg, partidas: allPartidas.length, openCambios, overdueReminders }}
+          projectId={project.id}
+          lang={lang}
+          general={{
+            progress: avg,
+            concluded: concludedCount,
+            partidas: allPartidas.length,
+            openCambios: analytics.requests.open,
+            criticalAlerts: analytics.requests.criticalAlerts,
+            overdueReminders,
+            last7Days: analytics.weekly.last7Days,
+            photoPct: analytics.photo.overall.pct,
+          }}
           bloques={analiticaBloques}
           ungrouped={analiticaUngrouped}
-          t={{ general: P.analiticaGeneral, byBloque: P.analiticaByBloque, openChanges: P.analiticaOpenChanges, overdue: P.analiticaOverdue, partidasWord: P.partidasWord, noBloques: P.analiticaNoBloques }}
+          analytics={analytics}
+          t={{
+            ...P.analitica,
+            general: P.analiticaGeneral,
+            byBloque: P.analiticaByBloque,
+            openChanges: P.analiticaOpenChanges,
+            overdue: P.analiticaOverdue,
+            partidasWord: P.partidasWord,
+            noBloques: P.analiticaNoBloques,
+            ungrouped: P.ungrouped,
+            aging7: P.aging7,
+            aging14: P.aging14,
+            noActivity: P.noActivity,
+            blockClosed: t.lifecycle.blockClosed,
+            severityImportant: t.requests.severityImportant,
+            severityCritical: t.requests.severityCritical,
+          }}
         />
       ) : activeTab === "informes" ? (
         <InformesTab
