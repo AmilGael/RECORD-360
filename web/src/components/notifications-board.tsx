@@ -1,5 +1,5 @@
 "use client";
-import { startTransition, useEffect, useMemo, useOptimistic, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { markNotificationRead } from "@/app/actions/notifications";
@@ -16,7 +16,6 @@ import {
 } from "@/lib/notifications/read-overlay";
 import {
   applyReadOverlay,
-  moveNotificationToRead,
   type NotificationListItem,
   type NotificationSectionsState,
 } from "@/lib/notifications/sections-state";
@@ -68,8 +67,8 @@ export function NotificationsBoard({
     void overlayVersion;
     return listReadOverlay();
   }, [overlayVersion]);
-  const overlaid = useMemo(() => applyReadOverlay(data, overlayIds, pageSize), [data, overlayIds, pageSize]);
-  const [view, applyMove] = useOptimistic(overlaid, (current, id: string) => moveNotificationToRead(current, id, pageSize));
+  // The overlay is the single source for instant moves.
+  const view = useMemo(() => applyReadOverlay(data, overlayIds, pageSize), [data, overlayIds, pageSize]);
 
   useEffect(() => {
     for (const n of data.read.items) removeReadOverlay(n.id);
@@ -77,7 +76,6 @@ export function NotificationsBoard({
 
   function markRead(id: string, navigating: boolean) {
     addReadOverlay(id);
-    startTransition(() => applyMove(id));
     const fd = new FormData();
     fd.set("id", id);
     void markNotificationRead(fd).then(() => {
