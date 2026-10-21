@@ -109,7 +109,7 @@ State is carried by **marks, not hues**: the active plane takes the light, pendi
 One slate ramp, one chalk voice, one rust paint — the palette of a painted-steel yard at night, with three quiet advisory marks.
 
 ### Primary
-- **Rust** (`--accent`, #C34E2D night / #C24A2A day): the painted band. Primary action fill, progress bands inset on plate bottom edges, active-tab underline, active-language underline, selection background, the sync-pulse lamp. Night rust is dark enough that white type on the button clears 4.5:1. Rust is applied like paint on steel — bands, edges, stamps — never as tinted backgrounds for whole regions. The new-obra toggle and the active state badge use chalk type; the rust icon and the green border stay the marks.
+- **Rust** (`--accent`, #C34E2D night / #C24A2A day): the painted band. Primary action fill, progress bands inset on plate bottom edges, active-tab underline, active-language underline, the hover underline on row titles, the underline under the unread tag and the landing step numbers, selection background, the sync-pulse lamp. Small type on a slate plane is never rust (at most 3.35:1); it stays chalk or ink and carries a rust underline. Night rust is dark enough that white type on the button clears 4.5:1. Rust is applied like paint on steel — bands, edges, stamps — never as tinted backgrounds for whole regions. The new-obra toggle and the active state badge use chalk type; the rust icon and the green border stay the marks.
 - **Rust Deep** (`--accent-deep`, #C24A2A night / #A83D20 day): the pressed/hover state of rust, and rust legible on chalk planes (the sealed plate's hash, cost figures).
 
 ### Neutral
