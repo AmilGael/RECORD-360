@@ -5,6 +5,7 @@ import { concludePartidaForm, reopenPartidaForm } from "@/app/actions/lifecycle"
 import { updatePartidaProgressForm } from "@/app/actions/partida-progress";
 import { movePartidaForm, renamePartidaForm } from "@/app/actions/project-edit";
 import { setPartidaTagsForm } from "@/app/actions/partida-tags";
+import type { FormError } from "@/lib/errors/form-result";
 import type { Lang } from "@/i18n/dictionaries";
 import type { PartidaPreview } from "@/lib/partida/preview";
 import { PartidaPanelView, type PanelCopy, type PartidaPanelShell } from "@/components/partida-panel";
@@ -19,11 +20,23 @@ type ActiveBlock = Parameters<typeof ProjectFileTree>[0]["activeBlock"];
 
 type RowPatch = Partial<Pick<PartidaTreeRow, "name" | "progressPct" | "completedAt" | "segmentId" | "tags">>;
 
-function patchGroups(groups: SegmentGroup[], ungrouped: PartidaTreeRow[], id: string, patch: RowPatch): { segments: SegmentGroup[]; ungrouped: PartidaTreeRow[] } {
+type Rows = { segments: SegmentGroup[]; ungrouped: PartidaTreeRow[] };
+
+function patchGroups(rows: Rows, id: string, patch: RowPatch): Rows {
   const apply = (row: PartidaTreeRow): PartidaTreeRow => row.id === id ? { ...row, ...patch } : row;
   return {
-    segments: groups.map((s) => ({ ...s, partidas: s.partidas.map(apply) })),
-    ungrouped: ungrouped.map(apply),
+    segments: rows.segments.map((s) => ({ ...s, partidas: s.partidas.map(apply) })),
+    ungrouped: rows.ungrouped.map(apply),
+  };
+}
+
+function rowPatchFrom(data: PartidaPreview): RowPatch {
+  return {
+    name: data.name,
+    progressPct: data.progressPct,
+    completedAt: data.completedAt,
+    tags: data.tags.map((name) => ({ tag: { name } })),
+    segmentId: data.segment?.id ?? null,
   };
 }
 
@@ -55,6 +68,17 @@ function findShell(segments: SegmentGroup[], ungrouped: PartidaTreeRow[], id: st
     segmentClosedAt: null,
   };
 }
+
+type PanelAction = "progress" | "conclude" | "reopen" | "rename" | "move" | "tags";
+
+const PANEL_ACTIONS: Record<PanelAction, (prev: FormError | null, formData: FormData) => Promise<FormError | null>> = {
+  progress: updatePartidaProgressForm,
+  conclude: concludePartidaForm,
+  reopen: reopenPartidaForm,
+  rename: renamePartidaForm,
+  move: movePartidaForm,
+  tags: setPartidaTagsForm,
+};
 
 const PHONE_SHEET = "(max-width: 899px)";
 
@@ -105,8 +129,7 @@ export function PartidaWorkspace({
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(initialSelectedId);
-  const [segments, setSegments] = useState(initialSegments);
-  const [ungrouped, setUngrouped] = useState(initialUngrouped);
+  const [rows, setRows] = useState<Rows>({ segments: initialSegments, ungrouped: initialUngrouped });
   const [preview, setPreview] = useState<PartidaPreview | null>(
     initialPreview && initialPreview.id === initialSelectedId ? initialPreview : null,
   );
@@ -120,19 +143,23 @@ export function PartidaWorkspace({
   const prevSelected = useRef(initialSelectedId);
 
   useEffect(() => {
-    setSegments(initialSegments);
-    setUngrouped(initialUngrouped);
+    setRows({ segments: initialSegments, ungrouped: initialUngrouped });
   }, [initialSegments, initialUngrouped]);
 
+  // Both optimistic layers live only while a save's transition is pending, so
+  // a failed save puts the panel AND the list row back on their own.
   const [optPreview, applyPreview] = useOptimistic(preview, (current, patch: Partial<PartidaPreview>) => (
     current ? { ...current, ...patch } : current
   ));
+  const [optRows, applyOptRow] = useOptimistic(rows, (current, change: { id: string; patch: RowPatch }) => (
+    patchGroups(current, change.id, change.patch)
+  ));
 
+  // Functional, so a response that lands late patches the rows as they are
+  // now, never a snapshot from when the request started.
   const applyRowPatch = useCallback((id: string, patch: RowPatch) => {
-    const next = patchGroups(segments, ungrouped, id, patch);
-    setSegments(next.segments);
-    setUngrouped(next.ungrouped);
-  }, [segments, ungrouped]);
+    setRows((current) => patchGroups(current, id, patch));
+  }, []);
 
   // Native history is patched by Next 15.5 onto ACTION_RESTORE (no RSC fetch).
   // Pass null, not history.state: a __NA payload skips the patch.
@@ -225,13 +252,7 @@ export function PartidaWorkspace({
       })
       .then((data) => {
         setPreview(data);
-        applyRowPatch(data.id, {
-          name: data.name,
-          progressPct: data.progressPct,
-          completedAt: data.completedAt,
-          tags: data.tags.map((name) => ({ tag: { name } })),
-          segmentId: data.segment?.id ?? null,
-        });
+        applyRowPatch(data.id, rowPatchFrom(data));
       })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -245,47 +266,49 @@ export function PartidaWorkspace({
     if (!res.ok) return;
     const data = await res.json() as PartidaPreview;
     setPreview(data);
-    applyRowPatch(data.id, {
-      name: data.name,
-      progressPct: data.progressPct,
-      completedAt: data.completedAt,
-      tags: data.tags.map((name) => ({ tag: { name } })),
-      segmentId: data.segment?.id ?? null,
-    });
+    applyRowPatch(data.id, rowPatchFrom(data));
   }
 
-  async function run(id: string, previewPatch: Partial<PartidaPreview>, rowPatch: RowPatch, fn: () => Promise<{ error: string } | null | void>) {
+  // The whole save is one async transition: the optimistic patches hold until
+  // the server answers and the real data is in, then drop away (and revert on
+  // failure, since nothing replaced them).
+  function run(action: PanelAction, id: string, fields: Record<string, string>, previewPatch: Partial<PartidaPreview>, rowPatch: RowPatch) {
+    const fd = new FormData();
+    fd.set("partidaId", id);
+    for (const [key, value] of Object.entries(fields)) fd.set(key, value);
     setFormError(null);
     setBusy(true);
-    startTransition(() => {
+    startTransition(async () => {
       applyPreview(previewPatch);
-      applyRowPatch(id, rowPatch);
-    });
-    try {
-      const result = await fn();
-      if (result && result.error) {
-        setFormError(result.error);
-        return;
+      applyOptRow({ id, patch: rowPatch });
+      try {
+        // The *Form wrappers return the viewer's sentence (UserError key) instead
+        // of throwing: Next masks thrown action messages in production.
+        const result = await PANEL_ACTIONS[action](null, fd);
+        if (result?.error) {
+          setFormError(result.error);
+          return;
+        }
+        await refetch(id);
+        router.refresh();
+      } catch {
+        // The request itself failed (offline, or the server never answered).
+        setFormError(panelT.panelOffline);
+      } finally {
+        setBusy(false);
       }
-      await refetch(id);
-      router.refresh();
-    } catch {
-      // A throw here is unexpected: the wrappers already turn UserError into a sentence.
-      setFormError(panelT.panelOffline);
-    } finally {
-      setBusy(false);
-    }
+    });
   }
 
-  const shell = findShell(segments, ungrouped, selectedId);
+  const shell = findShell(optRows.segments, optRows.ungrouped, selectedId);
 
   return (
     <div className={`workspace${selectedId ? " is-sheet-open" : ""}`}>
       <div className="workspace-list">
         <ProjectFileTree
           projectId={projectId}
-          segments={segments}
-          ungrouped={ungrouped}
+          segments={optRows.segments}
+          ungrouped={optRows.ungrouped}
           selectedId={selectedId}
           isAdmin={canEdit}
           filters={filters}
@@ -313,40 +336,17 @@ export function PartidaWorkspace({
         offline={offline}
         segments={segmentOptions}
         onClose={closePanel}
-        onProgress={(id, progressPct) => {
-          const fd = new FormData();
-          fd.set("partidaId", id);
-          fd.set("progressPct", String(progressPct));
-          void run(id, { progressPct }, { progressPct }, () => updatePartidaProgressForm(null, fd));
-        }}
+        onProgress={(id, progressPct) => run("progress", id, { progressPct: String(progressPct) }, { progressPct }, { progressPct })}
         onConclude={(id) => {
-          const fd = new FormData();
-          fd.set("partidaId", id);
-          void run(id, { completedAt: new Date().toISOString(), progressPct: 100 }, { completedAt: new Date().toISOString(), progressPct: 100 }, () => concludePartidaForm(null, fd));
+          const completedAt = new Date().toISOString();
+          run("conclude", id, {}, { completedAt, progressPct: 100 }, { completedAt, progressPct: 100 });
         }}
-        onReopen={(id) => {
-          const fd = new FormData();
-          fd.set("partidaId", id);
-          void run(id, { completedAt: null }, { completedAt: null }, () => reopenPartidaForm(null, fd));
-        }}
-        onRename={(id, name) => {
-          const fd = new FormData();
-          fd.set("partidaId", id);
-          fd.set("name", name);
-          void run(id, { name }, { name }, () => renamePartidaForm(null, fd));
-        }}
-        onMove={(id, segmentId) => {
-          const fd = new FormData();
-          fd.set("partidaId", id);
-          fd.set("segmentId", segmentId);
-          void run(id, {}, { segmentId: segmentId || null }, () => movePartidaForm(null, fd));
-        }}
+        onReopen={(id) => run("reopen", id, {}, { completedAt: null }, { completedAt: null })}
+        onRename={(id, name) => run("rename", id, { name }, { name }, { name })}
+        onMove={(id, segmentId) => run("move", id, { segmentId }, {}, { segmentId: segmentId || null })}
         onTags={(id, tags) => {
-          const fd = new FormData();
-          fd.set("partidaId", id);
-          fd.set("tags", tags);
           const names = tags.split(",").map((x) => x.trim()).filter(Boolean);
-          void run(id, { tags: names }, { tags: names.map((name) => ({ tag: { name } })) }, () => setPartidaTagsForm(null, fd));
+          run("tags", id, { tags }, { tags: names }, { tags: names.map((name) => ({ tag: { name } })) });
         }}
       />
     </div>

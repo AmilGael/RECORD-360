@@ -7,6 +7,9 @@ export interface SyncDeps {
   isOnline?: () => boolean;
   endpoint?: string;
   onChange?: () => void;
+  // Called with each item's id once the server has accepted it (2xx). This is
+  // the only proof of a seal: an item can also leave the queue by a discard.
+  onAccepted?: (id: string) => void;
   // "blocked" (401) items are only worth retrying once the session may have
   // changed — pass true on the app-load kick (which follows a login), never on
   // online/queue-changed kicks. "error" items are terminal regardless.
@@ -55,7 +58,10 @@ export async function syncQueue(deps: SyncDeps): Promise<SyncResult> {
       for (const item of items) {
         await deps.queue.update(item.id, { status: "syncing" });
         deps.onChange?.();
-        if (await sendItem(deps.queue, item, fetchFn, endpoint)) synced++;
+        if (await sendItem(deps.queue, item, fetchFn, endpoint)) {
+          synced++;
+          deps.onAccepted?.(item.id);
+        }
         deps.onChange?.();
       }
     } while (rerunRequested && isOnline());
