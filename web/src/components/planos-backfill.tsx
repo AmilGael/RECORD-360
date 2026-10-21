@@ -21,7 +21,12 @@ export function PlanosBackfill({ docs, t }: { docs: BackfillDoc[]; t: T }) {
   const [finished, setFinished] = useState(false);
   const cancelled = useRef(false);
 
-  useEffect(() => () => { cancelled.current = true; }, []);
+  // Reset on every mount: dev Strict Mode runs the cleanup and then the effect
+  // again, and an unmount-only flag would stay true from the first render.
+  useEffect(() => {
+    cancelled.current = false;
+    return () => { cancelled.current = true; };
+  }, []);
 
   async function run() {
     if (running || docs.length === 0) return;

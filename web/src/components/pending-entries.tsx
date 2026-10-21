@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { IndexedDbQueue } from "@/lib/offline/queue";
 import { syncQueue } from "@/lib/offline/sync";
 import type { QueuedRegistro } from "@/lib/offline/types";
-import { syncErrorText, type SyncErrorLabels } from "@/lib/offline/capture-status";
+import { announceAccepted, syncErrorText, type SyncErrorLabels } from "@/lib/offline/capture-status";
 
 let _queue: IndexedDbQueue | null = null;
 function getQueue(): IndexedDbQueue { if (!_queue) _queue = new IndexedDbQueue(); return _queue; }
@@ -32,7 +32,7 @@ export function PendingEntries({ partidaId, t }: { partidaId: string; t: T }) {
   function retry(id: string) {
     void getQueue().update(id, { status: "pending", errorCode: undefined, error: undefined }).then(() => {
       reload();
-      void syncQueue({ queue: getQueue(), onChange: () => window.dispatchEvent(new Event("raphl:sync-progress")) }).then(reload);
+      void syncQueue({ queue: getQueue(), onChange: () => window.dispatchEvent(new Event("raphl:sync-progress")), onAccepted: announceAccepted }).then(reload);
     });
   }
 
