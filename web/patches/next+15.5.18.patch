@@ -1,0 +1,135 @@
+diff --git a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-client.development.js b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-client.development.js
+index 0053084..cec47c8 100644
+--- a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-client.development.js
++++ b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-client.development.js
+@@ -20678,8 +20678,7 @@
+           (workInProgressRootRenderLanes & 62914560) ===
+             workInProgressRootRenderLanes &&
+           now$1() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+-          ? (executionContext & RenderContext) === NoContext &&
+-            prepareFreshStack(root, 0)
++          ? (executionContext & RenderContext) === NoContext ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+           : (workInProgressRootPingedLanes |= pingedLanes),
+         workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+           (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-client.production.js b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-client.production.js
+index 1f7a795..6948379 100644
+--- a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-client.production.js
++++ b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-client.production.js
+@@ -14034,7 +14034,7 @@ function pingSuspendedRoot(root, wakeable, pingedLanes) {
+       (workInProgressRootRenderLanes & 62914560) ===
+         workInProgressRootRenderLanes &&
+       300 > now() - globalMostRecentFallbackTime)
+-      ? 0 === (executionContext & 2) && prepareFreshStack(root, 0)
++      ? 0 === (executionContext & 2) ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+       : (workInProgressRootPingedLanes |= pingedLanes),
+     workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+       (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-profiling.development.js b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-profiling.development.js
+index ba87af2..4c2f0d6 100644
+--- a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-profiling.development.js
++++ b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-profiling.development.js
+@@ -20686,8 +20686,7 @@
+           (workInProgressRootRenderLanes & 62914560) ===
+             workInProgressRootRenderLanes &&
+           now$1() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+-          ? (executionContext & RenderContext) === NoContext &&
+-            prepareFreshStack(root, 0)
++          ? (executionContext & RenderContext) === NoContext ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+           : (workInProgressRootPingedLanes |= pingedLanes),
+         workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+           (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-profiling.profiling.js b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-profiling.profiling.js
+index 8c82c27..0539e85 100644
+--- a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-profiling.profiling.js
++++ b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-profiling.profiling.js
+@@ -15728,7 +15728,7 @@ function pingSuspendedRoot(root, wakeable, pingedLanes) {
+       (workInProgressRootRenderLanes & 62914560) ===
+         workInProgressRootRenderLanes &&
+       300 > now$1() - globalMostRecentFallbackTime)
+-      ? 0 === (executionContext & 2) && prepareFreshStack(root, 0)
++      ? 0 === (executionContext & 2) ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+       : (workInProgressRootPingedLanes |= pingedLanes),
+     workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+       (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-unstable_testing.development.js b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-unstable_testing.development.js
+index 38e4149..6b51890 100644
+--- a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-unstable_testing.development.js
++++ b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-unstable_testing.development.js
+@@ -20901,8 +20901,7 @@
+           (workInProgressRootRenderLanes & 62914560) ===
+             workInProgressRootRenderLanes &&
+           now$1() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+-          ? (executionContext & RenderContext) === NoContext &&
+-            prepareFreshStack(root, 0)
++          ? (executionContext & RenderContext) === NoContext ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+           : (workInProgressRootPingedLanes |= pingedLanes),
+         workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+           (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-unstable_testing.production.js b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-unstable_testing.production.js
+index 424eff7..4669630 100644
+--- a/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-unstable_testing.production.js
++++ b/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-unstable_testing.production.js
+@@ -14306,7 +14306,7 @@ function pingSuspendedRoot(root, wakeable, pingedLanes) {
+       (workInProgressRootRenderLanes & 62914560) ===
+         workInProgressRootRenderLanes &&
+       300 > now() - globalMostRecentFallbackTime)
+-      ? 0 === (executionContext & 2) && prepareFreshStack(root, 0)
++      ? 0 === (executionContext & 2) ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+       : (workInProgressRootPingedLanes |= pingedLanes),
+     workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+       (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js b/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js
+index 4376913..cdb791b 100644
+--- a/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js
++++ b/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js
+@@ -16469,8 +16469,7 @@
+           (workInProgressRootRenderLanes & 62914560) ===
+             workInProgressRootRenderLanes &&
+           now$1() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+-          ? (executionContext & RenderContext) === NoContext &&
+-            prepareFreshStack(root, 0)
++          ? (executionContext & RenderContext) === NoContext ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+           : (workInProgressRootPingedLanes |= pingedLanes),
+         workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+           (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js b/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js
+index 755076a..8c02f5f 100644
+--- a/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js
++++ b/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js
+@@ -11733,7 +11733,7 @@ function pingSuspendedRoot(root, wakeable, pingedLanes) {
+       (workInProgressRootRenderLanes & 62914560) ===
+         workInProgressRootRenderLanes &&
+       300 > now() - globalMostRecentFallbackTime)
+-      ? 0 === (executionContext & 2) && prepareFreshStack(root, 0)
++      ? 0 === (executionContext & 2) ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+       : (workInProgressRootPingedLanes |= pingedLanes),
+     workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+       (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom/cjs/react-dom-profiling.development.js b/node_modules/next/dist/compiled/react-dom/cjs/react-dom-profiling.development.js
+index 43d0363..13a17ca 100644
+--- a/node_modules/next/dist/compiled/react-dom/cjs/react-dom-profiling.development.js
++++ b/node_modules/next/dist/compiled/react-dom/cjs/react-dom-profiling.development.js
+@@ -16477,8 +16477,7 @@
+           (workInProgressRootRenderLanes & 62914560) ===
+             workInProgressRootRenderLanes &&
+           now$1() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+-          ? (executionContext & RenderContext) === NoContext &&
+-            prepareFreshStack(root, 0)
++          ? (executionContext & RenderContext) === NoContext ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+           : (workInProgressRootPingedLanes |= pingedLanes),
+         workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+           (workInProgressSuspendedRetryLanes = 0));
+diff --git a/node_modules/next/dist/compiled/react-dom/cjs/react-dom-profiling.profiling.js b/node_modules/next/dist/compiled/react-dom/cjs/react-dom-profiling.profiling.js
+index 85185b0..00e78f8 100644
+--- a/node_modules/next/dist/compiled/react-dom/cjs/react-dom-profiling.profiling.js
++++ b/node_modules/next/dist/compiled/react-dom/cjs/react-dom-profiling.profiling.js
+@@ -12404,7 +12404,7 @@ function pingSuspendedRoot(root, wakeable, pingedLanes) {
+       (workInProgressRootRenderLanes & 62914560) ===
+         workInProgressRootRenderLanes &&
+       300 > now$1() - globalMostRecentFallbackTime)
+-      ? 0 === (executionContext & 2) && prepareFreshStack(root, 0)
++      ? 0 === (executionContext & 2) ? prepareFreshStack(root, 0) : (workInProgressRootPingedLanes |= pingedLanes)
+       : (workInProgressRootPingedLanes |= pingedLanes),
+     workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+       (workInProgressSuspendedRetryLanes = 0));
