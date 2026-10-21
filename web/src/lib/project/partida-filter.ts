@@ -39,6 +39,18 @@ export function partidaNameMatches(name: string, query: string | null | undefine
   return name.toLowerCase().includes(q);
 }
 
+/**
+ * Whether the filter box should take the server's `q` as its new value. The
+ * box writes the URL 250ms after typing stops, and any refresh re-renders the
+ * page with whatever the URL held when the request left. Only a real
+ * navigation (a facet link, Limpiar, a submit) should replace what is typed:
+ * - `propQ === lastWritten`: our own write coming back. Keep the typing.
+ * - `propQ !== urlQ`: rendered before the latest write. Stale; keep it.
+ */
+export function shouldAdoptUrlQuery(propQ: string, lastWritten: string, urlQ: string): boolean {
+  return propQ !== lastWritten && propQ === urlQ.trim();
+}
+
 /** Applies the name query to rows that already passed the facet filters. */
 export function applyPartidaNameFilter<TSegment extends SegmentGroup<PartidaLike>, TUngrouped extends PartidaLike>(
   segments: TSegment[],

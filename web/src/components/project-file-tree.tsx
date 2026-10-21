@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createPartida } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
 import { Folder, Search } from "@/components/icons";
 import { RenameSegmentForm } from "@/components/project-edit-controls";
-import { applyPartidaNameFilter } from "@/lib/project/partida-filter";
+import { applyPartidaNameFilter, shouldAdoptUrlQuery } from "@/lib/project/partida-filter";
 import { projectProgress } from "@/lib/project/progress";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { activityAging } from "@/lib/partida/aging";
@@ -115,8 +115,15 @@ export function ProjectFileTree({
   rowRef: (id: string, el: HTMLButtonElement | null) => void;
 }) {
   const [q, setQ] = useState(filters.q);
-  // A facet navigation delivers a new URL query. Typing does not: the prop stays put.
-  useEffect(() => { setQ(filters.q); }, [filters.q]);
+  // The last q this box wrote to the URL. A refresh echoes it (or an older one)
+  // back as filters.q; neither may overwrite what is being typed.
+  const lastWritten = useRef(filters.q);
+  useEffect(() => {
+    const inUrl = new URL(window.location.href).searchParams.get("q") ?? "";
+    if (!shouldAdoptUrlQuery(filters.q, lastWritten.current, inUrl)) return;
+    lastWritten.current = filters.q;
+    setQ(filters.q);
+  }, [filters.q]);
 
   const named = useMemo(
     () => applyPartidaNameFilter(segments, ungrouped, q, filters.hasFilters),
@@ -128,6 +135,7 @@ export function ProjectFileTree({
       const url = new URL(window.location.href);
       const current = url.searchParams.get("q") ?? "";
       const next = q.trim();
+      lastWritten.current = next;
       if (next === current) return;
       if (next) url.searchParams.set("q", next);
       else url.searchParams.delete("q");
@@ -187,7 +195,19 @@ export function ProjectFileTree({
         </details>
         <div style={{ display: "flex", gap: 8 }}>
           <SubmitButton className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.filter}</SubmitButton>
-          {named.hasFilters && <Link href={`/app/projects/${projectId}?tab=code&block=${encodeURIComponent(filters.block)}`} className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.clear}</Link>}
+          {named.hasFilters && (
+            <Link
+              href={`/app/projects/${projectId}?tab=code&block=${encodeURIComponent(filters.block)}`}
+              // Clear the box here too: when the page loaded with no q, the
+              // navigation leaves filters.q unchanged, so the sync effect never
+              // runs and the typed name would keep filtering the list.
+              onClick={() => { lastWritten.current = ""; setQ(""); }}
+              className="btn btn-ghost"
+              style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}
+            >
+              {t.clear}
+            </Link>
+          )}
         </div>
       </form>
       {named.hasFilters && named.total === 0 && (
