@@ -103,3 +103,34 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - React #419 on app 404s is gone (0/20 after the route group; Q1's swallow was removed).
   - Server validation messages stay in the language the API sent. The 4xx fallback "No se pudo registrar." is still Spanish.
   - E2E registros stay in "Pruebas automáticas"; their reminders are resolved.
+
+## Q4: Partidas list with half-screen panel (feat/partida-panel, 2026-10-17)
+
+- **What users will notice:** opening a bloque shows the partida list on the left and a panel on the right (desktop, equal columns). Phone: the panel is a 55dvh sheet from the bottom. Tapping a row opens the panel without leaving the list; the first open is a history step, swapping rows replaces it, browser Back / Cerrar / Escape close it. Rows show last activity, 7-day brass and 14-day rust aging, and a Concluida badge. Nuevo registro lands on the Cuaderno composer. An assigned resident still sees Editar partida (same permission as before). Progress 100 still only via Concluir.
+- **What changed in code:**
+  - `lib/partida/preview.ts`: `getPartidaPreview` (access + `deletedAt` null; last 5 registros; text 280 chars; hash prefix 8; first IMAGE url; open CRs on the partida or its bloque) and `lastActivityByPartidaIds` (one `registro.groupBy`). `canEdit` = company-wide role or a `projectAssignment` — same as today's `canEditStructure`. No authz change.
+  - `GET /api/partidas/[id]/preview`: `requireFreshSession`, 404 when null, `Cache-Control: private, no-store`, 401/403.
+  - `lib/partida/aging.ts`: 7 / 14 day marks.
+  - `lib/nav/trail.ts`: `onlyPChanged` + `replaceTop`. Push and `reconcileOnPop` treat a `p`-only change as the same screen, so Volver from the Cuaderno still lands on the list with that partida selected.
+  - `partida-workspace.tsx`: native `history.pushState`/`replaceState` with `null` (not `history.state` — a `__NA` payload skips Next 15.5's ACTION_RESTORE patch). AbortController fetch; optimistic `run()` then refetch + `router.refresh()`; `openedByPush` + `history.back` vs replace on close.
+  - `partida-panel.tsx`: view with no hooks. Hides Editar partida, progress, Concluir, Reabrir when `canEdit` is false. Concluded partidas never show a progress input.
+  - `project-file-tree.tsx`: rows are buttons, not links; last activity and Concluida on the row; inline edit forms removed (they live in the panel).
+  - `partida-summary.tsx` deleted (nothing imported it).
+  - `log-composer.tsx`: `id="composer"`; `#composer` focuses the textarea.
+  - `globals.css`: `--brass` / `--brass-bg` next to `--state-*` (day `#8a6c1a`, night `#b08a2e`); aging marks use the token; workspace 1fr 1fr ≥900px, mobile 55dvh sheet; 4px tree-row-band; coarse 44px row/close. Below 900px, an open sheet adds `padding-bottom: calc(55dvh + var(--safe-b))` on the workspace (desktop unchanged) and `scroll-margin-bottom` on rows, filters and Volver; the tapped row is scrolled into the area above the sheet (`prefers-reduced-motion` respected).
+  - Dictionaries es+en: `newRegistro`, `openCuaderno`, `editPartida`, `panelOffline` (exact strings), `panelClose`, `aging7`/`aging14`, `noActivity`, `tagsLabel`.
+- **Migrations:** none.
+- **Rules for future work:**
+  - Panel selection must not RSC-fetch: `pushState(null, …)` so Next patches it to ACTION_RESTORE. Passing `history.state` skips the patch.
+  - `canEdit` on the panel is `canEditStructure`. Do not invent a narrower resident rule here.
+  - Progress 100 only through Concluir. The concluded panel has no progress field.
+  - Aging tokens: `--brass` / `--brass-bg`, not a hardcoded `#b08a2e`.
+  - After a client-side create, `router.refresh()` can hang on the same react-dom ping (react/react#37805); e2e waits for the `next-action` POST then reloads.
+- **How to verify:** `npm test` (708). `npx playwright test e2e/partida-panel.spec.ts` phone 390×844 + desktop 1280×800, es/en, night/day. `npx playwright test e2e/setup/partida-load.spec.ts --project desktop` (300 rows). `canEdit=false` is the unit test in `partida-panel.test.ts` (no e2e account in that state).
+- **Known limits:**
+  - 300-row desktop load: panel open **57ms** (under 1s). `content-visibility: auto` was not added.
+  - Search on the obra overview is still a GET navigation. Same ping hang as other `<Link>` / form GETs. Follow-up: client search, same as the panel (do not change it in this quest).
+  - Volver from Cuaderno → workspace with `p=` is covered. Phone "browser back then Volver" can still hang on react/react#37805 (Q3). Planos → Analítica → Volver still flakes on that ping. The notifications → partida Volver spec needs a live reminder notification for "Pruebas automáticas"; it is not a panel regression.
+  - Remaining `#b08a2e` on health dots, supervisor avatar, and severity chips was not in this quest's files.
+  - E2E leftover partidas named `Q4 concluida …` / `Q4 avance …` stay in bloque Cocina of E2E Obra Demo (append-only).
+  - Playwright was run against this quest's production build on `:3002`; `:3000` may still be an older build. Carga's 300 rows are seeded and deleted in the load spec (`assertLocalDatabase`).

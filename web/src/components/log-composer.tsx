@@ -113,6 +113,12 @@ export function LogComposer({
     );
   }, []);
 
+  useEffect(() => {
+    if (window.location.hash !== "#composer") return;
+    formRef.current?.scrollIntoView({ block: "start" });
+    textRef.current?.focus();
+  }, []);
+
   // Sealed only on the server's acceptance. Mounted for the composer's whole
   // life, not per capture: an online sync can accept the item before the
   // per-capture effect below has subscribed.
@@ -252,7 +258,7 @@ export function LogComposer({
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="card" style={{ padding: 16, marginBottom: 28 }}>
+    <form id="composer" ref={formRef} onSubmit={handleSubmit} className="card" style={{ padding: 16, marginBottom: 28 }}>
       {correction && (
         <div className="mono" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", background: "var(--paper-2)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "8px 10px", fontSize: "0.7rem", marginBottom: 10 }}>
           <span>{correction.notice} {correction.label}</span>
