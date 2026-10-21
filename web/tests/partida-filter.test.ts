@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyPartidaNameFilter, filterPartidaGroups, partidaNameMatches, UNGROUPED_FILTER } from "@/lib/project/partida-filter";
+import { applyPartidaNameFilter, filterPartidaGroups, partidaNameMatches, shouldAdoptUrlQuery, UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 import { projectProgress } from "@/lib/project/progress";
 import { parseDayBound } from "@/lib/time/zone";
 
@@ -203,5 +203,28 @@ describe("partida name filter parity", () => {
       expect(server).toEqual(expected);
       expect(client).toEqual(server);
     }
+  });
+});
+
+describe("shouldAdoptUrlQuery", () => {
+  it("keeps the typing when a refresh echoes the box's own last write", () => {
+    // Wrote "los", user typed on to "losa", a refresh renders q=los.
+    expect(shouldAdoptUrlQuery("los", "los", "los")).toBe(false);
+  });
+  it("keeps the typing when a refresh rendered before the latest write", () => {
+    // The request left with q=los; the box has since written "losa".
+    expect(shouldAdoptUrlQuery("los", "losa", "losa")).toBe(false);
+  });
+  it("adopts a real navigation: Limpiar drops q", () => {
+    expect(shouldAdoptUrlQuery("", "losa", "")).toBe(true);
+  });
+  it("adopts a real navigation to a different query (a facet link or submit)", () => {
+    expect(shouldAdoptUrlQuery("muro", "losa", "muro")).toBe(true);
+  });
+  it("compares the URL value trimmed, as the server does", () => {
+    expect(shouldAdoptUrlQuery("muro", "losa", "muro ")).toBe(true);
+  });
+  it("does nothing on the first render", () => {
+    expect(shouldAdoptUrlQuery("losa", "losa", "losa")).toBe(false);
   });
 });
