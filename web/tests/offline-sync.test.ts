@@ -163,6 +163,19 @@ describe("syncQueue result: { synced }", () => {
   });
 });
 
+describe("syncQueue: onAccepted", () => {
+  it("names only the items the server accepted, never a rejected one", async () => {
+    const q = new InMemoryQueue();
+    await q.enqueue(item("a"));
+    await q.enqueue(item("b"));
+    let n = 0;
+    const mixed = () => (++n === 1 ? ok() : Promise.resolve(new Response(JSON.stringify({ error: "malo" }), { status: 400 })));
+    const accepted: string[] = [];
+    await syncQueue({ queue: q, fetchFn: mixed, isOnline: () => true, onAccepted: (id) => accepted.push(id) });
+    expect(accepted).toEqual(["a"]);
+  });
+});
+
 describe("syncQueue: a capture queued while a pass is running", () => {
   it("is sent by the running pass and counted there", async () => {
     const q = new InMemoryQueue();
