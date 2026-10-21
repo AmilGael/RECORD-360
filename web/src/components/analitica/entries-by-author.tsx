@@ -14,11 +14,9 @@ export function EntriesByAuthorChart({ rows, t }: {
   const total = rows.reduce((s, r) => s + r.n, 0);
   const summary = fill(t.summary, total);
   const max = Math.max(...rows.map((r) => r.n), 1);
-  const vbW = 240;
-  const rowH = 18;
-  const labelW = 88;
-  const vbH = Math.max(rows.length * rowH, rowH);
 
+  // HTML rows, not SVG text: names keep the app's type size at every width
+  // and truncate (full name on hover) instead of running into the bars.
   return (
     <section className="analitica-chart">
       <h2 className="kicker">{t.title}</h2>
@@ -26,26 +24,21 @@ export function EntriesByAuthorChart({ rows, t }: {
         <p className="text-steel">{t.empty}</p>
       ) : (
         <>
-          <svg
-            role="img"
-            viewBox={`0 0 ${vbW} ${vbH}`}
-            width="100%"
-            aria-labelledby="analitica-authors-title analitica-authors-desc"
-          >
-            <title id="analitica-authors-title">{t.title}</title>
-            <desc id="analitica-authors-desc">{summary}</desc>
-            {rows.map((r, i) => {
-              const y = i * rowH;
-              const barW = ((vbW - labelW - 8) * r.n) / max;
+          <div role="img" aria-labelledby="analitica-authors-title analitica-authors-desc" className="analitica-author-rows">
+            <span id="analitica-authors-title" hidden>{t.title}</span>
+            <span id="analitica-authors-desc" hidden>{summary}</span>
+            {rows.map((r) => {
               const name = r.name ?? t.unnamed;
               return (
-                <g key={r.authorId}>
-                  <text x={0} y={y + 12}>{name}</text>
-                  <rect x={labelW} y={y + 4} width={barW} height={10} fill="var(--accent)" />
-                </g>
+                <div key={r.authorId} className="analitica-author-row">
+                  <span className="analitica-author-name" title={name}>{name}</span>
+                  <span className="analitica-author-track" aria-hidden="true">
+                    <i style={{ width: `${(r.n / max) * 100}%` }} />
+                  </span>
+                </div>
               );
             })}
-          </svg>
+          </div>
           <p className="analitica-chart-summary">{summary}</p>
           <details className="analitica-data">
             <summary>{t.viewData}</summary>
