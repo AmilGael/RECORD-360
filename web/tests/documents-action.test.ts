@@ -161,7 +161,7 @@ describe("registerDocument", () => {
     expect(doc.thumbKey).toBe(thumbKey);
     expect(doc.fileName).toBe("Planta Eléctrica.pdf");
   });
-  it("rejects a forged thumbnail token", async () => {
+  it("drops a forged thumbnail token but still records the plano", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
     const fileKey = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee03.pdf";
     const thumbKey = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee04.webp";
@@ -174,9 +174,12 @@ describe("registerDocument", () => {
     fd.set("thumbExp", String(thumb.exp));
     fd.set("thumbToken", "0".repeat(64));
     const res = await registerDocument(null, fd);
-    expect(res.ok).toBe(false);
+    expect(res.ok).toBe(true);
+    const doc = await prisma.document.findFirstOrThrow({ where: { projectId, title: "forged-thumb" } });
+    expect(doc.url).toBe(`/api/media/${fileKey}`);
+    expect(doc.thumbKey).toBeNull();
   });
-  it("rejects another user's thumbnail grant", async () => {
+  it("drops another user's thumbnail grant but still records the plano", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
     const fileKey = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee05.pdf";
     const thumbKey = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee06.webp";
@@ -189,9 +192,12 @@ describe("registerDocument", () => {
     fd.set("thumbExp", String(thumb.exp));
     fd.set("thumbToken", thumb.token);
     const res = await registerDocument(null, fd);
-    expect(res.ok).toBe(false);
+    expect(res.ok).toBe(true);
+    const doc = await prisma.document.findFirstOrThrow({ where: { projectId, title: "foreign-thumb" } });
+    expect(doc.url).toBe(`/api/media/${fileKey}`);
+    expect(doc.thumbKey).toBeNull();
   });
-  it("rejects a non-image thumbnail type", async () => {
+  it("drops a non-image thumbnail type but still records the plano", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
     const fileKey = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee07.pdf";
     const thumbKey = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee08.pdf";
@@ -204,7 +210,10 @@ describe("registerDocument", () => {
     fd.set("thumbExp", String(thumb.exp));
     fd.set("thumbToken", thumb.token);
     const res = await registerDocument(null, fd);
-    expect(res.ok).toBe(false);
+    expect(res.ok).toBe(true);
+    const doc = await prisma.document.findFirstOrThrow({ where: { projectId, title: "pdf-thumb" } });
+    expect(doc.url).toBe(`/api/media/${fileKey}`);
+    expect(doc.thumbKey).toBeNull();
   });
   it("rejects a grant issued to a different user", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });

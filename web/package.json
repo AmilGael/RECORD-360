@@ -15,7 +15,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "e2e": "playwright test",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package --error-on-fail"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
