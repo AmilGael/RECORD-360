@@ -462,9 +462,15 @@ export const dictionaries = {
     notifications: {
       title: "Notificaciones",
       empty: "Sin notificaciones.",
-      markRead: "Marcar leído",
+      markRead: "Marcar leída",
       markAllRead: "Marcar todo como leído",
       unread: "no leída",
+      unreadSection: "Sin leer ({count})",
+      readSection: "Leídas ({count})",
+      unreadCaughtUp: "Estás al día.",
+      readEmpty: "Aún no hay notificaciones leídas.",
+      unreadPager: "Paginación de no leídas",
+      readPager: "Paginación de leídas",
       filters: {
         sheetTitle: "Filtros",
         searchPlaceholder: "Buscar en notificaciones…",
@@ -1005,9 +1011,15 @@ export const dictionaries = {
     notifications: {
       title: "Notifications",
       empty: "No notifications.",
-      markRead: "Mark read",
+      markRead: "Mark as read",
       markAllRead: "Mark all as read",
       unread: "unread",
+      unreadSection: "Unread ({count})",
+      readSection: "Read ({count})",
+      unreadCaughtUp: "You're all caught up.",
+      readEmpty: "No read notifications yet.",
+      unreadPager: "Unread pagination",
+      readPager: "Read pagination",
       filters: {
         sheetTitle: "Filters",
         searchPlaceholder: "Search notifications…",

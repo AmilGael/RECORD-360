@@ -7,8 +7,9 @@ export async function markNotificationRead(formData: FormData): Promise<void> {
   const user = await requireFreshSession();
 
   const id = String(formData.get("id"));
+  // Keep the first read time: a second call matches 0 rows and leaves readAt.
   await prisma.notification.updateMany({
-    where: { id, userId: user.id },
+    where: { id, userId: user.id, readAt: null },
     data: { readAt: new Date() },
   });
   revalidatePath("/app/notifications");
