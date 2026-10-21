@@ -1106,11 +1106,29 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .analitica-tab { margin-top: 16px; min-width: 0; }
 .analitica-chart { margin: 20px 0; min-width: 0; }
 .analitica-chart svg { display: block; width: 100%; height: auto; max-width: 100%; }
-.analitica-chart text {
-  font-family: var(--font-mono), monospace;
-  fill: var(--steel);
-  font-size: 8px;
+/* Chart labels are HTML, never SVG text: viewBox text scales with the chart's
+   width, so it was 24px on desktop and 7.6px on a phone. */
+.analitica-chart .analitica-weekly-bars { height: 120px; }
+.analitica-weekly-labels {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
+  /* 3 viewBox units of 360 between bars, so labels sit under their bar. */
+  column-gap: 0.833%;
+  margin-top: 6px;
+  font-family: var(--font-mono), monospace; font-size: 0.62rem; color: var(--steel);
 }
+/* Vertical, reading bottom-up: "11 sept" fits under a 28px phone column. */
+.analitica-weekly-labels span {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  justify-self: center; white-space: nowrap; line-height: 1;
+}
+.analitica-author-rows { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.analitica-author-row { display: grid; grid-template-columns: minmax(0, 9.5rem) minmax(0, 1fr); gap: 10px; align-items: center; }
+.analitica-author-name {
+  font-size: 0.84rem; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.analitica-author-track { display: block; height: 10px; background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.analitica-author-track i { display: block; height: 100%; background: var(--accent); }
 .analitica-chart-summary {
   font-family: var(--font-mono), monospace;
   font-size: 0.74rem; letter-spacing: 0.02em;
