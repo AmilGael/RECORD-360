@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileText, Mic } from "@/components/icons";
 
-export type MediaItem = { id: string; url: string; label: string; date: string; kind: "image" | "video" | "pdf" | "audio" | "doc" };
+export type MediaItem = { id: string; url: string; label: string; date: string; kind: "image" | "video" | "pdf" | "audio" | "doc"; thumbUrl?: string };
 
 type T = { mediaTitle: string; mediaFotos: string; mediaVideos: string; mediaDocumentos: string; mediaAudio: string; mediaEmpty: string; older: string; newer: string };
 
@@ -38,6 +38,9 @@ export function MediaGalleries({ projectId, tab, items, page, hasMore, t }: {
               <img src={m.url} alt={m.label} loading="lazy" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: "var(--radius-sm)", display: "block" }} />
             ) : m.kind === "video" ? (
               <video src={m.url} preload="metadata" muted style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: "var(--radius-sm)", display: "block", background: "#000" }} />
+            ) : m.thumbUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={m.thumbUrl} alt={m.label} loading="lazy" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", background: "var(--paper-3)", borderRadius: "var(--radius-sm)", display: "block" }} />
             ) : (
               <div className="card" style={{ aspectRatio: "1", display: "grid", placeItems: "center", padding: 8 }}>
                 {m.kind === "audio" ? <Mic size={22} /> : <FileText size={22} />}

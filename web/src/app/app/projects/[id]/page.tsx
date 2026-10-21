@@ -38,10 +38,10 @@ export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ p?: string; tab?: string; q?: string; block?: string; space?: string; media?: string; mpage?: string; tags?: string | string[]; pmin?: string; pmax?: string; cambios?: string; ffrom?: string; fto?: string; rem?: string }>;
+  searchParams: Promise<{ p?: string; pq?: string; tab?: string; q?: string; block?: string; space?: string; media?: string; mpage?: string; tags?: string | string[]; pmin?: string; pmax?: string; cambios?: string; ffrom?: string; fto?: string; rem?: string }>;
 }) {
   const { id } = await params;
-  const { p: selectedId, tab, q, block, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto, rem } = await searchParams;
+  const { p: selectedId, pq, tab, q, block, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto, rem } = await searchParams;
   const session = await auth();
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
   const companyId = sessionUser.companyId;
@@ -368,10 +368,16 @@ export default async function ProjectPage({
         where: { projectId: id },
         orderBy: { createdAt: "desc" },
         take: MEDIA_PAGE,
-        select: { id: true, url: true, title: true, kind: true, createdAt: true },
+        select: { id: true, url: true, title: true, fileName: true, kind: true, createdAt: true, thumbKey: true },
       });
       mediaItems = [
-        ...docs2.map((d) => ({ id: d.id, url: d.url, label: d.title ?? d.kind, date: formatDate(d.createdAt, lang), kind: "doc" as const })),
+        ...docs2.map((d) => ({
+          id: d.id, url: d.url,
+          label: d.title ?? d.fileName ?? d.kind,
+          date: formatDate(d.createdAt, lang),
+          kind: "doc" as const,
+          thumbUrl: d.thumbKey ? `/api/media/${d.thumbKey}` : undefined,
+        })),
         ...mediaItems,
       ].slice(0, MEDIA_PAGE * 2);
     }
@@ -524,7 +530,15 @@ export default async function ProjectPage({
             authorMap={docAuthorMap}
             lang={lang}
             isAdmin={isAdmin}
-            t={{ empty: t.planos.empty, upload: t.planos.uploadByKind.PLANO, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view }}
+            canEdit={canEditStructure}
+            initialQuery={typeof pq === "string" ? pq : ""}
+            t={{
+              empty: t.planos.empty, upload: t.planos.uploadByKind.PLANO, title: t.planos.title,
+              error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view,
+              search: t.planos.search, searchCount: t.planos.searchCount, searchEmpty: t.planos.searchEmpty,
+              searchClear: t.planos.searchClear, updated: t.planos.updated, defaultName: t.planos.defaultName,
+              backfill: t.planos.backfill, backfillProgress: t.planos.backfillProgress, backfillDone: t.planos.backfillDone,
+            }}
           />
         </div>
       ) : activeTab === "analitica" ? (

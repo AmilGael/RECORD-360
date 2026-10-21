@@ -13,7 +13,7 @@ const LIMIT = 10;
 /**
  * Windows-style similarity search inside one obra (spec R3.2): one query string
  * matched (contains, case-insensitive) against partida names, registro text,
- * document titles, and cambio title/description. Returns null when the obra
+ * document titles or file names, and cambio title/description. Returns null when the obra
  * isn't visible to the caller; empty groups for blank/no-match queries.
  */
 export async function searchProject(user: SessionUser, projectId: string, q: string): Promise<ProjectSearchResults | null> {
@@ -31,7 +31,11 @@ export async function searchProject(user: SessionUser, projectId: string, q: str
       take: LIMIT, orderBy: { serverCreatedAt: "desc" },
       select: { id: true, partidaId: true, text: true, serverCreatedAt: true, partida: { select: { name: true } } },
     }),
-    prisma.document.findMany({ where: { projectId, title: contains }, take: LIMIT, orderBy: { createdAt: "desc" }, select: { id: true, title: true, url: true, kind: true } }),
+    prisma.document.findMany({
+      where: { projectId, OR: [{ title: contains }, { fileName: contains }] },
+      take: LIMIT, orderBy: { createdAt: "desc" },
+      select: { id: true, title: true, url: true, kind: true },
+    }),
     prisma.changeRequest.findMany({ where: { projectId, OR: [{ title: contains }, { description: contains }] }, take: LIMIT, orderBy: { createdAt: "desc" }, select: { id: true, code: true, title: true } }),
   ]);
   return {

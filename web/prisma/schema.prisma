@@ -344,13 +344,16 @@ model Document {
   segmentId    String?      // per-Bloque plan spaces are P4; null = project-level
   kind         DocumentKind @default(PLANO)
   title        String?
+  fileName     String?      // original upload name, sanitized; display only
   url          String
   sha256       String
   fileType     AttachmentType
+  thumbKey     String?      // presentation miniature; never replaces url/sha256
   uploadedById String
   createdAt    DateTime     @default(now())
 
   @@index([projectId, kind, createdAt])
+  @@index([thumbKey])
 }
 
 // AI-generated informe (spec R2.2 "Report" table). Deterministic PDF reports are

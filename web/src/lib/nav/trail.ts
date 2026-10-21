@@ -15,6 +15,9 @@ export const TRAIL_CAP = 50;
 // reply that was already sent or cancelled.
 const TRANSIENT_PARAMS = ["correctionOf", "replyTo"];
 
+/** Query params that rewrite the current screen instead of pushing a trail entry. */
+export const IN_PLACE_PARAMS = ["p", "pq"] as const;
+
 export function isTrailPath(pathname: string): boolean {
   return pathname === "/app" || pathname.startsWith("/app/");
 }
@@ -31,20 +34,20 @@ function pathOf(entry: string): string {
   return new URL(entry, "http://trail.invalid").pathname;
 }
 
-/** Search string of an entry with `p` removed, so two URLs that differ only by selection compare equal. */
-function searchWithoutP(entry: string): { pathname: string; rest: string } {
+/** Search string of an entry with in-place params removed, so two URLs that differ only by those compare equal. */
+function searchWithoutInPlace(entry: string): { pathname: string; rest: string } {
   const u = new URL(entry, "http://trail.invalid");
-  u.searchParams.delete("p");
+  for (const key of IN_PLACE_PARAMS) u.searchParams.delete(key);
   return { pathname: u.pathname, rest: u.searchParams.toString() };
 }
 
-/** True when `a` and `b` are the same /app path and differ only in the `p` param (including add/remove). */
+/** True when `a` and `b` are the same /app path and differ only in in-place params (`p`, `pq`). */
 export function onlyPChanged(a: string, b: string): boolean {
   const left = normalizeEntry(a);
   const right = normalizeEntry(b);
   if (left === right) return false;
-  const A = searchWithoutP(left);
-  const B = searchWithoutP(right);
+  const A = searchWithoutInPlace(left);
+  const B = searchWithoutInPlace(right);
   return A.pathname === B.pathname && A.rest === B.rest;
 }
 
@@ -73,9 +76,9 @@ export function popTo(trail: Trail, entry: string): Trail {
 
 /**
  * Browser back/forward landed on `current`. Back to the previous entry pops it;
- * a popstate that stays on the same screen (only transient params, or only `p`,
- * changed) keeps the trail; anything else (forward, or a jump the trail cannot
- * place) starts over from `current`.
+ * a popstate that stays on the same screen (only transient params, or only
+ * in-place params, changed) keeps the trail; anything else (forward, or a jump
+ * the trail cannot place) starts over from `current`.
  */
 export function reconcileOnPop(trail: Trail, current: string): Trail {
   const entry = normalizeEntry(current);
