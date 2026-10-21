@@ -118,12 +118,11 @@ export async function registerDocument(_prev: DocResult | null, formData: FormDa
     if (!contentTypeForKey(key)) return { ok: false, error: "Solicitud inválida." };
     if (!verifyUploadGrant(user.id, { key, fileType, exp, token })) return { ok: false, error: "No autorizado." };
 
+    // A miniature that fails its grant is dropped, never the file: the main
+    // object is already in the bucket under a verified grant. An unverified
+    // key is still never recorded, so /api/media never serves it.
     const thumb = readThumbGrant(formData);
-    let thumbKey: string | null = null;
-    if (thumb) {
-      if (!verifyImageThumbGrant(user.id, thumb)) return { ok: false, error: "No autorizado." };
-      thumbKey = thumb.key;
-    }
+    const thumbKey = thumb && verifyImageThumbGrant(user.id, thumb) ? thumb.key : null;
 
     await prisma.document.create({
       data: { projectId, segmentId, kind, title, fileName, url: `/api/media/${key}`, sha256, fileType, thumbKey, uploadedById: user.id! },

@@ -2,23 +2,36 @@
  * Browser-only. Loaded with a dynamic import so Node tests and the server
  * never pull pdfjs-dist. A failed miniature must never block the upload.
  */
+// Type-only: erased at build, so it never loads pdfjs-dist on the server.
+import type { PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const MAX_BYTES = 30 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
 const LONG_SIDE = 480;
 
+/** Lets the timeout stop work that is still running, not just stop waiting for it. */
+type Job = { cancel: () => void };
+
 export async function generateThumbnail(file: File): Promise<Blob | null> {
   if (file.size > MAX_BYTES) return null;
-  const work = run(file).catch(() => null);
+  const job: Job = { cancel: () => {} };
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<null>((resolve) => {
-    setTimeout(() => resolve(null), TIMEOUT_MS);
+    timer = setTimeout(() => {
+      job.cancel();
+      resolve(null);
+    }, TIMEOUT_MS);
   });
-  return Promise.race([work, timeout]);
+  try {
+    return await Promise.race([run(file, job).catch(() => null), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-async function run(file: File): Promise<Blob | null> {
+async function run(file: File, job: Job): Promise<Blob | null> {
   const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-  if (isPdf) return pdfThumb(file);
+  if (isPdf) return pdfThumb(file, job);
   if (file.type.startsWith("image/")) return imageThumb(file);
   return null;
 }
@@ -40,7 +53,7 @@ async function imageThumb(file: File): Promise<Blob | null> {
   }
 }
 
-async function pdfThumb(file: File): Promise<Blob | null> {
+async function pdfThumb(file: File, job: Job): Promise<Blob | null> {
   // Legacy build + worker from our origin. v5+ needs Node 22; 4.10.38 is the
   // pin. Import inside the function so a server/test graph never loads it.
   // Do not add pdfjs-dist to transpilePackages: SWC injects @swc/helpers
@@ -52,7 +65,20 @@ async function pdfThumb(file: File): Promise<Blob | null> {
   ).toString();
   const data = new Uint8Array(await file.arrayBuffer());
   // Production CSP forbids eval; pdf.js will try it unless this is false.
-  const pdf = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
+  const task = pdfjs.getDocument({ data, isEvalSupported: false });
+  // Destroying the task frees the parsed document and its worker. Without it
+  // every call leaves a live worker behind, and a backfill over many plans
+  // runs the phone out of memory. A timeout destroys it too, which also stops
+  // a render still in progress.
+  job.cancel = () => { void task.destroy(); };
+  try {
+    return await renderFirstPage(await task.promise);
+  } finally {
+    void task.destroy();
+  }
+}
+
+async function renderFirstPage(pdf: PDFDocumentProxy): Promise<Blob | null> {
   const page = await pdf.getPage(1);
   const base = page.getViewport({ scale: 1 });
   const scale = base.width > 0 ? LONG_SIDE / base.width : 1;
