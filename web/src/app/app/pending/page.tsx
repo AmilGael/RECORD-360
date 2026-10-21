@@ -5,10 +5,10 @@ import { getDict } from "@/i18n/server";
 import { projectAccessWhere } from "@/lib/authz/projects";
 import { pageWindow } from "@/lib/feed/paginate";
 import { loadPendingItems, type PendingKind } from "@/lib/notifications/pending";
-import { resolveReminder } from "@/app/actions/reminders";
 import { SeverityMarker } from "@/components/severity-marker";
-import { SubmitButton } from "@/components/submit-button";
+import { PendingList } from "@/components/pending-list";
 import { FiltersSheet } from "@/components/filters-sheet";
+import { BackButton } from "@/components/back-button";
 import { formatRecordTime } from "@/lib/format/datetime";
 import { prisma } from "@/lib/db";
 
@@ -59,6 +59,7 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="reveal" style={{ maxWidth: 720, margin: "0 auto" }}>
+      <BackButton fallbackHref="/app" labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <p className="kicker">{P.title.toUpperCase()}</p>
       <h1 className="h-lg" style={{ fontSize: "clamp(1.9rem, 4vw, 2.7rem)", margin: "10px 0 20px" }}>{P.title}</h1>
 
@@ -92,43 +93,36 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
         </form>
       </FiltersSheet>
 
-      {pageItems.length === 0 && (
-        <p className="text-steel">{hasActiveFilters ? P.noResults : P.empty}</p>
-      )}
-
-      {pageItems.map((item) => (
-        <div key={item.id} className="row" style={{ gap: 16 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <Link href={item.deepLink} className="row-link">{item.title}</Link>
-              <SeverityMarker severity={item.severity} t={t.severity} />
-              {item.overdue && (
-                <span className="mono" style={{ fontSize: "0.62rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--state-blocked)", fontWeight: 700 }}>
-                  {P.overdue}
-                </span>
-              )}
-            </div>
-            <p className="text-steel" style={{ margin: "3px 0 0", fontSize: "0.76rem" }}>
-              {typeLabel(item.kind)} · {item.projectName}
-              {item.partidaName ? ` · ${item.partidaName}` : ""}
-              {item.dueAt ? ` · ${P.dueLabel}: ${formatRecordTime(item.dueAt, lang)}` : ""}
-              {item.authorName ? ` · ${P.authorLabel}: ${item.authorName}` : ""}
-            </p>
-          </div>
-          {item.kind === "reminder" ? (
-            <form action={resolveReminder}>
-              <input type="hidden" name="registroId" value={item.id.slice("rem:".length)} />
-              <SubmitButton className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem" }}>
-                {P.resolve}
-              </SubmitButton>
-            </form>
-          ) : (
-            <Link href={item.deepLink} className="btn btn-ghost" style={{ fontSize: "0.76rem", padding: "0.3rem 0.65rem" }}>
-              {P.viewRequest}
-            </Link>
-          )}
-        </div>
-      ))}
+      <PendingList
+        emptyLabel={hasActiveFilters ? P.noResults : P.empty}
+        labels={{ resolve: P.resolve, viewRequest: P.viewRequest, resolveError: P.resolveError }}
+        rows={pageItems.map((item) => ({
+          id: item.id,
+          action:
+            item.kind === "reminder"
+              ? { kind: "resolve" as const, registroId: item.id.slice("rem:".length) }
+              : { kind: "link" as const, href: item.deepLink },
+          content: (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <Link href={item.deepLink} className="row-link">{item.title}</Link>
+                <SeverityMarker severity={item.severity} t={t.severity} />
+                {item.overdue && (
+                  <span className="mono" style={{ fontSize: "0.62rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--state-blocked)", fontWeight: 700 }}>
+                    {P.overdue}
+                  </span>
+                )}
+              </div>
+              <p className="text-steel" style={{ margin: "3px 0 0", fontSize: "0.76rem" }}>
+                {typeLabel(item.kind)} · {item.projectName}
+                {item.partidaName ? ` · ${item.partidaName}` : ""}
+                {item.dueAt ? ` · ${P.dueLabel}: ${formatRecordTime(item.dueAt, lang)}` : ""}
+                {item.authorName ? ` · ${P.authorLabel}: ${item.authorName}` : ""}
+              </p>
+            </>
+          ),
+        }))}
+      />
 
       {total > 0 && (
         <div

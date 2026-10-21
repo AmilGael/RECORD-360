@@ -17,6 +17,9 @@ import { SubmitButton } from "@/components/submit-button";
 import { concludePartida, reopenPartida } from "@/app/actions/lifecycle";
 import type { Role } from "@prisma/client";
 import { formatRecordTime } from "@/lib/format/datetime";
+import { BackButton } from "@/components/back-button";
+import { projectHrefWithParams } from "@/lib/project/space-links";
+import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 
 export default async function PartidaPage({
   params, searchParams,
@@ -43,7 +46,7 @@ export default async function PartidaPage({
           assignments: { select: { userId: true } },
         },
       },
-      segment: { select: { closedAt: true } },
+      segment: { select: { id: true, name: true, closedAt: true } },
     },
   });
   if (!partida) notFound();
@@ -97,14 +100,22 @@ export default async function PartidaPage({
         cancelLabel: correctionCopy.cancelLabel,
       }
     : null;
+  // The partida's place in its bloque workspace: the Volver fallback and the
+  // bloque crumb both land there with this partida selected.
+  const bloqueHref = projectHrefWithParams(partida.projectId, {
+    tab: "code", block: partida.segment?.id ?? UNGROUPED_FILTER, p: partida.id,
+  });
+  const syncErrors = { sessionExpired: t.offlineCapture.errorSessionExpired, forbidden: t.offlineCapture.errorForbidden };
 
   return (
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
+      <BackButton fallbackHref={bloqueHref} labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <Breadcrumbs
         ariaLabel={t.breadcrumb.aria}
         items={[
           { label: t.nav.sites, href: "/app" },
           { label: partida.project.name, href: `/app/projects/${partida.projectId}` },
+          { label: partida.segment?.name ?? t.project.ungrouped, href: bloqueHref },
           { label: partida.name },
         ]}
       />
@@ -154,10 +165,10 @@ export default async function PartidaPage({
           )}
         </>
       )}
-      <LogComposer partidaId={partida.id} t={t.composer} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
+      <LogComposer partidaId={partida.id} t={t.composer} syncErrors={syncErrors} locations={locationLabels} correction={correction} reply={reply} lang={lang} />
       <PendingEntries
         partidaId={partida.id}
-        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, discard: t.offlineCapture.discard, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle }}
+        t={{ syncTitle: t.pendingWork.syncTitle, pendingOne: t.offlineCapture.pendingOne, syncing: t.offlineCapture.syncing, retry: t.offlineCapture.retry, discard: t.offlineCapture.discard, errorTitle: t.offlineCapture.errorTitle, blockedTitle: t.offlineCapture.blockedTitle, errors: syncErrors }}
       />
       {registros.map((r) => (
         <RecordCard

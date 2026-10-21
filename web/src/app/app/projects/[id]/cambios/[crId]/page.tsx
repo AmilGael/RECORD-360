@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackButton } from "@/components/back-button";
 import { getDict } from "@/i18n/server";
 import { formatRecordTime } from "@/lib/format/datetime";
 import { resolveChangeRequest } from "@/app/actions/cambios";
@@ -42,8 +42,8 @@ export default async function CambioDetail({ params }: { params: Promise<{ id: s
 
   return (
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
-      <Link href={`/app/projects/${id}?tab=cambios`} className="kicker" style={{ textDecoration: "none" }}>← {R.tab}</Link>
-      <div className="cr-detail card" style={{ marginTop: 12 }}>
+      <BackButton fallbackHref={`/app/projects/${id}?tab=cambios`} labels={{ label: t.nav.back, aria: t.nav.backAria }} />
+      <div className="cr-detail card" style={{ marginTop: 2 }}>
         <div className="cr-detail-head">
           <span className="mono" style={{ fontSize: "0.7rem", letterSpacing: "0.1em" }}>{cr.code}</span>
           <span className="state-badge" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>

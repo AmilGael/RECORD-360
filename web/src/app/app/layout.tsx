@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -8,6 +9,7 @@ import { OfflineProvider } from "@/components/offline-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarDrawer } from "@/components/sidebar-drawer";
+import { NavTrail } from "@/components/nav-trail";
 import { countPendingItems } from "@/lib/notifications/pending";
 import { cookies } from "next/headers";
 
@@ -40,6 +42,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="grid-bg" style={{ minHeight: "100vh" }}>
       <OfflineProvider />
+      <Suspense fallback={null}>
+        <NavTrail />
+      </Suspense>
       <header className="appbar appbar--app">
         <div className="appbar-inner">
           <Link href="/app" className="brand"><b>Raphel<span className="dot" aria-hidden="true">.</span></b><span className="tag">{t.common.blackBox}</span></Link>

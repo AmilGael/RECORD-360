@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireSuperAdmin } from "@/lib/auth/operator";
 import { approveRequest, rejectRequest, resendActivation } from "@/app/actions/access";
 import { SubmitButton } from "@/components/submit-button";
+import { BackButton } from "@/components/back-button";
+import { getDict } from "@/i18n/server";
 
 export default async function AccessRequestsPage() {
   try {
@@ -13,9 +15,11 @@ export default async function AccessRequestsPage() {
 
   const pending = await prisma.accessRequest.findMany({ where: { status: "PENDING" }, orderBy: { createdAt: "asc" } });
   const resolved = await prisma.accessRequest.findMany({ where: { status: { not: "PENDING" } }, orderBy: { reviewedAt: "desc" }, take: 25 });
+  const { t } = await getDict();
 
   return (
     <div className="reveal" style={{ maxWidth: 720, margin: "0 auto" }}>
+      <BackButton fallbackHref="/app" labels={{ label: t.nav.back, aria: t.nav.backAria }} />
       <div className="dash-header">
         <div>
           <div className="kicker">OPERADOR</div>

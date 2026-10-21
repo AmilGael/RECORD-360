@@ -10,6 +10,7 @@ import { projectProgress } from "@/lib/project/progress";
 import { formatDate, formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
 import { DashboardSearch } from "@/components/dashboard-search";
+import { BackButton } from "@/components/back-button";
 import { Folder, Plus } from "@/components/icons";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import type { Role } from "@prisma/client";
@@ -63,7 +64,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     };
     return (
       <div className="reveal">
-        <Link href="/app" className="kicker" style={{ textDecoration: "none" }}>&#8592; {D.backToDash}</Link>
+        <BackButton fallbackHref="/app" labels={{ label: t.nav.back, aria: t.nav.backAria }} />
         <h1 className="h-lg" style={{ margin: "10px 0 16px" }}>{tableView === "activas" ? D.tableTitleActive : D.tableTitleArchived}</h1>
         <div className="card" style={{ padding: 0, overflowX: "auto" }}>
           <table className="dash-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>

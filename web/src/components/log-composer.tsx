@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mic } from "@/components/icons";
 import { IndexedDbQueue } from "@/lib/offline/queue";
 import type { QueuedRegistro } from "@/lib/offline/types";
+import { SYNC_ACCEPTED_EVENT, nextCaptureState, syncErrorText, type CaptureState, type SyncErrorLabels } from "@/lib/offline/capture-status";
 import type { Lang } from "@/i18n/dictionaries";
 import { classifyDictationError, mergeTranscript } from "@/lib/dictation";
 import { datetimeLocalToIso, useDatetimeLocalMin } from "@/lib/time/local-input";
@@ -45,9 +46,14 @@ type ComposerT = {
   dictateErrorNetwork?: string;
   dictateErrorAborted?: string;
   dictateErrorOther?: string;
-  saved?: string;
+  savedOnDevice: string;
+  savedSealed: string;
+  savedFailed: string;
+  savedFailedHint: string;
   categories: Record<string, string>;
 };
+
+const SEALED_NOTICE_MS = 4000;
 
 // Lazy browser-only singleton — IndexedDB is only touched inside event handlers.
 let _queue: IndexedDbQueue | null = null;
@@ -60,10 +66,11 @@ function emitQueueChanged() {
 }
 
 export function LogComposer({
-  partidaId, t, locations, correction, reply, lang,
+  partidaId, t, syncErrors, locations, correction, reply, lang,
 }: {
   partidaId: string;
   t: ComposerT;
+  syncErrors: SyncErrorLabels;
   locations: string[];
   correction?: { id: string; label: string; cancelLabel: string; notice: string } | null;
   reply?: { id: string; label: string; cancelLabel: string; notice: string } | null;
@@ -76,8 +83,7 @@ export function LogComposer({
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const savedTimerRef = useRef<number | null>(null);
+  const [capture, setCapture] = useState<{ id: string; state: CaptureState } | null>(null);
   const reminderMin = useDatetimeLocalMin();
 
   const [speechSupported, setSpeechSupported] = useState(false);
@@ -107,14 +113,42 @@ export function LogComposer({
     );
   }, []);
 
+  // Sealed only on the server's acceptance. Mounted for the composer's whole
+  // life, not per capture: an online sync can accept the item before the
+  // per-capture effect below has subscribed.
   useEffect(() => {
-    return () => {
-      if (savedTimerRef.current) {
-        window.clearTimeout(savedTimerRef.current);
-        savedTimerRef.current = null;
-      }
+    const onAccepted = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      setCapture((c) => (c && c.id === id ? { id, state: { kind: "sealed" } } : c));
     };
+    window.addEventListener(SYNC_ACCEPTED_EVENT, onAccepted);
+    return () => window.removeEventListener(SYNC_ACCEPTED_EVENT, onAccepted);
   }, []);
+
+  // Follow the registro just queued until the server seals it or refuses it.
+  const captureId = capture?.id ?? null;
+  useEffect(() => {
+    if (!captureId) return;
+    const check = () => {
+      void getQueue().all().then((queued) => {
+        setCapture((c) => (c && c.id === captureId ? { id: c.id, state: nextCaptureState(c.state, c.id, queued) } : c));
+      }).catch(() => {});
+    };
+    check();
+    window.addEventListener("raphl:sync-progress", check);
+    window.addEventListener("raphl:queue-changed", check);
+    return () => {
+      window.removeEventListener("raphl:sync-progress", check);
+      window.removeEventListener("raphl:queue-changed", check);
+    };
+  }, [captureId]);
+
+  const captureKind = capture?.state.kind ?? null;
+  useEffect(() => {
+    if (captureKind !== "sealed") return;
+    const timer = window.setTimeout(() => setCapture(null), SEALED_NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [captureKind]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -149,16 +183,11 @@ export function LogComposer({
     try {
       await getQueue().enqueue(item);
       form.reset();
-      setSaved(true);
+      setCapture({ id: item.id, state: { kind: "on-device" } });
       // OfflineProvider syncs on this event and refreshes the feed only once
       // the server has accepted the item.
       emitQueueChanged();
       if (correction || reply) router.replace(`/app/partidas/${partidaId}`);
-      if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = window.setTimeout(() => {
-        setSaved(false);
-        savedTimerRef.current = null;
-      }, 4000);
     } catch {
       setError(t.error);
     } finally {
@@ -242,9 +271,16 @@ export function LogComposer({
           {error}
         </p>
       )}
-      {saved && (
-        <p role="status" style={{ background: "rgba(46,125,50,0.08)", border: "1px solid #2e7d32", color: "#2e7d32", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
-          {t.saved ?? "Guardado."}
+      {capture?.state.kind === "on-device" && (
+        <p role="status" className="capture-notice is-on-device">{t.savedOnDevice}</p>
+      )}
+      {capture?.state.kind === "sealed" && (
+        <p role="status" className="capture-notice is-sealed">{t.savedSealed}</p>
+      )}
+      {capture?.state.kind === "failed" && (
+        <p role="alert" className="capture-notice is-failed">
+          {[t.savedFailed, syncErrorText(capture.state.item, syncErrors)].filter(Boolean).join(": ")}
+          <span className="capture-notice-hint">{t.savedFailedHint}</span>
         </p>
       )}
       {dictationError && (
