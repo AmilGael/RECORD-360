@@ -14,47 +14,36 @@ export function WeeklyActivityChart({ weeks, lang, t }: {
   const total = weeks.reduce((s, w) => s + w.n, 0);
   const max = Math.max(...weeks.map((w) => w.n), 1);
   const summary = fill(t.summary, total);
+  // Bars only. The SVG stretches to the container at a fixed CSS height
+  // (preserveAspectRatio="none"), so nothing in it may be text: viewBox text
+  // would scale with the width and the rotated labels used to overflow the
+  // bottom edge. Week labels are HTML in a matching 12-column grid below.
   const vbW = 360;
-  const vbH = 148;
-  const padL = 4;
-  const padR = 4;
-  const padT = 6;
-  const padB = 36;
-  const innerW = vbW - padL - padR;
-  const innerH = vbH - padT - padB;
+  const vbH = 100;
   const gap = 3;
-  const barW = (innerW - gap * (weeks.length - 1)) / weeks.length;
+  const barW = (vbW - gap * (weeks.length - 1)) / weeks.length;
 
   return (
     <section className="analitica-chart">
       <h2 className="kicker">{t.title}</h2>
-      <svg
-        role="img"
-        viewBox={`0 0 ${vbW} ${vbH}`}
-        width="100%"
-        aria-labelledby="analitica-weekly-title analitica-weekly-desc"
-      >
-        <title id="analitica-weekly-title">{t.title}</title>
-        <desc id="analitica-weekly-desc">{summary}</desc>
-        {weeks.map((w, i) => {
-          const h = (w.n / max) * innerH;
-          const x = padL + i * (barW + gap);
-          const y = padT + innerH - h;
-          return (
-            <g key={w.week}>
-              <rect x={x} y={y} width={barW} height={Math.max(h, 0)} fill="var(--accent)" />
-              <text
-                x={x + barW / 2}
-                y={vbH - 8}
-                textAnchor="end"
-                transform={`rotate(-55 ${x + barW / 2} ${vbH - 8})`}
-              >
-                {formatWeekLabel(w.week, lang)}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+      <div role="img" aria-labelledby="analitica-weekly-title analitica-weekly-desc">
+        <span id="analitica-weekly-title" hidden>{t.title}</span>
+        <span id="analitica-weekly-desc" hidden>{summary}</span>
+        <svg
+          className="analitica-weekly-bars"
+          viewBox={`0 0 ${vbW} ${vbH}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          {weeks.map((w, i) => {
+            const h = (w.n / max) * vbH;
+            return <rect key={w.week} x={i * (barW + gap)} y={vbH - h} width={barW} height={Math.max(h, 0)} fill="var(--accent)" />;
+          })}
+        </svg>
+        <div className="analitica-weekly-labels" aria-hidden="true">
+          {weeks.map((w) => <span key={w.week}>{formatWeekLabel(w.week, lang)}</span>)}
+        </div>
+      </div>
       <p className="analitica-chart-summary">{summary}</p>
       <details className="analitica-data">
         <summary>{t.viewData}</summary>
