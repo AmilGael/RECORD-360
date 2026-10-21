@@ -417,7 +417,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .sidebar-icon-button,
 .sidebar-signout { transition: border-color 0.18s var(--ease), color 0.18s var(--ease), background 0.18s var(--ease); }
 .sidebar-icon-button:hover,
-.sidebar-signout:hover { border-color: var(--accent); color: var(--accent); }
+.sidebar-signout:hover { border-color: var(--accent); color: var(--ink); }
 .sidebar-signout { justify-content: center; background: transparent; }
 
 /* list rows */
@@ -430,7 +430,8 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .row > * { transition: transform 0.18s var(--ease); }
 .row:hover > * { transform: translateX(6px); }
 .row-link { color: var(--ink); text-decoration: none; font-weight: 700; transition: color 0.18s var(--ease); }
-.row:hover .row-link { color: var(--accent); }
+/* Rust is the hover mark, not the type: rust text on slate is under 4.5:1. */
+.row:hover .row-link { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 
 .notif-section { margin-top: 8px; }
 .notif-section + .notif-section { margin-top: 28px; }
@@ -448,7 +449,9 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 .notif-row.is-read:hover .notif-title { color: var(--ink); }
 .notif-unread-tag {
   margin-left: 6px; font-family: var(--font-mono), monospace; font-size: 0.62rem;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink);
+  /* Small rust type on slate fails 4.5:1; the rust underline is the mark. */
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 .notif-mark-read { font-size: 0.76rem; padding: 0.3rem 0.65rem; }
 .notif-pager {
@@ -706,7 +709,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   border-top: 1px solid var(--line);
 }
 .dash-risk-item:first-child { border-top: none; }
-.dash-risk-item:hover .dash-risk-name { color: var(--accent); }
+.dash-risk-item:hover .dash-risk-name { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .dash-risk-name { display: flex; align-items: center; gap: 8px; font-weight: 700; transition: color 0.15s var(--ease); }
 .dash-risk-track { margin-top: 8px; }
 .dash-risk-meta {
@@ -1221,7 +1224,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
   flex: 1; min-width: 170px; padding: 22px 20px; margin-right: -1px; position: relative;
   border: 1px solid color-mix(in srgb, var(--paper) 18%, transparent); border-radius: var(--radius-sm);
 }
-.lp-node .lp-step { font-family: var(--font-mono), monospace; font-size: 0.7rem; letter-spacing: 0.14em; color: var(--accent); }
+.lp-node .lp-step { font-family: var(--font-mono), monospace; font-size: 0.7rem; letter-spacing: 0.14em; color: color-mix(in srgb, var(--paper) 78%, transparent); box-shadow: inset 0 -2px 0 var(--accent); }
 .lp-node h3 { font-weight: 700; font-size: 1.15rem; margin: 12px 0 6px; letter-spacing: -0.01em; }
 .lp-node p { font-size: 0.84rem; color: color-mix(in srgb, var(--paper) 78%, transparent); line-height: 1.5; }
 .lp-node .lp-arrow { position: absolute; right: -11px; top: 50%; transform: translateY(-50%); color: var(--accent); z-index: 2; background: var(--ink); padding: 2px 0; }
@@ -1364,8 +1367,9 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink); backg
 /* 02 — being stamped: the rust band, painted along the plate's bottom edge —
    the same mark the app uses for progress/commitment on its plates. */
 .lp-plate--stamp { border: 1px solid var(--line-strong); border-bottom: 6px solid var(--accent); background: var(--paper-2); }
-.lp-plate--stamp .lp-plate-step { color: var(--accent); }
-.lp-plate--stamp .lp-hash { color: var(--accent); }
+/* The 6px rust band is the stamp; its small type stays ink. */
+.lp-plate--stamp .lp-plate-step { color: var(--ink); }
+.lp-plate--stamp .lp-hash { color: var(--ink); }
 /* 03 — sealed: the full chalk plane (concluded) mark. The record takes the light. */
 .lp-plate--sealed { background: var(--ink); color: var(--paper); border: 1px solid var(--ink); }
 .lp-plate--sealed .lp-plate-step { color: color-mix(in srgb, var(--paper) 72%, var(--ink)); }
