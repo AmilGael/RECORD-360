@@ -1,9 +1,11 @@
 "use client";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createPartida } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
 import { Folder, Search } from "@/components/icons";
 import { RenameSegmentForm } from "@/components/project-edit-controls";
+import { applyPartidaNameFilter, shouldAdoptUrlQuery } from "@/lib/project/partida-filter";
 import { projectProgress } from "@/lib/project/progress";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { activityAging } from "@/lib/partida/aging";
@@ -112,13 +114,49 @@ export function ProjectFileTree({
   onSelect: (id: string) => void;
   rowRef: (id: string, el: HTMLButtonElement | null) => void;
 }) {
+  const [q, setQ] = useState(filters.q);
+  // The last q this box wrote to the URL. A refresh echoes it (or an older one)
+  // back as filters.q; neither may overwrite what is being typed.
+  const lastWritten = useRef(filters.q);
+  useEffect(() => {
+    const inUrl = new URL(window.location.href).searchParams.get("q") ?? "";
+    if (!shouldAdoptUrlQuery(filters.q, lastWritten.current, inUrl)) return;
+    lastWritten.current = filters.q;
+    setQ(filters.q);
+  }, [filters.q]);
+
+  const named = useMemo(
+    () => applyPartidaNameFilter(segments, ungrouped, q, filters.hasFilters),
+    [segments, ungrouped, q, filters.hasFilters],
+  );
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      const url = new URL(window.location.href);
+      const current = url.searchParams.get("q") ?? "";
+      const next = q.trim();
+      lastWritten.current = next;
+      if (next === current) return;
+      if (next) url.searchParams.set("q", next);
+      else url.searchParams.delete("q");
+      window.history.replaceState(null, "", url);
+    }, 250);
+    return () => window.clearTimeout(id);
+  }, [q]);
+
   return (
     <div className="tree">
       <form action={`/app/projects/${projectId}`} className="tree-filter">
         <input type="hidden" name="tab" value="code" />
         <label className="search-wrap" style={{ marginBottom: 0 }}>
           <span className="icon"><Search size={13} /></span>
-          <input name="q" defaultValue={filters.q} placeholder={t.searchPartidas} className="search-input" />
+          <input
+            name="q"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t.searchPartidas}
+            className="search-input"
+          />
         </label>
         {/* WS4F: the active block is fixed by the workspace context (Bloques
             overview / space nav switch it), not by a second selector nested
@@ -157,13 +195,25 @@ export function ProjectFileTree({
         </details>
         <div style={{ display: "flex", gap: 8 }}>
           <SubmitButton className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.filter}</SubmitButton>
-          {filters.hasFilters && <Link href={`/app/projects/${projectId}?tab=code&block=${encodeURIComponent(filters.block)}`} className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.clear}</Link>}
+          {named.hasFilters && (
+            <Link
+              href={`/app/projects/${projectId}?tab=code&block=${encodeURIComponent(filters.block)}`}
+              // Clear the box here too: when the page loaded with no q, the
+              // navigation leaves filters.q unchanged, so the sync effect never
+              // runs and the typed name would keep filtering the list.
+              onClick={() => { lastWritten.current = ""; setQ(""); }}
+              className="btn btn-ghost"
+              style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}
+            >
+              {t.clear}
+            </Link>
+          )}
         </div>
       </form>
-      {filters.hasFilters && filters.total === 0 && (
+      {named.hasFilters && named.total === 0 && (
         <div className="tree-empty">{t.noResults}</div>
       )}
-      {segments.map((s) => (
+      {named.segments.map((s) => (
         <div key={s.id}>
           <div className="tree-folder">
             <span className="tree-folder-name" title={s.name}><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</span>
@@ -175,10 +225,10 @@ export function ProjectFileTree({
           ))}
         </div>
       ))}
-      {ungrouped.length > 0 && (
+      {named.ungrouped.length > 0 && (
         <div>
           <div className="tree-folder" style={{ opacity: 0.7 }}><span className="tree-folder-name"><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{t.ungrouped}</span></div>
-          {ungrouped.map((pa) => (
+          {named.ungrouped.map((pa) => (
             <FileRow key={pa.id} pa={pa} selectedId={selectedId} lang={lang} t={t} onSelect={onSelect} rowRef={rowRef} />
           ))}
         </div>

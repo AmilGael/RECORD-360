@@ -276,3 +276,22 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - Close-block e2e asserts the refusal and writes nothing. Self-archive stays hidden and thrown.
   - Stacked on #27. Review only the commits after `437c761`.
 
+## Q11c: Instant partida name filter (feat/partida-filter-instant, 2026-10-20)
+
+- **What users will notice:** in a bloque, typing a partida name filters the list at once and does not reload the page. A link that already has `?q=` opens filtered. Submitting a facet still reloads, and it keeps the name that is in the box even when the address has not caught up. Volver from a name filter leaves the list for the screen that opened it. An open partida stays open when its row is filtered out.
+- **What changed in code:**
+  - `partidaNameMatches` and `applyPartidaNameFilter` in `web/src/lib/project/partida-filter.ts`. The rule is trim, then lower case, then `includes`. `filterPartidaGroups` uses that function, so the server and the client share it.
+  - The bloque page still applies block, tags, progress, open solicitudes, and dates. It does not apply the name. Those rows go to `ProjectFileTree`.
+  - The tree filters during render from the address, so the first HTML is already filtered. Typing updates the list immediately. `replaceState` writes `q` after 250 ms and skips when it is unchanged. The folder percent is `projectProgress` of the visible rows. The total, `hasFilters` (true when `q` is non-empty), the empty state, and empty bloque groups match the old server result. The name field is controlled, so a facet submit sends the text in the box.
+  - The open panel is still `p`. Filtering the list does not clear it.
+- **Migrations:** none.
+- **Rules for future work:**
+  - Do not fold accents in this filter. A later quest can, and the obra search half of that needs Postgres `unaccent`, which is a migration.
+  - Facet submits stay navigations. The name field on that form is the current text, not a hidden copy of the last address.
+  - `q` stays an in-place trail param. A name-only change still replaces the trail top.
+- **How to verify:** lint, `tsc --noEmit`, `npm test` (784, was 782). Filtering the Q4 load of 300 partidas took 0.118 ms; the script and the Carga rows were removed. `E2E_PROD=1 npx playwright test e2e/partida-filter.spec.ts --workers=1`: 4 passed (phone and desktop, es and en).
+- **Known limits:**
+  - Matching is accent-sensitive. "mamposteria" does not find "Mampostería", here and in the obra search. Field users on phones often skip accents. Candidate for a later quest. The obra search side would need Postgres `unaccent`, which means a migration.
+  - Because `q` is in-place, Volver from a name-only filter leaves the bloque list for the screen that opened it, not the unfiltered list. Facet submits still push, and they keep `q`.
+  - Stacked on #28. Review only the commits after `542c9d6`.
+
