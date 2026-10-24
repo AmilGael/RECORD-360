@@ -12,6 +12,7 @@ type T = {
   assign: string;
   remove: string;
   chooseUser: string;
+  selectRole: string;
 };
 
 export function ProjectAssignmentsPanel({
@@ -34,11 +35,11 @@ export function ProjectAssignmentsPanel({
       {canManage && (
         <form action={assignProjectUser} className="assignment-form">
           <input type="hidden" name="projectId" value={projectId} />
-          <select name="role" className="input" defaultValue="SUPERVISOR">
+          <select name="role" className="input" defaultValue="SUPERVISOR" aria-label={t.selectRole}>
             <option value="SUPERVISOR">{t.supervisor}</option>
             <option value="RESIDENT">{t.resident}</option>
           </select>
-          <select name="userId" className="input" required defaultValue="">
+          <select name="userId" className="input" required defaultValue="" aria-label={t.chooseUser}>
             <option value="" disabled>{t.chooseUser}</option>
             {users.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.email}</option>)}
           </select>

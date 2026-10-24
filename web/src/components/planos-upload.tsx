@@ -5,7 +5,7 @@ import { Upload } from "@/components/icons";
 import type { DocumentKind } from "@prisma/client";
 import { putViaPresign, thumbFile } from "@/lib/thumbs/presign-put";
 
-type T = { upload: string; title: string; error: string };
+type T = { upload: string; file: string; title: string; error: string };
 
 type PresignResponse =
   | { direct: false; error?: string }
@@ -132,7 +132,7 @@ export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { proj
         </p>
       )}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <input type="file" name="file" required accept="application/pdf,image/jpeg,image/png,image/webp" disabled={pending} />
+        <input type="file" name="file" required accept="application/pdf,image/jpeg,image/png,image/webp" disabled={pending} aria-label={t.file} />
         <button type="submit" className="btn btn-accent" style={{ marginLeft: "auto" }} disabled={pending} aria-busy={pending}>
           <Upload size={12} style={{ verticalAlign: -1, marginRight: 5 }} />
           {t.upload}

@@ -6,7 +6,7 @@ import { PlanosGrid, type PlanoCard } from "@/components/planos-grid";
 import { PlanosBackfill } from "@/components/planos-backfill";
 
 type PlanosT = {
-  empty: string; upload: string; title: string; error: string; uploadedBy: string; view: string;
+  empty: string; upload: string; file: string; title: string; error: string; uploadedBy: string; view: string;
   search: string; searchCount: string; searchEmpty: string; searchClear: string;
   updated: string; defaultName: string;
   backfill: string; backfillProgress: string; backfillDone: string;
@@ -43,7 +43,7 @@ export function PlanosTab({
 
   return (
     <div>
-      {isAdmin && <PlanosUpload projectId={projectId} t={{ upload: t.upload, title: t.title, error: t.error }} />}
+      {isAdmin && <PlanosUpload projectId={projectId} t={{ upload: t.upload, file: t.file, title: t.title, error: t.error }} />}
       {canEdit && missing.length > 0 && (
         <PlanosBackfill docs={missing} t={{ backfill: t.backfill, backfillProgress: t.backfillProgress, backfillDone: t.backfillDone }} />
       )}
