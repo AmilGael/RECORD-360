@@ -173,6 +173,43 @@ body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
 /* ---------- planes: cards, plates, panels ---------- */
 .raphel-app .repo-card { border-radius: var(--radius); }
 .raphel-app .repo-card .repo-title { font-stretch: 100%; text-transform: none; letter-spacing: -0.005em; }
+/* Active obra card: large cover on the left, text beside it, progress band on
+   the bottom edge. The archived list keeps the compact .repo-card rows. */
+.raphel-app .project-card { display: block; padding: 16px 18px 22px; }
+.raphel-app .project-card-link {
+  display: flex; align-items: center; gap: 20px;
+  color: inherit; text-decoration: none; min-width: 0;
+}
+.raphel-app .project-card-body { flex: 1; min-width: 0; }
+.raphel-app .project-card .repo-title { font-size: 1.5rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.015em; }
+.raphel-app .project-card .repo-meta { margin-top: 10px; row-gap: 4px; }
+.raphel-app .project-card .progress-label { min-width: 0; text-align: left; }
+.raphel-app .project-card-actions { margin-top: 12px; }
+@media (min-width: 561px) {
+  .raphel-app .project-card-actions { padding-left: 240px; }
+}
+@media (max-width: 560px) {
+  .raphel-app .project-card { padding: 14px 14px 20px; }
+  .raphel-app .project-card-link { flex-direction: column; align-items: stretch; gap: 14px; }
+  .raphel-app .project-card .repo-title { font-size: 1.3rem; }
+}
+
+/* Project cover: image, or a plane tinted with --paper-3 and --line carrying
+   the folder line icon (no text). */
+.raphel-app .project-cover {
+  position: relative; flex: none; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper-3); border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--steel);
+}
+.raphel-app .project-cover.is-card { width: 220px; height: 140px; }
+.raphel-app .project-cover.is-hero { width: 100%; height: 200px; }
+.raphel-app .project-cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.raphel-app .project-cover-placeholder { display: inline-flex; opacity: 0.8; }
+@media (max-width: 560px) {
+  .raphel-app .project-cover.is-card { width: 100%; height: 160px; }
+}
+
 .raphel-app .planos-card { border-radius: var(--radius); overflow: hidden; }
 .raphel-app .panel-entry { border-radius: var(--radius-sm); }
 .raphel-app .panel-thumb { border-radius: var(--radius-sm); }

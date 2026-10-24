@@ -13,6 +13,7 @@ import type { Lang } from "@/i18n/dictionaries";
 import { DashboardSearch } from "@/components/dashboard-search";
 import { foldForSearch } from "@/lib/text/fold";
 import { BackButton } from "@/components/back-button";
+import { ProjectCover } from "@/components/project-cover";
 import { Folder, Plus } from "@/components/icons";
 import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
 import type { Role } from "@prisma/client";
@@ -197,53 +198,49 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             {projectRows.length === 0 && (
               <div className="repo-list-empty">{D.empty}</div>
             )}
-            {projectRows.map((p, i) => (
-              <div key={p.id} className="repo-card" data-name={foldForSearch(p.name)}>
-                {/* The plate's painted index — position in the yard, not an id. */}
-                <span className="plate-index" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
-                <Link href={`/app/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit", minWidth: 0 }}>
-                  <div className="repo-title">
-                    {p.coverImageKey ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={`/api/media/${p.coverImageKey}`} alt="" style={{ width: 28, height: 28, objectFit: "cover", borderRadius: "var(--radius-sm)", flexShrink: 0 }} />
-                    ) : (
-                      <span className="folder-icon"><Folder size={14} /></span>
-                    )}
-                    {p.name}
-                  </div>
-                  <div className="repo-meta">
-                    <span>{p.partidas} {D.partidas}</span>
-                    <span className="sep">·</span>
-                    {/* The plate band (bottom edge) is the progress visualization
-                        now — a second track widget here would say it twice. The
-                        number stays as data in the meta voice. */}
-                    <span className="progress-label">{p.progress}%</span>
-                    {p.latestTime && (
-                      <>
-                        <span className="sep">·</span>
-                        <span>{D.lastBy} {p.latestAuthor} · {p.latestTime}</span>
-                      </>
-                    )}
-                    {p.latestHash && (
-                      <>
-                        <span className="sep">·</span>
-                        <span>{p.latestHash.slice(0, 7)}</span>
-                      </>
-                    )}
-                    {!p.latestTime && (
-                      <>
-                        <span className="sep">·</span>
-                        <span>{D.noUpdates}</span>
-                      </>
-                    )}
+            {projectRows.map((p) => (
+              <div key={p.id} className="repo-card project-card" data-name={foldForSearch(p.name)}>
+                {/* The card link carries the project name as its text; the
+                    cover is decorative (empty alt) and falls back to a
+                    designed placeholder when missing or broken. */}
+                <Link href={`/app/projects/${p.id}`} className="project-card-link">
+                  <ProjectCover coverImageKey={p.coverImageKey} name={p.name} variant="card" />
+                  <div className="project-card-body">
+                    <div className="repo-title">{p.name}</div>
+                    <div className="repo-meta">
+                      <span>{p.partidas} {D.partidas}</span>
+                      <span className="sep">·</span>
+                      {/* The band (bottom edge) is the progress visualization
+                          now — a second track widget here would say it twice.
+                          The number stays as data in the meta voice. */}
+                      <span className="progress-label">{p.progress}%</span>
+                      {p.latestTime && (
+                        <>
+                          <span className="sep">·</span>
+                          <span>{D.lastBy} {p.latestAuthor} · {p.latestTime}</span>
+                        </>
+                      )}
+                      {p.latestHash && (
+                        <>
+                          <span className="sep">·</span>
+                          <span>{p.latestHash.slice(0, 7)}</span>
+                        </>
+                      )}
+                      {!p.latestTime && (
+                        <>
+                          <span className="sep">·</span>
+                          <span>{D.noUpdates}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </Link>
                 {isOwner && (
-                  <div style={{ marginTop: 8, gridColumn: 2 }}>
+                  <div className="project-card-actions">
                     <ArchiveButton projectId={p.id} t={{ archive: D.archive, confirm: D.confirm, yes: D.yes, no: D.no }} />
                   </div>
                 )}
-                {/* Progress as paint on the plate's bottom edge (comp A). */}
+                {/* Progress as paint on the card's bottom edge. */}
                 <span className="plate-band-track" aria-hidden="true" />
                 <span className={`plate-band${p.progress >= 100 ? " is-done" : ""}`} style={{ width: `${p.progress}%` }} aria-hidden="true" />
               </div>
