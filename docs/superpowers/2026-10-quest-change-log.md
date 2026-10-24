@@ -203,3 +203,28 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - E2E uses `reminder.resolved` (admin registro + resolve in "Pruebas automáticas"); the stored title is Spanish in both locales. Spec marks the resident inbox read first so leftover identical titles do not fill page 1.
   - Those registros stay in "Pruebas automáticas" (append-only); their reminders are resolved.
   - Mark-all in the spec is a real `updateMany` on the e2e resident's notifications.
+
+## Q7: Analítica v1 (feat/analitica-v1, 2026-10-20)
+
+- **What users will notice:** Analítica is KPIs, a 12-week activity chart, a partida-status chart, each bloque as its own plate (progress band, Cerrado, last activity with 7/14-day marks, photo coverage, partidas), open alerts, and entries by person. Progress stays one neutral accent; green only on a concluded partida. Charts have "Ver datos" tables.
+- **What changed in code:**
+  - `lib/analytics/weeks.ts`: Monday keys, `oldestWeekStartUtc` via `zonedWallTimeToUtc`, `calendarDaysOpen` from `Date.UTC` of `zonedDate` parts, `formatWeekLabel` with `timeZone: "UTC"`.
+  - `lib/analytics/project.ts`: six aggregations, `Promise.all`, `projectAccessWhere` then `null`. Time filters in raw SQL are `(${iso}::timestamptz AT TIME ZONE 'UTC')`, never a Date. Week keys and `last_at` come back as text (`to_char`).
+  - `components/analitica/{weekly-activity,partida-status,entries-by-author}.tsx`: inline SVG, `role="img"`, summary + "Ver datos". WS6 kept in `analitica-tab.tsx`. Bloque plates reuse `.repo-card` / `.plate-index` / `.plate-band` without `is-done`.
+  - Project page runs aggregations only when `tab=analitica`. Overdue reminders stay the existing `registro.count`.
+- **Migrations:** none.
+- **Rules for future work:**
+  - `Registro.serverCreatedAt` is `timestamp(3) without time zone` holding UTC. A single `AT TIME ZONE` is wrong. Local `SHOW TimeZone` is `America/New_York`; Supabase is UTC. Always pass `.toISOString()` and cast.
+  - Week buckets: `to_char(date_trunc('week', local), 'YYYY-MM-DD')`. Zero-fill with the same keys. Labels from the key via `Date.UTC` + `timeZone: "UTC"` (es "8 mar", en "Mar 8").
+  - `last_at`: `to_char(max(...), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`, parse in JS. Do not return the timestamp.
+  - Days open: calendar dates in `APP_TIME_ZONE`, never instant subtraction.
+  - Concluded = `completedAt IS NOT NULL`. Open at `progressPct` 100 is in progress. Deleted partidas excluded. `segmentId` null is Sin bloque, last, only when it has partidas.
+  - Author names: `companyId` of the viewer, same as `preview.ts`. Ranking `ORDER BY count(*) DESC, authorId ASC` (the SQL form of `[{ _count: { authorId: "desc" } }, { authorId: "asc" }]`).
+  - SVG: omit `height="auto"` (console error). Scale with `viewBox` + `width="100%"`.
+  - Do not bring `healthLevel` back onto this tab.
+- **How to verify:** `npm test` (763). `E2E_PROD=1 npx playwright test e2e/analitica.spec.ts --workers=1` phone 390×844 + desktop 1280×800, es/en, night/day. Screenshots in `web/e2e/artifacts/analitica/`.
+- **Known limits:**
+  - Q4 300-partida load on E2E Obra Demo: `getProjectAnalytics` ~9 ms, page include + overdue ~15 ms total locally. No index. Recreated with `carga-load.ts` and removed.
+  - E2E is read-only on E2E Obra Demo; it creates no rows.
+  - Stacked on #25. Review only the commits after `71f3a27`.
+
