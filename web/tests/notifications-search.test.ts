@@ -54,7 +54,7 @@ afterAll(async () => {
 describe("buildNotificationWhere", () => {
   it("scopes strictly to the requesting user (tenant/user isolation)", async () => {
     const rows = await prisma.notification.findMany({ where: buildNotificationWhere(userId, {}) });
-    expect(rows.length).toBe(5);
+    expect(rows.length).toBe(6);
     expect(rows.every((r) => r.userId === userId)).toBe(true);
   });
 
@@ -151,11 +151,11 @@ describe("buildNotificationWhere", () => {
     const page1 = await prisma.notification.findMany({ where, orderBy: { createdAt: "desc" }, take: 2, skip: 0 });
     const page2 = await prisma.notification.findMany({ where, orderBy: { createdAt: "desc" }, take: 2, skip: 2 });
     const page3 = await prisma.notification.findMany({ where, orderBy: { createdAt: "desc" }, take: 2, skip: 4 });
-    expect(total).toBe(5);
-    expect(page1.length + page2.length + page3.length).toBe(5);
+    expect(total).toBe(6);
+    expect(page1.length + page2.length + page3.length).toBe(6);
     // No overlap across pages.
     const ids = [...page1, ...page2, ...page3].map((r) => r.id);
-    expect(new Set(ids).size).toBe(5);
+    expect(new Set(ids).size).toBe(6);
   });
 });
 
