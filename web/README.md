@@ -6,7 +6,7 @@ construction site logging. This is the `web/` workspace; the product PRD lives i
 
 ## Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 22 (the version in `.nvmrc`) and npm
 - A PostgreSQL database
 - (Production) an S3-compatible bucket (e.g. Cloudflare R2) and a [Resend](https://resend.com) API key
 

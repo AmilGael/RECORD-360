@@ -21,7 +21,11 @@
   command = "npx prisma generate && npm run build"
 
 [build.environment]
-  NODE_VERSION = "20"
+  # Must equal web/.nvmrc (tests/node-version.test.ts fails otherwise). It stays
+  # here, not only in .nvmrc, because the Netlify UI still holds a stale
+  # NODE_VERSION=20 and this file overrides the UI; .nvmrc alone would not.
+  # Once the UI variable is deleted, this line can go and .nvmrc takes over.
+  NODE_VERSION = "22"
 
 # Migrations run ONLY on the production deploy (post-merge to the production
 # branch = a trusted context). For defense in depth, scope DATABASE_URL and
