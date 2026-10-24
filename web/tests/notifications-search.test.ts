@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { buildNotificationWhere } from "@/lib/notifications/query";
+import { getNotificationSections } from "@/lib/notifications/sections";
 import { generateRegistrationCode } from "@/lib/project/registration-code";
 import { parseDayBound } from "@/lib/time/zone";
 
@@ -32,6 +33,8 @@ beforeAll(async () => {
       { companyId, userId, type: "cambio.created", title: "Solicitud legada SC-0 creada", severity: "CRITICAL", projectId: projectB, createdAt: new Date(Date.now() - 40 * day) },
       // unrelated event, unread
       { companyId, userId, type: "user.archived", eventKey: "user.archived", title: "Usuario archivado", createdAt: new Date(Date.now() - 5 * day) },
+      // Portuguese accents: found by exact and unaccented spellings
+      { companyId, userId, type: "user.archived", eventKey: "user.archived", title: "Visita de João Conceição", createdAt: new Date(Date.now() - 6 * day) },
       // another user's notification — must never leak into userId's results
       { companyId, userId: otherUserId /* still same company but different user is fine too */, type: "block.created", eventKey: "block.created", title: "Bloque ajeno", createdAt: new Date() },
       // cross-tenant row — must never leak
@@ -51,16 +54,23 @@ afterAll(async () => {
 describe("buildNotificationWhere", () => {
   it("scopes strictly to the requesting user (tenant/user isolation)", async () => {
     const rows = await prisma.notification.findMany({ where: buildNotificationWhere(userId, {}) });
-    expect(rows.length).toBe(5);
+    expect(rows.length).toBe(6);
     expect(rows.every((r) => r.userId === userId)).toBe(true);
   });
 
-  it("matches free text across title AND body (q)", async () => {
-    const byTitle = await prisma.notification.findMany({ where: buildNotificationWhere(userId, { q: "Bloque Norte" }) });
-    expect(byTitle.map((r) => r.title)).toEqual(["Bloque Norte creado"]);
+  it("matches free text across title and body, including an unaccented query", async () => {
+    const page = { unreadPage: 1, readPage: 1, pageSize: 25 };
+    const byTitle = await getNotificationSections(userId, { q: "Bloque Norte" }, page);
+    expect(byTitle.unread.items.map((r) => r.title)).toEqual(["Bloque Norte creado"]);
+    expect(byTitle.read.total).toBe(0);
 
-    const byBody = await prisma.notification.findMany({ where: buildNotificationWhere(userId, { q: "cimentación" }) });
-    expect(byBody.map((r) => r.title)).toEqual(["Partida X concluida"]);
+    const byBody = await getNotificationSections(userId, { q: "cimentación" }, page);
+    expect(byBody.unread.items.map((r) => r.title)).toEqual(["Partida X concluida"]);
+    expect(byBody.read.total).toBe(0);
+
+    const unaccented = await getNotificationSections(userId, { q: "cimentacion" }, page);
+    expect(unaccented.unread.items.map((r) => r.title)).toEqual(["Partida X concluida"]);
+    expect(unaccented.read.total).toBe(0);
   });
 
   it("filters by unread/read status", async () => {
@@ -141,10 +151,60 @@ describe("buildNotificationWhere", () => {
     const page1 = await prisma.notification.findMany({ where, orderBy: { createdAt: "desc" }, take: 2, skip: 0 });
     const page2 = await prisma.notification.findMany({ where, orderBy: { createdAt: "desc" }, take: 2, skip: 2 });
     const page3 = await prisma.notification.findMany({ where, orderBy: { createdAt: "desc" }, take: 2, skip: 4 });
-    expect(total).toBe(5);
-    expect(page1.length + page2.length + page3.length).toBe(5);
+    expect(total).toBe(6);
+    expect(page1.length + page2.length + page3.length).toBe(6);
     // No overlap across pages.
     const ids = [...page1, ...page2, ...page3].map((r) => r.id);
-    expect(new Set(ids).size).toBe(5);
+    expect(new Set(ids).size).toBe(6);
   });
 });
+
+// A text query takes the SQL path (notificationWhereSql), so each filter is
+// checked there too, not only through buildNotificationWhere.
+describe("getNotificationSections with text: every filter on the SQL path", () => {
+  const page = { unreadPage: 1, readPage: 1, pageSize: 25 };
+  const titles = (s: Awaited<ReturnType<typeof getNotificationSections>>) =>
+    [...s.unread.items, ...s.read.items].map((n) => n.title).sort();
+
+  it("type keeps the legacy cambio.* alias", async () => {
+    const s = await getNotificationSections(userId, { q: "Solicitud", type: "request.created" }, page);
+    expect(titles(s)).toEqual(["Solicitud SC-1 creada", "Solicitud legada SC-0 creada"]);
+  });
+  it("severity", async () => {
+    const s = await getNotificationSections(userId, { q: "Solicitud", severity: "CRITICAL" }, page);
+    expect(titles(s)).toEqual(["Solicitud legada SC-0 creada"]);
+  });
+  it("project and date range", async () => {
+    const day = 86_400_000;
+    const s = await getNotificationSections(userId, { q: "Solicitud", projectId: projectB, from: new Date(Date.now() - 4 * day) }, page);
+    expect(titles(s)).toEqual(["Solicitud SC-1 creada"]);
+    const older = await getNotificationSections(userId, { q: "Solicitud", to: new Date(Date.now() - 10 * day) }, page);
+    expect(titles(older)).toEqual(["Solicitud legada SC-0 creada"]);
+  });
+  it("status splits read and unread, and counts match the items", async () => {
+    const s = await getNotificationSections(userId, { q: "Solicitud" }, page);
+    expect(s.read.items.map((n) => n.title)).toEqual(["Solicitud SC-1 creada"]);
+    expect(s.unread.items.map((n) => n.title)).toEqual(["Solicitud legada SC-0 creada"]);
+    expect([s.unread.total, s.read.total]).toEqual([1, 1]);
+    const unreadOnly = await getNotificationSections(userId, { q: "Solicitud", status: "unread" }, page);
+    expect(unreadOnly.read.items).toEqual([]);
+    expect(unreadOnly.unread.total).toBe(1);
+  });
+  it("never returns another user's or another company's rows", async () => {
+    const s = await getNotificationSections(userId, { q: "Bloque" }, page);
+    expect(titles(s)).toEqual(["Bloque Norte creado"]);
+  });
+  it("finds a Portuguese name typed exactly or without accents", async () => {
+    for (const q of ["João", "joao", "Conceicao", "CONCEIÇÃO"]) {
+      const s = await getNotificationSections(userId, { q }, page);
+      expect(titles(s), q).toEqual(["Visita de João Conceição"]);
+    }
+  });
+  it("pages a broad query by the page size, not by every match", async () => {
+    const s = await getNotificationSections(userId, { q: "a" }, { unreadPage: 1, readPage: 1, pageSize: 2 });
+    expect(s.unread.items.length).toBeLessThanOrEqual(2);
+    expect(s.unread.total).toBeGreaterThan(2);
+    expect(s.unread.hasOlder).toBe(true);
+  });
+});
+
