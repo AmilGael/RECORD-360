@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { prepareAttachments } from "@/lib/registro/upload";
 import type { Storage } from "@/lib/storage/types";
+import { rejectedText } from "./helpers/user-message";
 
 const okStorage: Storage = {
   put: async () => ({ key: "k.png", url: "/api/media/k.png" }),
@@ -44,7 +45,7 @@ describe("prepareAttachments", () => {
       },
     };
     const svg = new File([new Uint8Array([1])], "evil.svg", { type: "image/svg+xml" });
-    await expect(prepareAttachments([svg], spy)).rejects.toThrow(/no permitido/i);
+    expect(await rejectedText(prepareAttachments([svg], spy))).toMatch(/no permitido/i);
     expect(called).toBe(false);
   });
 
@@ -58,16 +59,16 @@ describe("prepareAttachments", () => {
       },
     };
     const f = new File([new Uint8Array([1])], "p.png", { type: "image/png" });
-    await expect(prepareAttachments([f], failing)).rejects.toThrow(/no se pudo guardar/i);
+    expect(await rejectedText(prepareAttachments([f], failing))).toMatch(/no se pudo guardar/i);
   });
 
   it("rejects more than 10 files", async () => {
     const many = Array.from({ length: 11 }, (_, i) => new File([new Uint8Array([i + 1])], `f${i}.png`, { type: "image/png" }));
-    await expect(prepareAttachments(many, okStorage)).rejects.toThrow(/demasiados|too many|máx/i);
+    expect(await rejectedText(prepareAttachments(many, okStorage))).toMatch(/demasiados|too many|máx/i);
   });
   it("rejects a file larger than the per-type limit", async () => {
     // IMAGE cap is 15 MB (multimodal per-type caps); 16 MB must be rejected.
     const big = new File([new Uint8Array(16 * 1024 * 1024)], "big.png", { type: "image/png" });
-    await expect(prepareAttachments([big], okStorage)).rejects.toThrow(/grande|large|máx/i);
+    expect(await rejectedText(prepareAttachments([big], okStorage))).toMatch(/grande|large|máx/i);
   });
 });

@@ -9,6 +9,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 import { createChangeRequest, resolveChangeRequest, type CreateChangeRequestState } from "@/app/actions/cambios";
+import { rejectedText } from "./helpers/user-message";
 
 let companyId = "", managerId = "", adminId = "", residentId = "", outsiderId = "", projectId = "", segmentA = "", segmentB = "", pA = "", pB = "";
 
@@ -244,7 +245,7 @@ describe("resolveChangeRequest", () => {
   it("REJECT requires a reason", async () => {
     const cr = await openCR(residentId, [segmentA]);
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-    await expect(resolveChangeRequest(fd({ changeRequestId: cr.id, action: "REJECT" }))).rejects.toThrow(/feedback/i);
+    expect(await rejectedText(resolveChangeRequest(fd({ changeRequestId: cr.id, action: "REJECT" })))).toMatch(/feedback/i);
   });
 
   it("rejects a non-manager", async () => {
@@ -256,7 +257,7 @@ describe("resolveChangeRequest", () => {
   it("forbids resolving your own request (MANAGER)", async () => {
     const cr = await openCR(managerId, [segmentA]); // opened by the manager
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-    await expect(resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE", resolutionNote: "x" }))).rejects.toThrow(/propia/i);
+    expect(await rejectedText(resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE", resolutionNote: "x" })))).toMatch(/propia/i);
   });
 
   it("ADMIN may resolve their own request (small-team reality) with mandatory feedback", async () => {
@@ -271,17 +272,17 @@ describe("resolveChangeRequest", () => {
   it("MANAGER still cannot resolve their own request", async () => {
     const cr = await openCR(managerId, [segmentA]);
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-    await expect(
+    expect(await rejectedText(
       resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE", resolutionNote: "x" })),
-    ).rejects.toThrow(/propia/i);
+    )).toMatch(/propia/i);
   });
 
   it("rejects resolution without feedback — observaciones obligatorias", async () => {
     const cr = await openCR(residentId, [segmentA]);
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-    await expect(
+    expect(await rejectedText(
       resolveChangeRequest(fd({ changeRequestId: cr.id, action: "INTEGRATE" })),
-    ).rejects.toThrow(/feedback/i);
+    )).toMatch(/feedback/i);
   });
 
   it("REJECT stores resolutionNote mirrored to rejectionReason and notifies with the feedback text", async () => {
@@ -319,7 +320,7 @@ describe("resolveChangeRequest", () => {
     await resolveChangeRequest(fd({ changeRequestId: cr.id, action: "REJECT", resolutionNote: "Primera resolución" }));
     const countBefore = await prisma.notification.count({ where: { link: { contains: cr.id } } });
 
-    await expect(resolveChangeRequest(fd({ changeRequestId: cr.id, action: "REJECT", resolutionNote: "Segundo intento" }))).rejects.toThrow(/resuelta/i);
+    expect(await rejectedText(resolveChangeRequest(fd({ changeRequestId: cr.id, action: "REJECT", resolutionNote: "Segundo intento" })))).toMatch(/resuelta/i);
     const countAfter = await prisma.notification.count({ where: { link: { contains: cr.id } } });
     expect(countAfter).toBe(countBefore);
   });

@@ -14,7 +14,8 @@ import { PendingEntries } from "@/components/pending-entries";
 import { SignPartidaForm } from "@/components/sign-partida-form";
 import { pageWindow } from "@/lib/feed/paginate";
 import { SubmitButton } from "@/components/submit-button";
-import { concludePartida, reopenPartida } from "@/app/actions/lifecycle";
+import { concludePartidaForm, reopenPartidaForm } from "@/app/actions/lifecycle";
+import { InlineActionForm } from "@/components/inline-action-form";
 import type { Role } from "@prisma/client";
 import { formatRecordTime } from "@/lib/format/datetime";
 import { BackButton } from "@/components/back-button";
@@ -105,7 +106,23 @@ export default async function PartidaPage({
   const bloqueHref = projectHrefWithParams(partida.projectId, {
     tab: "code", block: partida.segment?.id ?? UNGROUPED_FILTER, p: partida.id,
   });
-  const syncErrors = { sessionExpired: t.offlineCapture.errorSessionExpired, forbidden: t.offlineCapture.errorForbidden };
+  const syncErrors = {
+    session_expired: t.offlineCapture.errorSessionExpired,
+    forbidden: t.offlineCapture.errorForbidden,
+    generic: t.offlineCapture.errorGeneric,
+    reminder_invalid: t.offlineCapture.errorReminderInvalid,
+    reminder_future: t.offlineCapture.errorReminderFuture,
+    location_too_long: t.offlineCapture.errorLocationTooLong,
+    category_invalid: t.offlineCapture.errorCategoryInvalid,
+    file_type: t.offlineCapture.errorFileType,
+    file_too_big: t.offlineCapture.errorFileTooBig,
+    file_too_many: t.offlineCapture.errorFileTooMany,
+    file_total: t.offlineCapture.errorFileTotal,
+    file_save: t.offlineCapture.errorFileSave,
+    correction_target: t.offlineCapture.errorCorrectionTarget,
+    reply_target: t.offlineCapture.errorReplyTarget,
+    captured_at: t.offlineCapture.errorCapturedAt,
+  };
 
   return (
     <div className="reveal" style={{ maxWidth: 640, margin: "0 auto" }}>
@@ -144,24 +161,24 @@ export default async function PartidaPage({
             </div>
           </div>
           {canEditStructure && !partida.segment?.closedAt && (
-            <form action={reopenPartida}>
+            <InlineActionForm action={reopenPartidaForm}>
               <input type="hidden" name="partidaId" value={partida.id} />
               <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem" }}>
                 {t.lifecycle.reopenPartida}
               </SubmitButton>
-            </form>
+            </InlineActionForm>
           )}
         </div>
       ) : (
         <>
           <PartidaProgressForm partidaId={partida.id} progressPct={partida.progressPct} canEdit={canEditStructure} t={{ progress: t.partida.progress, save: t.project.save }} />
           {canEditStructure && (
-            <form action={concludePartida} style={{ marginBottom: 8 }}>
+            <InlineActionForm action={concludePartidaForm} style={{ marginBottom: 8 }}>
               <input type="hidden" name="partidaId" value={partida.id} />
               <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem" }}>
                 {t.lifecycle.concludePartida}
               </SubmitButton>
-            </form>
+            </InlineActionForm>
           )}
         </>
       )}

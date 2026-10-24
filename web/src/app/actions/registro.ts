@@ -7,6 +7,9 @@ import { storage } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 import { projectAccessWhere } from "@/lib/authz/projects";
 import { requireFreshSession } from "@/lib/auth/session";
+import { userText } from "@/lib/errors/form-result";
+import { toUserMessage } from "@/lib/errors/user-error";
+import { getDict } from "@/i18n/server";
 
 export type LogResult = { ok: true } | { ok: false; error: string };
 
@@ -19,7 +22,7 @@ export async function logRegistro(_prev: LogResult | null, formData: FormData): 
     const partida = await prisma.partida.findFirst({
       where: { id: partidaId, deletedAt: null, project: projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) },
     });
-    if (!partida) return { ok: false, error: "No autorizado." };
+    if (!partida) return { ok: false, error: await userText("unauthorized") };
 
     const text = (String(formData.get("text") ?? "").trim()) || null;
     const category = parseCategory(formData.get("category"));
@@ -45,13 +48,13 @@ export async function logRegistro(_prev: LogResult | null, formData: FormData): 
     const correctionOfId = typeof correctionRaw === "string" && correctionRaw.trim() ? correctionRaw.trim() : null;
     if (correctionOfId) {
       const corrected = await prisma.registro.findFirst({ where: { id: correctionOfId, partidaId }, select: { id: true } });
-      if (!corrected) return { ok: false, error: "Destino de corrección inválido." };
+      if (!corrected) return { ok: false, error: await userText("correctionTarget") };
     }
     const replyRaw = formData.get("replyToId");
     const replyToId = typeof replyRaw === "string" && replyRaw.trim() ? replyRaw.trim() : null;
     if (replyToId) {
       const replied = await prisma.registro.findFirst({ where: { id: replyToId, partidaId }, select: { id: true } });
-      if (!replied) return { ok: false, error: "Destino de respuesta inválido." };
+      if (!replied) return { ok: false, error: await userText("replyTarget") };
     }
     const reminderDueAt = parseReminderDueAt(formData.get("reminderDueAt"));
 
@@ -61,7 +64,7 @@ export async function logRegistro(_prev: LogResult | null, formData: FormData): 
     revalidatePath("/app");
     return { ok: true };
   } catch (e) {
-    // parse* validators throw user-facing Spanish messages; surface them.
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo registrar." };
+    const { t } = await getDict();
+    return { ok: false, error: toUserMessage(e, t, "logRegistro") };
   }
 }

@@ -3,6 +3,7 @@ import { attachmentKindForType } from "@/lib/storage/mime";
 import { SIZE_CAP } from "@/lib/registro/upload";
 import { issueUploadGrant } from "@/lib/uploads/grant";
 import { requireFreshSession } from "@/lib/auth/session";
+import { getDict } from "@/i18n/server";
 
 // Netlify buffers function request bodies at ~6 MB (≈4.4 MB effective after
 // encoding), so any upload routed through a server action 413s before the app
@@ -13,16 +14,14 @@ import { requireFreshSession } from "@/lib/auth/session";
 // driver can't presign (local disk in dev), the client falls back to the
 // server-action path, which has no platform ceiling locally.
 
-const MSG_TYPE = "Tipo de archivo no permitido. Usa imagen, PDF, video o audio.";
-const MSG_SIZE = "Archivo demasiado grande.";
-
 export async function POST(req: Request) {
+  const { t } = await getDict();
   let user;
   try {
     user = await requireFreshSession();
   } catch (error) {
     const forbidden = error instanceof Error && error.message === "Forbidden";
-    return Response.json({ error: "No autorizado." }, { status: forbidden ? 403 : 401 });
+    return Response.json({ error: t.serverErrors.unauthorized }, { status: forbidden ? 403 : 401 });
   }
 
   let contentType = "", size = NaN;
@@ -31,13 +30,13 @@ export async function POST(req: Request) {
     contentType = String(body.contentType ?? "");
     size = Number(body.size);
   } catch {
-    return Response.json({ error: "Solicitud inválida." }, { status: 400 });
+    return Response.json({ error: t.serverErrors.invalidRequest }, { status: 400 });
   }
 
   const kind = attachmentKindForType(contentType);
-  if (!kind) return Response.json({ error: MSG_TYPE }, { status: 415 });
-  if (!Number.isInteger(size) || size <= 0) return Response.json({ error: "Solicitud inválida." }, { status: 400 });
-  if (size > SIZE_CAP[kind]) return Response.json({ error: MSG_SIZE }, { status: 413 });
+  if (!kind) return Response.json({ error: t.serverErrors.fileType }, { status: 415 });
+  if (!Number.isInteger(size) || size <= 0) return Response.json({ error: t.serverErrors.invalidRequest }, { status: 400 });
+  if (size > SIZE_CAP[kind]) return Response.json({ error: t.serverErrors.fileTooBig }, { status: 413 });
 
   if (typeof storage.presignPut !== "function") return Response.json({ direct: false });
 

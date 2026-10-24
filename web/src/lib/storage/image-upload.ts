@@ -1,4 +1,5 @@
 import type { Storage } from "./types";
+import { UserError } from "@/lib/errors/user-error";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PNG_ONLY = ["image/png"];
@@ -17,9 +18,9 @@ export async function uploadBrandedImage(
 ): Promise<string> {
   const allowed = opts.pngOnly ? PNG_ONLY : IMAGE_TYPES;
   if (!allowed.includes(file.type)) {
-    throw new Error(opts.pngOnly ? "El archivo debe ser PNG (fondo transparente o blanco)." : "Formato de imagen no válido (JPG, PNG o WebP).");
+    throw new UserError(opts.pngOnly ? "imagePng" : "imageType");
   }
-  if (file.size > MAX_IMAGE_BYTES) throw new Error("La imagen supera el máximo de 8 MB.");
+  if (file.size > MAX_IMAGE_BYTES) throw new UserError("imageTooBig");
   const buffer = Buffer.from(await file.arrayBuffer());
   const { key } = await storage.put({ buffer, filename: file.name, contentType: file.type });
   return key;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { prepareAttachments } from "@/lib/registro/upload";
+import { rejectedText } from "./helpers/user-message";
 
 const storage = {
   put: async () => ({ url: "/api/media/test.bin", key: "test.bin" }),
@@ -12,7 +13,7 @@ function file(name: string, type: string, size: number) {
 describe("prepareAttachments total size", () => {
   it("rejects when the combined payload exceeds the safe total cap", async () => {
     const files = [file("a.pdf", "application/pdf", 30 * 1024 * 1024), file("b.mp4", "video/mp4", 26 * 1024 * 1024)];
-    await expect(prepareAttachments(files, storage as never)).rejects.toThrow(/total|tama[ñn]o total|l[ií]mite/i);
+    expect(await rejectedText(prepareAttachments(files, storage as never))).toMatch(/total|tama[ñn]o total|l[ií]mite/i);
   });
 });
 

@@ -10,6 +10,7 @@ vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 import { concludePartida, reopenPartida, closeSegment, reopenSegment } from "@/app/actions/lifecycle";
 import { createPartida } from "@/app/actions/admin";
 import { updatePartidaProgress } from "@/app/actions/partida-progress";
+import { rejectedText } from "./helpers/user-message";
 
 let companyId = "", adminId = "", managerId = "", projectId = "";
 
@@ -133,7 +134,7 @@ describe("reopenPartida", () => {
     asAdmin();
     await concludePartida(fd({ partidaId: p.id }));
     await closeSegment(fd({ segmentId: segment.id })); // all partidas concluded -> closes fine
-    await expect(reopenPartida(fd({ partidaId: p.id }))).rejects.toThrow(/bloque/i);
+    expect(await rejectedText(reopenPartida(fd({ partidaId: p.id })))).toMatch(/bloque/i);
   });
 });
 
@@ -141,7 +142,7 @@ describe("manual progress invariant (updatePartidaProgress)", () => {
   it("rejects 100 (must use Conclude)", async () => {
     const p = await prisma.partida.create({ data: { projectId, name: "Progreso manual", progressPct: 50 } });
     asAdmin();
-    await expect(updatePartidaProgress(fd({ partidaId: p.id, progressPct: "100" }))).rejects.toThrow(/99/);
+    expect(await rejectedText(updatePartidaProgress(fd({ partidaId: p.id, progressPct: "100" })))).toMatch(/99/);
     const after = await prisma.partida.findUniqueOrThrow({ where: { id: p.id } });
     expect(after.progressPct).toBe(50);
   });
@@ -167,7 +168,7 @@ describe("closeSegment / reopenSegment", () => {
     const segment = await prisma.segment.create({ data: { projectId, name: "Bloque con pendientes" } });
     await prisma.partida.create({ data: { projectId, segmentId: segment.id, name: "Sin concluir" } });
     asAdmin();
-    await expect(closeSegment(fd({ segmentId: segment.id }))).rejects.toThrow(/sin concluir/i);
+    expect(await rejectedText(closeSegment(fd({ segmentId: segment.id })))).toMatch(/sin concluir/i);
     const after = await prisma.segment.findUniqueOrThrow({ where: { id: segment.id } });
     expect(after.closedAt).toBeNull();
   });
@@ -199,7 +200,7 @@ describe("closeSegment / reopenSegment", () => {
     const archivedProjectId = (await prisma.project.create({ data: { companyId, name: "Archived seg P", registrationCode: generateRegistrationCode(), archivedAt: new Date() } })).id;
     const segment = await prisma.segment.create({ data: { projectId: archivedProjectId, name: "Bloque en obra archivada" } });
     asAdmin();
-    await expect(closeSegment(fd({ segmentId: segment.id }))).rejects.toThrow(/archivada/i);
+    expect(await rejectedText(closeSegment(fd({ segmentId: segment.id })))).toMatch(/archivada/i);
     const after = await prisma.segment.findUniqueOrThrow({ where: { id: segment.id } });
     expect(after.closedAt).toBeNull();
     await prisma.segment.delete({ where: { id: segment.id } });
@@ -225,9 +226,9 @@ describe("createPartida rejects a closed block", () => {
   it("throws when the resolved segment is closed", async () => {
     const segment = await prisma.segment.create({ data: { projectId, name: "Bloque Cerrado XYZ", closedAt: new Date() } });
     asAdmin();
-    await expect(
+    expect(await rejectedText(
       createPartida(fd({ projectId, name: "No debería crearse", segment: "Bloque Cerrado XYZ" })),
-    ).rejects.toThrow(/cerrado/i);
+    )).toMatch(/cerrado/i);
     const count = await prisma.partida.count({ where: { segmentId: segment.id } });
     expect(count).toBe(0);
   });

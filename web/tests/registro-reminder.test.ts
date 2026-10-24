@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseReminderDueAt } from "@/lib/registro/validate";
 import { zonedTimestamp } from "@/lib/time/zone";
+import { thrownText } from "./helpers/user-message";
 
 // An offset-less datetime-local value is wall time in APP_TIME_ZONE (Santo
 // Domingo), not on the machine running the test.
@@ -25,8 +26,8 @@ describe("parseReminderDueAt", () => {
   });
 
   it("rejects invalid or past dates", () => {
-    expect(() => parseReminderDueAt("not-a-date")).toThrow(/Recordatorio/i);
+    expect(thrownText(() => parseReminderDueAt("not-a-date"))).toMatch(/Recordatorio/i);
     const past = toAppDateTimeInput(new Date(Date.now() - 5 * 60_000));
-    expect(() => parseReminderDueAt(past)).toThrow(/futura/i);
+    expect(thrownText(() => parseReminderDueAt(past))).toMatch(/futura/i);
   });
 });

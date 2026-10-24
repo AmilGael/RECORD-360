@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireFreshSession } from "@/lib/auth/session";
+import { UserError } from "@/lib/errors/user-error";
+import { formResult, type FormError } from "@/lib/errors/form-result";
+import { getDict } from "@/i18n/server";
 
 const ASSIGNABLE_ROLES: Role[] = [Role.SUPERVISOR, Role.RESIDENT];
 
@@ -14,7 +17,7 @@ async function requireManager() {
 
 function parseAssignableRole(raw: FormDataEntryValue | null) {
   const role = String(raw ?? "") as Role;
-  if (!ASSIGNABLE_ROLES.includes(role)) throw new Error("Rol inválido.");
+  if (!ASSIGNABLE_ROLES.includes(role)) throw new UserError("roleInvalid");
   return role;
 }
 
@@ -30,7 +33,13 @@ export async function assignProjectUser(formData: FormData) {
   ]);
   if (!project || !assignee) throw new Error("Forbidden");
   if (assignee.role !== role) {
-    throw new Error(`El rol global de ${assignee.name} es ${assignee.role}, no ${role}.`);
+    const { t } = await getDict();
+    const label = (r: Role) => (r in t.admin.roles ? t.admin.roles[r as keyof typeof t.admin.roles] : r);
+    throw new UserError("assignmentRoleMismatch", {
+      name: assignee.name,
+      role: label(assignee.role),
+      submitted: label(role),
+    });
   }
 
   await prisma.projectAssignment.upsert({
@@ -40,6 +49,10 @@ export async function assignProjectUser(formData: FormData) {
   });
   revalidatePath(`/app/projects/${projectId}`);
   revalidatePath("/app");
+}
+
+export async function assignProjectUserForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("assignProjectUser", () => assignProjectUser(formData));
 }
 
 export async function removeProjectAssignment(formData: FormData) {

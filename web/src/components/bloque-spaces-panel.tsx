@@ -6,7 +6,8 @@ import type { ReactNode } from "react";
 import { PlanosUpload } from "@/components/planos-upload";
 import { SubmitButton } from "@/components/submit-button";
 import { resolveReminder } from "@/app/actions/reminders";
-import { closeSegment, reopenSegment } from "@/app/actions/lifecycle";
+import { closeSegmentForm, reopenSegmentForm } from "@/app/actions/lifecycle";
+import { InlineActionForm } from "@/components/inline-action-form";
 import { spaceHref, type PreservedParams } from "@/lib/project/space-links";
 
 type SegmentSummary = { id: string; name: string; progress: number; count: number; closedAt: Date | string | null };
@@ -98,12 +99,12 @@ export function BloqueSpacesPanel({
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {canManageLifecycle && (
-              <form action={isClosed ? reopenSegment : closeSegment}>
+              <InlineActionForm action={isClosed ? reopenSegmentForm : closeSegmentForm}>
                 <input type="hidden" name="segmentId" value={selected.id} />
                 <SubmitButton className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem" }}>
                   {isClosed ? t.reopenBlock : t.closeBlock}
                 </SubmitButton>
-              </form>
+              </InlineActionForm>
             )}
             <div className="space-meter"><span>{selected.progress}%</span><small>{selected.count} partidas</small></div>
           </div>

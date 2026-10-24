@@ -7,6 +7,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { deleteSegment } from "@/app/actions/admin";
+import { rejectedText } from "./helpers/user-message";
 
 let companyId = "", adminId = "", managerId = "", projectId = "";
 
@@ -49,13 +50,13 @@ describe("deleteSegment", () => {
     const seg = await prisma.segment.create({ data: { projectId, name: "Bloque Con Partidas" } });
     await prisma.partida.create({ data: { projectId, segmentId: seg.id, name: "P1", deletedAt: new Date() } });
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
-    await expect(deleteSegment(fd(seg.id))).rejects.toThrow(/contiene/i);
+    expect(await rejectedText(deleteSegment(fd(seg.id)))).toMatch(/contiene/i);
   });
   it("refuses when documents hang off the bloque", async () => {
     const seg = await prisma.segment.create({ data: { projectId, name: "Bloque Con Docs" } });
     await prisma.document.create({ data: { projectId, segmentId: seg.id, kind: "PLANO", url: "/api/media/sd.pdf", sha256: "x", fileType: "PDF", uploadedById: adminId } });
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
-    await expect(deleteSegment(fd(seg.id))).rejects.toThrow(/contiene/i);
+    expect(await rejectedText(deleteSegment(fd(seg.id)))).toMatch(/contiene/i);
     await prisma.document.deleteMany({ where: { segmentId: seg.id } });
   });
   it("MANAGER cannot delete bloques", async () => {

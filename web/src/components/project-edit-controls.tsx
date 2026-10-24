@@ -1,5 +1,6 @@
-import { renameProject, renameSegment, renamePartida, movePartida } from "@/app/actions/project-edit";
+import { renameProjectForm, renameSegmentForm, renamePartidaForm, movePartidaForm } from "@/app/actions/project-edit";
 import { SubmitButton } from "@/components/submit-button";
+import { InlineActionForm } from "@/components/inline-action-form";
 import { Pencil, MoveRight } from "@/components/icons";
 
 type EditT = {
@@ -16,11 +17,11 @@ export function RenameProjectForm({ projectId, currentName, t }: { projectId: st
   return (
     <details className="inline-edit">
       <summary><Pencil size={12} />{t.rename}</summary>
-      <form action={renameProject}>
+      <InlineActionForm action={renameProjectForm}>
         <input type="hidden" name="projectId" value={projectId} />
         <input name="name" defaultValue={currentName} required className="input" />
         <SubmitButton className="btn btn-ghost">{t.save}</SubmitButton>
-      </form>
+      </InlineActionForm>
     </details>
   );
 }
@@ -29,11 +30,11 @@ export function RenameSegmentForm({ segmentId, currentName, t }: { segmentId: st
   return (
     <details className="inline-edit tree-edit">
       <summary><Pencil size={11} />{t.rename}</summary>
-      <form action={renameSegment}>
+      <InlineActionForm action={renameSegmentForm}>
         <input type="hidden" name="segmentId" value={segmentId} />
         <input name="name" defaultValue={currentName} required className="input" />
         <SubmitButton className="btn btn-ghost">{t.save}</SubmitButton>
-      </form>
+      </InlineActionForm>
     </details>
   );
 }
@@ -42,11 +43,11 @@ export function RenamePartidaForm({ partidaId, currentName, t }: { partidaId: st
   return (
     <details className="inline-edit tree-edit">
       <summary><Pencil size={11} />{t.rename}</summary>
-      <form action={renamePartida}>
+      <InlineActionForm action={renamePartidaForm}>
         <input type="hidden" name="partidaId" value={partidaId} />
         <input name="name" defaultValue={currentName} required className="input" />
         <SubmitButton className="btn btn-ghost">{t.save}</SubmitButton>
-      </form>
+      </InlineActionForm>
     </details>
   );
 }
@@ -62,14 +63,14 @@ export function MovePartidaForm({
   return (
     <details className="inline-edit tree-edit">
       <summary><MoveRight size={11} />{t.move}</summary>
-      <form action={movePartida}>
+      <InlineActionForm action={movePartidaForm}>
         <input type="hidden" name="partidaId" value={partidaId} />
         <select name="segmentId" defaultValue={currentSegmentId ?? ""} className="input" aria-label={t.moveTo}>
           <option value="">{t.ungrouped}</option>
           {segments.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <SubmitButton className="btn btn-ghost">{t.save}</SubmitButton>
-      </form>
+      </InlineActionForm>
     </details>
   );
 }

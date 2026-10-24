@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseProgressPct, parseLocation, parseReminderDueAt, parseOfflineReminderDueAt } from "@/lib/registro/validate";
 import { zonedTimestamp } from "@/lib/time/zone";
+import { thrownText } from "./helpers/user-message";
 
 const sdWall = (d: Date) => zonedTimestamp(d).replace(" ", "T");
 const floorToMinute = (d: Date) => new Date(Math.floor(d.getTime() / 60_000) * 60_000);
@@ -62,7 +63,7 @@ describe("parseReminderDueAt (online path — stays strict)", () => {
     expect(parseReminderDueAt("")).toBeNull();
   });
   it("rejects a reminder more than ~60s in the past relative to now", () => {
-    expect(() => parseReminderDueAt(new Date(Date.now() - 5 * 60_000).toISOString())).toThrow(/futura/i);
+    expect(thrownText(() => parseReminderDueAt(new Date(Date.now() - 5 * 60_000).toISOString()))).toMatch(/futura/i);
   });
   it("accepts a future reminder", () => {
     const iso = new Date(Date.now() + 60 * 60_000).toISOString();
@@ -82,7 +83,7 @@ describe("parseReminderDueAt (online path — stays strict)", () => {
     expect(stored?.toISOString()).toBe(new Date(`${wall}:00-04:00`).toISOString());
   });
   it("still rejects an offset-less wall time that is past in Santo Domingo", () => {
-    expect(() => parseReminderDueAt(sdWall(new Date(Date.now() - 5 * 60_000)))).toThrow(/futura/i);
+    expect(thrownText(() => parseReminderDueAt(sdWall(new Date(Date.now() - 5 * 60_000))))).toMatch(/futura/i);
   });
 });
 
@@ -104,14 +105,14 @@ describe("parseOfflineReminderDueAt (R3 WS10 §5 offline policy)", () => {
   it("rejects a reminder that was already more than 60s before clientCapturedAt (invalid even at capture)", () => {
     const capturedAt = new Date("2026-01-01T10:00:00.000Z");
     const reminderAt = new Date("2026-01-01T09:00:00.000Z"); // 1 hour before capture
-    expect(() => parseOfflineReminderDueAt(reminderAt.toISOString(), capturedAt)).toThrow(/futura/i);
+    expect(thrownText(() => parseOfflineReminderDueAt(reminderAt.toISOString(), capturedAt))).toMatch(/futura/i);
   });
   it("falls back to the strict online rule when clientCapturedAt is missing (no anchor to trust)", () => {
     const pastReminder = new Date(Date.now() - 5 * 60_000).toISOString();
-    expect(() => parseOfflineReminderDueAt(pastReminder, null)).toThrow(/futura/i);
+    expect(thrownText(() => parseOfflineReminderDueAt(pastReminder, null))).toMatch(/futura/i);
   });
   it("throws on a malformed date string", () => {
-    expect(() => parseOfflineReminderDueAt("not-a-date", new Date())).toThrow(/inválido/i);
+    expect(thrownText(() => parseOfflineReminderDueAt("not-a-date", new Date()))).toMatch(/inválido/i);
   });
   it("reads an offset-less value left in an old queue as Santo Domingo wall time", () => {
     const capturedAt = new Date("2026-01-01T14:00:00.000Z"); // 10:00 in Santo Domingo
@@ -122,6 +123,6 @@ describe("parseOfflineReminderDueAt (R3 WS10 §5 offline policy)", () => {
     const capturedAt = new Date("2026-01-01T14:00:00.000Z"); // 10:00 in Santo Domingo
     // 09:59:30 local is inside the 60 s skew; 09:00 local was already past at capture.
     expect(parseOfflineReminderDueAt("2026-01-01T09:59:30", capturedAt)?.toISOString()).toBe("2026-01-01T13:59:30.000Z");
-    expect(() => parseOfflineReminderDueAt("2026-01-01T09:00", capturedAt)).toThrow(/futura/i);
+    expect(thrownText(() => parseOfflineReminderDueAt("2026-01-01T09:00", capturedAt))).toMatch(/futura/i);
   });
 });

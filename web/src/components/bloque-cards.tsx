@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSegment } from "@/app/actions/admin";
-import { closeSegment, reopenSegment } from "@/app/actions/lifecycle";
+import { closeSegmentForm, reopenSegmentForm } from "@/app/actions/lifecycle";
+import { InlineActionForm } from "@/components/inline-action-form";
 import { SubmitButton } from "@/components/submit-button";
 import { DeleteSegmentButton } from "@/components/delete-segment-button";
 import { Layers, Plus } from "@/components/icons";
@@ -49,12 +50,12 @@ export function BloqueCards({ projectId, bloques, ungroupedCount, canEdit, isOwn
               </Link>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {canEdit && (
-                  <form action={isClosed ? reopenSegment : closeSegment}>
+                  <InlineActionForm action={isClosed ? reopenSegmentForm : closeSegmentForm}>
                     <input type="hidden" name="segmentId" value={b.id} />
                     <SubmitButton className="btn btn-ghost" style={{ padding: "0.25rem 0.6rem", fontSize: "0.68rem" }}>
                       {isClosed ? t.reopenBlock : t.closeBlock}
                     </SubmitButton>
-                  </form>
+                  </InlineActionForm>
                 )}
                 {isOwner && b.deletable && (
                   <DeleteSegmentButton segmentId={b.id} t={{ deleteBloque: t.deleteBloque, deleteBloqueConfirm: t.deleteBloqueConfirm, yes: t.yes, no: t.no }} />

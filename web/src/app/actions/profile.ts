@@ -6,6 +6,8 @@ import { storage } from "@/lib/storage";
 import { uploadBrandedImage } from "@/lib/storage/image-upload";
 import { writeAudit } from "@/lib/audit/log";
 import { requireFreshSession } from "@/lib/auth/session";
+import { UserError } from "@/lib/errors/user-error";
+import { formResult, type FormError } from "@/lib/errors/form-result";
 
 const ADMIN_ROLES: Role[] = [Role.ADMIN, Role.MANAGER];
 
@@ -22,7 +24,7 @@ export async function updateUserProfile(formData: FormData) {
 
   if (formData.has("phone")) {
     const phone = String(formData.get("phone") ?? "").trim();
-    if (phone.length > 30) throw new Error("El número es demasiado largo.");
+    if (phone.length > 30) throw new UserError("phoneTooLong");
     data.phone = phone || null;
   }
   const photo = formData.get("photo");
@@ -72,7 +74,7 @@ export async function updateCompanySeal(formData: FormData) {
   if (actor.role !== Role.ADMIN) throw new Error("Forbidden");
 
   const seal = formData.get("seal");
-  if (!(seal instanceof File) || seal.size === 0) throw new Error("Selecciona una imagen PNG.");
+  if (!(seal instanceof File) || seal.size === 0) throw new UserError("selectPng");
   const sealKey = await uploadBrandedImage(seal, storage, { pngOnly: true });
 
   await prisma.$transaction(async (tx) => {
@@ -87,4 +89,12 @@ export async function updateCompanySeal(formData: FormData) {
     });
   });
   revalidatePath("/app/admin");
+}
+
+export async function updateUserProfileForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("updateUserProfile", () => updateUserProfile(formData));
+}
+
+export async function updateCompanySealForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("updateCompanySeal", () => updateCompanySeal(formData));
 }

@@ -252,3 +252,27 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - `dash.analyticsGreen/Yellow/Red` are only read by `dictionary-labels.test.ts`. No unused component or lib file. Operator scripts left.
   - Stacked on #26. Review only the commits after `eb6d7c8`.
 
+## Q11: Localized errors and instant obra search (fix/i18n-errors-search, 2026-10-20)
+
+- **What users will notice:** errors that the app catches come back in the language of the session, including an old failed informe. Searching an obra updates the results as you type and does not reload the page. Volver from a search leaves the obra, and opening a hit then Volver returns to that search.
+- **What changed in code:**
+  - `UserError` carries a `serverErrors` key. `toUserMessage` fills that sentence, maps the exact `Unauthorized` / `Forbidden` sentinels to `unauthorized`, and logs anything else before returning `generic`. It never returns an unknown `e.message`.
+  - Reachable bare forms return the sentence through `useActionState` (`InlineActionForm`). The throwing action stays for tests and for states the UI already prevents.
+  - Informe `errorMessage` stores the key. The four old Spanish sentences (`clave de API invalida`, `servicio esta ocupado`, `no tiene saldo`, `No se pudo generar el informe`) map to `informeBadKey`, `informeBusy`, `informeNoCredit`, `informeFailed`. Anything else is `generic`.
+  - Offline sync stores `errorCode` only. A 400 without a known code is `generic` and the raw body is not kept. A row that has only `error` still shows that text.
+  - `GET /api/projects/[id]/search` and `ObraSearch`: 250 ms, one in-flight request, nothing under 2 characters, `replaceState` for `q`. The GET form remains. `q` is an in-place trail param on every `/app` path. The route trims `q`, returns empty groups under 2 characters, and searches only the first 200. `Unauthorized` is 401 and `Forbidden` is 403; anything else is logged and returns 404 with an empty body. The box shows its search error for those statuses and does not retry until the query changes.
+  - DESIGN.md line 102: night rust `#C34E2D`, day `#C24A2A`.
+- **Migrations:** none.
+- **Rules for future work:**
+  - Do not put a database or library message in a response, a queue row, or `Error.message` that the UI prints. Add a key to both locales.
+  - `Unauthorized` and `Forbidden` stay the machine strings `requireFreshSession` throws. Routes still map those two to 401 and 403.
+  - On the obra root, `q` feeds only the search box and the results panel. Bloque cards and their counts do not read it, and links into a bloque do not carry `q`.
+  - A change of only `q` replaces the trail top. On Notificaciones, a submit that also changes status, obra, type, severity, or dates still pushes.
+- **How to verify:** lint, `tsc --noEmit`, `npm test` (782, was 763). `E2E_PROD=1 npx playwright test e2e/obra-search.spec.ts e2e/journey-resident.spec.ts e2e/journey-manager.spec.ts --workers=1`: obra search 8 passed (phone and desktop, es/en, night/day); resident journey passed on phone and manager journey passed on desktop (the other project skips each). Screenshots in `web/e2e/artifacts/q11-search/`.
+- **Known limits:**
+  - The partida name filter stays on the server. `page.tsx` runs `filterPartidaGroups` and passes only the matches to `ProjectFileTree`. Open solicitudes and `createdAt` are applied before the row is built, so the client row has no `createdAt` and no `hasOpenCambios`. Follow-up: pass the facet-filtered rows and filter the name on the client the way Planos filters `pq`, and leave the facet submit as a navigation.
+  - Because `q` is in-place, a name-only filter submit on the bloque list replaces the trail entry. Volver from that list goes to the screen before the list, not the unfiltered list. Facet submits (`tags`, `pmin`, `pmax`, `cambios`, `ffrom`, `fto`) still push.
+  - Resolve stays a throw. `SubmitButton` disables the clicked button while that form is pending, so a double tap does not send a second resolve. Integrate and Reject are separate forms; the sibling button stays enabled.
+  - Close-block e2e asserts the refusal and writes nothing. Self-archive stays hidden and thrown.
+  - Stacked on #27. Review only the commits after `437c761`.
+

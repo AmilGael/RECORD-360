@@ -3,7 +3,11 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { assembleReportData, type ReportScope } from "@/lib/report/data";
 import { buildInformeSystem, buildInformeUserMessage } from "@/lib/informes/prompt";
-import { generateInformeContent, INFORME_MODEL, isCreditExhaustedError } from "@/lib/informes/client";
+import { generateInformeContent, INFORME_MODEL } from "@/lib/informes/client";
+import { generationErrorKey } from "@/lib/informes/error-text";
+import { userText } from "@/lib/errors/form-result";
+import { toUserMessage } from "@/lib/errors/user-error";
+import { getDict } from "@/i18n/server";
 import { requireFreshSession } from "@/lib/auth/session";
 import type { InformeArchetype } from "@prisma/client";
 import { ARCHETYPE_VALUES } from "@/lib/informes/archetypes";
@@ -12,7 +16,6 @@ import { parseRangeValue } from "@/lib/report/params";
 import { buildInformeIdempotencyKey } from "@/lib/informes/idempotency";
 import { notifyEvent } from "@/lib/notifications/events";
 import { Prisma } from "@prisma/client";
-import Anthropic from "@anthropic-ai/sdk";
 
 export type InformeResult =
   | { ok: true; informeId: string; status: "READY" | "PENDING" }
@@ -29,19 +32,6 @@ export type InformeResult =
 // has occurred" and took down the entire informes flow — no report could ever
 // be generated. Nothing outside this file uses it; keep it module-private.
 const PENDING_STALE_MS = 3 * 60_000;
-
-function mapGenerationError(e: unknown): string {
-  if (e instanceof Anthropic.AuthenticationError) {
-    return "El generador de informes no esta configurado (clave de API invalida).";
-  }
-  if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.APIConnectionTimeoutError || (e instanceof Anthropic.APIError && Number(e.status) >= 529)) {
-    return "El servicio esta ocupado. Intentalo de nuevo en un momento.";
-  }
-  if (isCreditExhaustedError(e)) {
-    return "El generador de informes no esta disponible: la cuenta de API no tiene saldo. Contacta al administrador.";
-  }
-  return "No se pudo generar el informe. Intentalo de nuevo.";
-}
 
 /**
  * Generate and persist an AI informe. Any project member may request one (the
@@ -63,7 +53,7 @@ function mapGenerationError(e: unknown): string {
  */
 export async function createInforme(_prev: InformeResult | null, formData: FormData): Promise<InformeResult> {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) return { ok: false, error: "El generador de informes no esta configurado (falta la clave de API)." };
+    if (!process.env.ANTHROPIC_API_KEY) return { ok: false, error: await userText("informeNotConfigured") };
 
     const user = await requireFreshSession();
 
@@ -71,9 +61,9 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
       where: { id: user.id, companyId: user.companyId },
       select: { id: true, name: true, signatureKey: true },
     });
-    if (!requester) return { ok: false, error: "No autorizado." };
+    if (!requester) return { ok: false, error: await userText("unauthorized") };
     if (!requester.signatureKey) {
-      return { ok: false, missingFirma: true, error: "Necesitas registrar tu firma en Equipo antes de generar informes." };
+      return { ok: false, missingFirma: true, error: await userText("informeNeedSignature") };
     }
     // Match the PDF route's real requirement: a key alone is insufficient if
     // the object was removed or storage is unavailable.
@@ -81,26 +71,26 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
       return {
         ok: false,
         missingSeal: true,
-        error: "Necesitas registrar el sello de la empresa en Equipo antes de generar informes.",
+        error: await userText("informeNeedSeal"),
       };
     }
 
     const brief = String(formData.get("brief") ?? "").trim();
-    if (!brief) return { ok: false, error: "Describe de que va el informe." };
-    if (brief.length > 2000) return { ok: false, error: "La solicitud es demasiado larga (max. 2000 caracteres)." };
+    if (!brief) return { ok: false, error: await userText("informeBriefRequired") };
+    if (brief.length > 2000) return { ok: false, error: await userText("informeBriefTooLong") };
 
     // WS7: audience archetype is required (no default/preselect) — it drives
     // both the AI prompt's section structure and the PDF's audience label.
     const archetypeRaw = String(formData.get("archetype") ?? "");
     if (!ARCHETYPE_VALUES.includes(archetypeRaw as InformeArchetype)) {
-      return { ok: false, error: "Selecciona la audiencia del informe." };
+      return { ok: false, error: await userText("informeAudienceRequired") };
     }
     const archetype = archetypeRaw as InformeArchetype;
 
     const scopeRef = String(formData.get("scopeRef") ?? "");
     const [scopeType, scopeId] = scopeRef ? scopeRef.split(":", 2) : [String(formData.get("scopeType")), String(formData.get("scopeId"))];
     if (!["project", "segment", "partida"].includes(scopeType) || !scopeId) {
-      return { ok: false, error: "Alcance invalido." };
+      return { ok: false, error: await userText("informeScopeInvalid") };
     }
     const scope = { type: scopeType, id: scopeId } as ReportScope;
 
@@ -113,11 +103,11 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     };
     const from = parseDate("from");
     const to = parseDate("to");
-    if (from === "invalid" || to === "invalid") return { ok: false, error: "Rango de fechas invalido." };
+    if (from === "invalid" || to === "invalid") return { ok: false, error: await userText("informeDateInvalid") };
 
     // Tenant + archived scoping happens inside assembleReportData.
     const data = await assembleReportData({ id: user.id, companyId: user.companyId, role: user.role }, scope, from, to);
-    if (!data) return { ok: false, error: "No autorizado." };
+    if (!data) return { ok: false, error: await userText("unauthorized") };
 
     // M2: a resubmitted identical request must never bill a second generation
     // or leave a second row. The key is derived server-side from the inputs, so
@@ -216,12 +206,15 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
       revalidatePath(`/app/projects/${data.project.id}`);
       return { ok: true, informeId, status: "READY" };
     } catch (e) {
-      const message = mapGenerationError(e);
+      const key = generationErrorKey(e);
+      const { t } = await getDict();
+      const message = t.serverErrors[key];
+      // Store the key, not the sentence, so a later viewer sees it in their language.
       // Best-effort: if even this write fails the row stays PENDING and the
       // stale-reclaim path recovers it on the next attempt.
       await prisma.informe.update({
         where: { id: informeId },
-        data: { status: "FAILED", errorMessage: message },
+        data: { status: "FAILED", errorMessage: key },
       }).catch(() => {});
       await notifyEvent({
         ...notifyBase,
@@ -234,6 +227,8 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
     }
   } catch (e) {
     // Failures before a row exists (auth, validation, seal, data assembly).
-    return { ok: false, error: mapGenerationError(e) };
+    // A database error is generic, not "could not generate".
+    const { t } = await getDict();
+    return { ok: false, error: toUserMessage(e, t, "createInforme") };
   }
 }

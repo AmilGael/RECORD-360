@@ -1,6 +1,6 @@
 "use client";
 import { useActionState, useEffect, useState } from "react";
-import { updateUserProfile } from "@/app/actions/profile";
+import { updateUserProfileForm } from "@/app/actions/profile";
 import { SubmitButton } from "@/components/submit-button";
 import { Pencil } from "@/components/icons";
 
@@ -19,19 +19,11 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const SIGNATURE_TYPES = new Set(["image/png"]);
 
-/**
- * Client wrapper around the (throwing) server action so useActionState can
- * surface a friendly inline error instead of an unhandled-rejection/error
- * overlay. `updateUserProfile` itself is untouched — same single-arg,
- * throwing contract the existing server-side tests rely on.
- */
+/** The server wrapper returns the viewer's sentence. The throwing action stays for tests. */
 async function submitProfile(_prev: Result | null, formData: FormData): Promise<Result> {
-  try {
-    await updateUserProfile(formData);
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo actualizar el perfil." };
-  }
+  const result = await updateUserProfileForm(null, formData);
+  if (result?.error) return { ok: false, error: result.error };
+  return { ok: true };
 }
 
 function validateFile(file: File, kind: "photo" | "signature", t: T): string | null {

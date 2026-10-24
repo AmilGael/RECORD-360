@@ -4,6 +4,7 @@ import { buildReportPdf } from "@/lib/report/pdf";
 import { requireFreshSession } from "@/lib/auth/session";
 import { missingSealResponse, parseRangeParam, sanitizeFilename } from "@/lib/report/params";
 import { loadCompanySealPng } from "@/lib/report/seal";
+import { getDict } from "@/i18n/server";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -12,7 +13,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const url = new URL(req.url);
     const from = parseRangeParam(url, "from");
     const to = parseRangeParam(url, "to");
-    if (from === "invalid" || to === "invalid") return new Response("Rango invalido", { status: 400 });
+    if (from === "invalid" || to === "invalid") {
+      const { t } = await getDict();
+      return new Response(t.serverErrors.informeDateInvalid, { status: 400 });
+    }
 
     const data = await assembleReportData(
       { id: user.id, companyId: user.companyId, role: user.role },
@@ -38,8 +42,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       },
     });
   } catch (e) {
-    if (e instanceof Error && e.message === "Unauthorized") return new Response("Unauthorized", { status: 401 });
-    if (e instanceof Error && e.message === "Forbidden") return new Response("Forbidden", { status: 403 });
-    return new Response("Error", { status: 500 });
+    const { t } = await getDict();
+    if (e instanceof Error && (e.message === "Unauthorized" || e.message === "Forbidden")) {
+      return new Response(t.serverErrors.unauthorized, { status: e.message === "Forbidden" ? 403 : 401 });
+    }
+    console.error("[project report]", e);
+    return new Response(t.serverErrors.generic, { status: 500 });
   }
 }

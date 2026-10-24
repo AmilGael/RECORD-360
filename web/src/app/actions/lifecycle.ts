@@ -13,6 +13,8 @@ import { requireFreshSession, type FreshSessionUser } from "@/lib/auth/session";
 import { requireProjectStructureAccess, projectAccessWhere } from "@/lib/authz/projects";
 import { writeAudit } from "@/lib/audit/log";
 import { notifyEvent } from "@/lib/notifications/events";
+import { UserError } from "@/lib/errors/user-error";
+import { formResult, type FormError } from "@/lib/errors/form-result";
 
 // The sidebar's pending/unread badges are rendered by app/app/layout.tsx, which
 // is shared by every /app route. revalidatePath("/app") defaults to type
@@ -61,7 +63,7 @@ export async function concludePartida(formData: FormData) {
   const user = await requireFreshSession();
   const partidaId = String(formData.get("partidaId"));
   const partida = await loadOwnedPartida(user, partidaId);
-  if (partida.project.archivedAt) throw new Error("La obra está archivada.");
+  if (partida.project.archivedAt) throw new UserError("archivedObra");
 
   if (partida.completedAt) return; // idempotent fast path: already concluded
 
@@ -112,12 +114,12 @@ export async function reopenPartida(formData: FormData) {
   const user = await requireFreshSession();
   const partidaId = String(formData.get("partidaId"));
   const partida = await loadOwnedPartida(user, partidaId);
-  if (partida.project.archivedAt) throw new Error("La obra está archivada.");
+  if (partida.project.archivedAt) throw new UserError("archivedObra");
 
   if (!partida.completedAt) return; // idempotent fast path: already open
 
   if (partida.segment?.closedAt) {
-    throw new Error("El bloque está cerrado: reábrelo antes de reabrir la partida.");
+    throw new UserError("blockClosedReopenPartida");
   }
 
   // Atomic guarded update (see concludePartida): only the invocation whose
@@ -171,7 +173,7 @@ async function loadOwnedSegment(user: FreshSessionUser, segmentId: string) {
   if (!segment) throw new Error("Forbidden");
   // Symmetric lifecycle gating (WS8): every lifecycle transition — not just
   // conclude — is rejected while the obra is archived.
-  if (segment.project.archivedAt) throw new Error("La obra está archivada.");
+  if (segment.project.archivedAt) throw new UserError("archivedObra");
   await requireProjectStructureAccess(user, segment.projectId);
   return segment;
 }
@@ -212,7 +214,7 @@ export async function closeSegment(formData: FormData) {
       where: { segmentId: segment.id, deletedAt: null, completedAt: null },
     });
     if (openCount > 0) {
-      throw new Error("No se puede cerrar el bloque: hay partidas sin concluir.");
+      throw new UserError("blockHasOpenPartidas");
     }
     // Guarded update: after a P2034 retry (or a plain concurrent close) the
     // winner may already have closed the segment — count 0 means this
@@ -287,4 +289,21 @@ export async function reopenSegment(formData: FormData) {
   });
 
   revalidateSegmentPaths(segment.projectId);
+}
+
+/** Bare forms on the bloque list. The throwing actions stay for callers that expect a throw. */
+export async function closeSegmentForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("closeSegment", () => closeSegment(formData));
+}
+
+export async function reopenSegmentForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("reopenSegment", () => reopenSegment(formData));
+}
+
+export async function concludePartidaForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("concludePartida", () => concludePartida(formData));
+}
+
+export async function reopenPartidaForm(_prev: FormError | null, formData: FormData): Promise<FormError | null> {
+  return formResult("reopenPartida", () => reopenPartida(formData));
 }

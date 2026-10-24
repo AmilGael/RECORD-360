@@ -11,6 +11,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 import { movePartida, renamePartida, renameProject, renameSegment } from "@/app/actions/project-edit";
+import { rejectedText } from "./helpers/user-message";
 
 let companyId = "";
 let otherCompanyId = "";
@@ -76,7 +77,7 @@ describe("project edit actions", () => {
     await renameSegment(fd({ segmentId: segmentAId, name: "Bloque Principal" }));
     await expect(prisma.segment.findUniqueOrThrow({ where: { id: segmentAId } })).resolves.toMatchObject({ name: "Bloque Principal" });
 
-    await expect(renameSegment(fd({ segmentId: segmentBId, name: "bloque principal" }))).rejects.toThrow(/bloque/i);
+    expect(await rejectedText(renameSegment(fd({ segmentId: segmentBId, name: "bloque principal" })))).toMatch(/bloque/i);
   });
 
   it("renames a partida without changing the registro hash chain", async () => {
@@ -113,7 +114,7 @@ describe("project edit actions", () => {
   });
 
   it("rejects moves to another project's bloque", async () => {
-    await expect(movePartida(fd({ partidaId, segmentId: otherSegmentId }))).rejects.toThrow(/bloque/i);
+    expect(await rejectedText(movePartida(fd({ partidaId, segmentId: otherSegmentId })))).toMatch(/bloque/i);
   });
 
   it("rejects edits by non-manager roles", async () => {

@@ -8,6 +8,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 import { purgeProject } from "@/app/actions/admin";
+import { rejectedText } from "./helpers/user-message";
 
 let companyId = "";
 let otherCompanyId = "";
@@ -85,7 +86,7 @@ describe("purgeProject — ADMIN-only permanent deletion", () => {
     asAdmin();
     const p = await makeArchivedProject("has-partida");
     const partida = await prisma.partida.create({ data: { projectId: p.id, name: "Vaciado losa" } });
-    await expect(purgeProject(fd(p.id))).rejects.toThrow(/partidas|cambios|documentos/i);
+    expect(await rejectedText(purgeProject(fd(p.id)))).toMatch(/partidas|cambios|documentos/i);
     expect(await prisma.project.count({ where: { id: p.id } })).toBe(1);
     // cleanup
     await prisma.partida.delete({ where: { id: partida.id } });
@@ -96,7 +97,7 @@ describe("purgeProject — ADMIN-only permanent deletion", () => {
     asAdmin();
     const s = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const p = await prisma.project.create({ data: { companyId, name: `Active Project ${s}`, registrationCode: generateRegistrationCode() } }); // no archivedAt
-    await expect(purgeProject(fd(p.id))).rejects.toThrow(/archiva/i);
+    expect(await rejectedText(purgeProject(fd(p.id)))).toMatch(/archiva/i);
     expect(await prisma.project.count({ where: { id: p.id } })).toBe(1);
     // cleanup
     await prisma.project.delete({ where: { id: p.id } });

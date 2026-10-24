@@ -1,6 +1,7 @@
 import type { Role } from "@prisma/client";
-import { assignProjectUser, removeProjectAssignment } from "@/app/actions/project-assignments";
+import { assignProjectUserForm, removeProjectAssignment } from "@/app/actions/project-assignments";
 import { SubmitButton } from "@/components/submit-button";
+import { InlineActionForm } from "@/components/inline-action-form";
 
 type AssignmentRow = { id: string; role: Role; user: { name: string; email: string } };
 type UserOption = { id: string; name: string; email: string; role: Role };
@@ -33,7 +34,7 @@ export function ProjectAssignmentsPanel({
       <AssignmentGroup label={t.resident} rows={residents} removeLabel={t.remove} canManage={canManage} />
       {assignments.length === 0 && <div className="mono text-steel" style={{ fontSize: "0.7rem" }}>{t.noAssigned}</div>}
       {canManage && (
-        <form action={assignProjectUser} className="assignment-form">
+        <InlineActionForm action={assignProjectUserForm} className="assignment-form">
           <input type="hidden" name="projectId" value={projectId} />
           <select name="role" className="input" defaultValue="SUPERVISOR" aria-label={t.selectRole}>
             <option value="SUPERVISOR">{t.supervisor}</option>
@@ -44,7 +45,7 @@ export function ProjectAssignmentsPanel({
             {users.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.email}</option>)}
           </select>
           <SubmitButton className="btn btn-ghost">{t.assign}</SubmitButton>
-        </form>
+        </InlineActionForm>
       )}
     </div>
   );

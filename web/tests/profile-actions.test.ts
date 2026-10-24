@@ -13,6 +13,7 @@ vi.mock("@/lib/storage", () => ({
 }));
 
 import { updateUserProfile, updateCompanySeal } from "@/app/actions/profile";
+import { rejectedText } from "./helpers/user-message";
 
 let companyId = "", otherCompanyId = "", adminId = "", managerId = "", residentId = "", outsiderId = "";
 
@@ -56,7 +57,7 @@ describe("updateUserProfile", () => {
   });
   it("rejects a non-PNG firma", async () => {
     authMock.mockResolvedValue({ user: { id: managerId, companyId, role: "MANAGER" } });
-    await expect(updateUserProfile(fd({ userId: residentId, signature: jpg() }))).rejects.toThrow(/PNG/i);
+    expect(await rejectedText(updateUserProfile(fd({ userId: residentId, signature: jpg() })))).toMatch(/PNG/i);
   });
   it("RESIDENT cannot edit profiles", async () => {
     authMock.mockResolvedValue({ user: { id: residentId, companyId, role: "RESIDENT" } });
@@ -112,6 +113,6 @@ describe("updateCompanySeal", () => {
   });
   it("rejects a JPEG seal", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
-    await expect(updateCompanySeal(fd({ seal: jpg() }))).rejects.toThrow(/PNG/i);
+    expect(await rejectedText(updateCompanySeal(fd({ seal: jpg() })))).toMatch(/PNG/i);
   });
 });

@@ -8,6 +8,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { assignProjectUser } from "@/app/actions/project-assignments";
 import { archiveUser } from "@/app/actions/admin";
+import { rejectedText } from "./helpers/user-message";
 
 let companyId = "";
 let adminId = "";
@@ -59,7 +60,7 @@ describe("assignProjectUser", () => {
 
   it("explains a mismatched role instead of generic Forbidden", async () => {
     authMock.mockResolvedValue({ user: { id: adminId, companyId, role: "ADMIN" } });
-    await expect(assignProjectUser(fd(residentId, "SUPERVISOR"))).rejects.toThrow(/rol global/i);
+    expect(await rejectedText(assignProjectUser(fd(residentId, "SUPERVISOR")))).toMatch(/rol global/i);
   });
 
   it("rejects assigning an archived user and creates no ProjectAssignment", async () => {

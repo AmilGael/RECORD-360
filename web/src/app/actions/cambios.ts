@@ -11,6 +11,8 @@ import { retryOnConflict } from "@/lib/registro/retry";
 import { projectAccessWhere } from "@/lib/authz/projects";
 import { notifyEvent, resolveRecipients } from "@/lib/notifications/events";
 import { requireFreshSession } from "@/lib/auth/session";
+import { toUserMessage, UserError } from "@/lib/errors/user-error";
+import { getDict } from "@/i18n/server";
 
 const KIND_LABEL = { CHANGE: "Solicitud de cambio", ALERT: "Alerta" } as const;
 const SEVERITY_TO_NOTIFICATION: Record<"IMPORTANT" | "CRITICAL", NotificationSeverity> = {
@@ -46,9 +48,9 @@ export async function createChangeRequest(_prev: CreateChangeRequestState, formD
     const { lat: gpsLat, lng: gpsLng } = parseRequestGps(formData.get("gpsLat"), formData.get("gpsLng"));
 
     const segmentIds = [...new Set(formData.getAll("segmentIds").map(String).filter(Boolean))];
-    if (segmentIds.length === 0) throw new Error("Selecciona al menos un bloque afectado.");
+    if (segmentIds.length === 0) throw new UserError("segmentRequired");
     const validSegments = await prisma.segment.findMany({ where: { id: { in: segmentIds }, projectId }, select: { id: true } });
-    if (validSegments.length !== segmentIds.length) throw new Error("Bloque inválido.");
+    if (validSegments.length !== segmentIds.length) throw new UserError("invalidBlock");
 
     const photos = formData.getAll("evidence").filter((f): f is File => f instanceof File);
     const prepared = await prepareAttachments(photos, storage);
@@ -78,7 +80,8 @@ export async function createChangeRequest(_prev: CreateChangeRequestState, formD
     revalidatePath(`/app/projects/${projectId}`);
     return { status: "success" };
   } catch (err) {
-    return { status: "error", message: err instanceof Error ? err.message : "No se pudo crear la solicitud." };
+    const { t } = await getDict();
+    return { status: "error", message: toUserMessage(err, t, "createChangeRequest") };
   }
 }
 
@@ -88,17 +91,17 @@ export async function resolveChangeRequest(formData: FormData) {
 
   const crId = String(formData.get("changeRequestId"));
   const action = String(formData.get("action"));
-  if (action !== "INTEGRATE" && action !== "REJECT") throw new Error("Acción inválida.");
+  if (action !== "INTEGRATE" && action !== "REJECT") throw new UserError("invalidAction");
 
   const cr = await prisma.changeRequest.findFirst({
     where: { id: crId, project: { companyId: user.companyId } },
     include: { partidas: { select: { partidaId: true } }, segments: { select: { segmentId: true } } },
   });
   if (!cr) throw new Error("Forbidden");
-  if (cr.status !== "OPEN") throw new Error("La solicitud ya fue resuelta.");
+  if (cr.status !== "OPEN") throw new UserError("changeAlreadyResolved");
   // 4-eyes when possible: a MANAGER cannot close their own solicitud. ADMIN may
   // (small companies often have a single admin who also files requests).
-  if (user.role !== Role.ADMIN && cr.authorId === user.id) throw new Error("No puedes resolver tu propia solicitud.");
+  if (user.role !== Role.ADMIN && cr.authorId === user.id) throw new UserError("cannotResolveOwn");
 
   const resolutionNote = parseResolutionNote(formData.get("resolutionNote"));
 
@@ -143,7 +146,7 @@ export async function resolveChangeRequest(formData: FormData) {
       revalidatePath(`/app/partidas/${partidaId}`);
     }
   } else {
-    throw new Error("Acción inválida.");
+    throw new UserError("invalidAction");
   }
 
   // WS5: the author must ALWAYS hear about the resolution of their own

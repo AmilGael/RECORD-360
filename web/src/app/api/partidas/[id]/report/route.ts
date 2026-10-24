@@ -6,6 +6,7 @@ import { projectAccessWhere } from "@/lib/authz/projects";
 import { verifyChain } from "@/lib/registro/hash";
 import { toStored } from "@/lib/registro/map";
 import { requireFreshSession } from "@/lib/auth/session";
+import { getDict } from "@/i18n/server";
 import { missingSealResponse, parseRangeParam, sanitizeFilename } from "@/lib/report/params";
 import { loadCompanySealPng } from "@/lib/report/seal";
 import { stampSealOnEveryPage, PAGE_BOTTOM_RESERVED } from "@/lib/report/pdf";
@@ -48,7 +49,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const url = new URL(req.url);
     const from = parseRangeParam(url, "from");
     const to = parseRangeParam(url, "to");
-    if (from === "invalid" || to === "invalid") return new Response("Rango invalido", { status: 400 });
+    if (from === "invalid" || to === "invalid") {
+      const { t } = await getDict();
+      return new Response(t.serverErrors.informeDateInvalid, { status: 400 });
+    }
     const hasRange = from !== null || to !== null;
     const fromTo = hasRange
       ? { serverCreatedAt: { gte: from ?? undefined, lte: to ?? undefined } }
@@ -262,9 +266,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") return new Response("Unauthorized", { status: 401 });
-    if (error instanceof Error && error.message === "Forbidden") return new Response("Forbidden", { status: 403 });
-    const message = error instanceof Error ? error.message : "Error";
-    return new Response(message, { status: 500 });
+    const { t } = await getDict();
+    if (error instanceof Error && (error.message === "Unauthorized" || error.message === "Forbidden")) {
+      return new Response(t.serverErrors.unauthorized, { status: error.message === "Forbidden" ? 403 : 401 });
+    }
+    console.error("[partida report]", error);
+    return new Response(t.serverErrors.generic, { status: 500 });
   }
 }

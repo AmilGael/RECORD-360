@@ -7,6 +7,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 import { createProject } from "@/app/actions/admin";
+import { rejectedText } from "./helpers/user-message";
 
 describe("createProject ownerName (WS4A)", () => {
   let companyId = "", adminId = "";
@@ -43,7 +44,7 @@ describe("createProject ownerName (WS4A)", () => {
     const fd = new FormData();
     fd.set("name", "Obra Propietario Largo");
     fd.set("ownerName", "x".repeat(121));
-    await expect(createProject(fd)).rejects.toThrow(/largo/i);
+    expect(await rejectedText(createProject(fd))).toMatch(/largo/i);
     const p = await prisma.project.findFirst({ where: { companyId, name: "Obra Propietario Largo" } });
     expect(p).toBeNull();
   });

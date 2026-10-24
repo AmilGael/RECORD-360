@@ -6,6 +6,8 @@ import { projectAccessWhere } from "@/lib/authz/projects";
 import { computeSignatureSeal } from "@/lib/signatures/seal";
 import { lockPartidaLedger } from "@/lib/registro/ledger-lock";
 import { requireFreshSession } from "@/lib/auth/session";
+import { toUserMessage, UserError } from "@/lib/errors/user-error";
+import { getDict } from "@/i18n/server";
 
 export async function signPartida(formData: FormData): Promise<void> {
   const user = await requireFreshSession();
@@ -34,7 +36,7 @@ export async function signPartida(formData: FormData): Promise<void> {
     if (signerRecord.companyId !== user.companyId || signerRecord.role !== user.role) throw new Error("Forbidden");
 
     const passwordOk = signerRecord.passwordHash ? await bcrypt.compare(password, signerRecord.passwordHash) : false;
-    if (!passwordOk) throw new Error("Contraseña incorrecta.");
+    if (!passwordOk) throw new UserError("wrongPassword");
 
     const latestRegistro = await tx.registro.findFirst({
       where: { partidaId },
@@ -84,6 +86,7 @@ export async function signPartidaAction(_prev: SignResult | null, formData: Form
     await signPartida(formData);
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo firmar." };
+    const { t } = await getDict();
+    return { ok: false, error: toUserMessage(e, t, "signPartida") };
   }
 }

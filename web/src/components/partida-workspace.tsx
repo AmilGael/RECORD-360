@@ -1,7 +1,11 @@
 "use client";
 import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { runPanelAction, type PanelAction } from "@/app/actions/partida-panel";
+import { concludePartidaForm, reopenPartidaForm } from "@/app/actions/lifecycle";
+import { updatePartidaProgressForm } from "@/app/actions/partida-progress";
+import { movePartidaForm, renamePartidaForm } from "@/app/actions/project-edit";
+import { setPartidaTagsForm } from "@/app/actions/partida-tags";
+import type { FormError } from "@/lib/errors/form-result";
 import type { Lang } from "@/i18n/dictionaries";
 import type { PartidaPreview } from "@/lib/partida/preview";
 import { PartidaPanelView, type PanelCopy, type PartidaPanelShell } from "@/components/partida-panel";
@@ -64,6 +68,17 @@ function findShell(segments: SegmentGroup[], ungrouped: PartidaTreeRow[], id: st
     segmentClosedAt: null,
   };
 }
+
+type PanelAction = "progress" | "conclude" | "reopen" | "rename" | "move" | "tags";
+
+const PANEL_ACTIONS: Record<PanelAction, (prev: FormError | null, formData: FormData) => Promise<FormError | null>> = {
+  progress: updatePartidaProgressForm,
+  conclude: concludePartidaForm,
+  reopen: reopenPartidaForm,
+  rename: renamePartidaForm,
+  move: movePartidaForm,
+  tags: setPartidaTagsForm,
+};
 
 const PHONE_SHEET = "(max-width: 899px)";
 
@@ -267,8 +282,10 @@ export function PartidaWorkspace({
       applyPreview(previewPatch);
       applyOptRow({ id, patch: rowPatch });
       try {
-        const result = await runPanelAction(action, fd);
-        if (!result.ok) {
+        // The *Form wrappers return the viewer's sentence (UserError key) instead
+        // of throwing: Next masks thrown action messages in production.
+        const result = await PANEL_ACTIONS[action](null, fd);
+        if (result?.error) {
           setFormError(result.error);
           return;
         }

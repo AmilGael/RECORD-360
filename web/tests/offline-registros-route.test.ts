@@ -62,7 +62,7 @@ describe("POST /api/offline/registros", () => {
       reminderDueAt: "2026-06-01T14:03:00.000Z",
     }));
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/Recordatorio/i);
+    expect((await res.json()).errorCode).toBe("reminder_future");
   });
   it("accepts a now-past reminderDueAt that was still valid at clientCapturedAt (R3 WS10 offline policy)", async () => {
     asUser();
@@ -89,7 +89,7 @@ describe("POST /api/offline/registros", () => {
       reminderDueAt: "2026-06-01T13:00:00.000Z",
     }));
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/Recordatorio/i);
+    expect((await res.json()).errorCode).toBe("reminder_future");
   });
   it("is idempotent: same key twice → one row, returns existing id", async () => {
     asUser();

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { uploadBrandedImage } from "@/lib/storage/image-upload";
 import type { Storage } from "@/lib/storage/types";
+import { rejectedText } from "./helpers/user-message";
 
 const fakeStorage: Storage = {
   async put(file) {
@@ -27,9 +28,9 @@ describe("uploadBrandedImage", () => {
   });
   it("pngOnly mode rejects everything but PNG (firma/seal contract)", async () => {
     await expect(uploadBrandedImage(file("image/png"), fakeStorage, { pngOnly: true })).resolves.toBeTruthy();
-    await expect(uploadBrandedImage(file("image/jpeg"), fakeStorage, { pngOnly: true })).rejects.toThrow(/PNG/i);
+    expect(await rejectedText(uploadBrandedImage(file("image/jpeg"), fakeStorage, { pngOnly: true }))).toMatch(/PNG/i);
   });
   it("rejects oversize files", async () => {
-    await expect(uploadBrandedImage(file("image/png", 9 * 1024 * 1024), fakeStorage)).rejects.toThrow(/8 MB/);
+    expect(await rejectedText(uploadBrandedImage(file("image/png", 9 * 1024 * 1024), fakeStorage))).toMatch(/8 MB/);
   });
 });

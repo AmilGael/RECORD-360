@@ -4,6 +4,9 @@ import { projectAccessWhere } from "@/lib/authz/projects";
 import { verifyChain } from "@/lib/registro/hash";
 import { toStored } from "@/lib/registro/map";
 import { requireFreshSession } from "@/lib/auth/session";
+import { userText } from "@/lib/errors/form-result";
+import { toUserMessage } from "@/lib/errors/user-error";
+import { getDict } from "@/i18n/server";
 
 export type VerifyResult =
   | { status: "ok"; count: number }
@@ -18,13 +21,14 @@ export async function verifyPartidaChain(_prev: VerifyResult | null, formData: F
       where: { id: partidaId, deletedAt: null, project: projectAccessWhere({ id: user.id, companyId: user.companyId, role: user.role }) },
       select: { id: true },
     });
-    if (!partida) return { status: "error", message: "No autorizado." };
+    if (!partida) return { status: "error", message: await userText("unauthorized") };
     const registros = await prisma.registro.findMany({
       where: { partidaId }, orderBy: [{ serverCreatedAt: "asc" }, { id: "asc" }], include: { attachments: true },
     });
     const result = verifyChain(registros.map(toStored));
     return result.ok ? { status: "ok", count: registros.length } : { status: "broken", brokenAt: result.brokenAt ?? null };
-  } catch {
-    return { status: "error", message: "No autorizado." };
+  } catch (e) {
+    const { t } = await getDict();
+    return { status: "error", message: toUserMessage(e, t, "verifyPartidaChain") };
   }
 }

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { UserError } from "@/lib/errors/user-error";
 
 // Locked decision D2: preserve the model whose grounding/archetype compliance
 // was verified live. The request is bounded below Netlify's current 60-second
@@ -39,6 +40,6 @@ export async function generateInformeContent(system: string, userMessage: string
     messages: [{ role: "user", content: userMessage }],
   });
   const text = res.content.find((b) => b.type === "text");
-  if (!text || text.type !== "text" || !text.text.trim()) throw new Error("El generador no devolvio contenido.");
+  if (!text || text.type !== "text" || !text.text.trim()) throw new UserError("informeEmpty");
   return text.text;
 }

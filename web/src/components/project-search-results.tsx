@@ -1,9 +1,16 @@
+"use client";
 import Link from "next/link";
-import type { ProjectSearchResults as Results } from "@/lib/project/search";
+
+export type SearchResultsView = {
+  partidas: { id: string; name: string }[];
+  registros: { id: string; partidaId: string; partidaName: string; text: string | null }[];
+  documentos: { id: string; title: string | null; url: string; kind: string }[];
+  cambios: { id: string; code: string; title: string }[];
+};
 
 type T = { searchResults: string; searchNoResults: string; searchInPartidas: string; searchInRegistros: string; searchInDocumentos: string; searchInCambios: string };
 
-export function ProjectSearchResultsPanel({ projectId, results, t }: { projectId: string; results: Results; t: T }) {
+export function ProjectSearchResultsPanel({ projectId, results, t }: { projectId: string; results: SearchResultsView; t: T }) {
   const empty = !results.partidas.length && !results.registros.length && !results.documentos.length && !results.cambios.length;
   return (
     <div className="card" style={{ padding: 14, marginTop: 12 }}>
