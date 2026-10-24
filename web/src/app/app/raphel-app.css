@@ -219,3 +219,48 @@ body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
   .raphel-app .workspace-panel { border-radius: var(--radius) var(--radius) 0 0; }
   .raphel-app .panel-grab { border-radius: var(--radius-sm); }
 }
+
+/* ---------- side sheet (components/sheet.tsx) ---------- */
+/* z-index 70 clears the sticky appbar (40) and the phone drawer (55-60). */
+.raphel-app .sheet-layer { position: fixed; inset: 0; z-index: 70; }
+.raphel-app .sheet-backdrop {
+  position: absolute; inset: 0; width: 100%; padding: 0; border: 0; cursor: pointer;
+  background: rgba(10, 8, 6, 0.55);
+  animation: raphel-sheet-fade 200ms var(--ease) both;
+}
+.raphel-app .sheet-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  display: flex; flex-direction: column;
+  background: var(--paper); color: var(--ink);
+  animation: raphel-sheet-in 260ms var(--ease) both;
+}
+.raphel-app .sheet-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: calc(12px + var(--safe-t)) calc(20px + var(--safe-r)) 12px calc(20px + var(--safe-l));
+  border-bottom: 1px solid var(--line);
+}
+.raphel-app .sheet-title {
+  min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 1.25rem; font-weight: 700; letter-spacing: -0.012em;
+}
+.raphel-app .sheet-close { flex: none; }
+.raphel-app .sheet-body {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 20px calc(20px + var(--safe-r)) calc(20px + var(--safe-b)) calc(20px + var(--safe-l));
+}
+@media (min-width: 640px) {
+  .raphel-app .sheet-panel {
+    left: auto; width: 28rem; max-width: 100%;
+    border-left: 1px solid var(--line-strong);
+    border-radius: var(--radius) 0 0 var(--radius);
+    box-shadow: var(--shadow-sheet);
+  }
+  .raphel-app .sheet-head { padding-right: 20px; padding-left: 20px; }
+  .raphel-app .sheet-body { padding-right: 20px; padding-left: 20px; }
+}
+@keyframes raphel-sheet-in { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes raphel-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .raphel-app .sheet-panel,
+  .raphel-app .sheet-backdrop { animation: none; }
+}
