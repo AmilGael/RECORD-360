@@ -28,7 +28,7 @@ export function ArchiveRestoreButton({ userId, mode, t }: { userId: string; mode
   return (
     <form action={action} style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       <input type="hidden" name="userId" value={userId} />
-      <span className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-deep)" }}>{confirmLabel}</span>
+      <span className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-text, var(--accent-deep))" }}>{confirmLabel}</span>
       <SubmitButton className="btn btn-accent" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{t.yes}</SubmitButton>
       <button type="button" onClick={() => setConfirming(false)} className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>
         {t.no}

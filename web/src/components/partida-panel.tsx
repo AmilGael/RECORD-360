@@ -121,7 +121,7 @@ export function PartidaPanelView({
           </p>
         )}
         {formError && (
-          <p role="alert" className="mono" style={{ fontSize: "0.74rem", color: "var(--accent-deep)", margin: "0 0 10px" }}>{formError}</p>
+          <p role="alert" className="mono" style={{ fontSize: "0.74rem", color: "var(--accent-text, var(--accent-deep))", margin: "0 0 10px" }}>{formError}</p>
         )}
         {preview && preview.registros.length === 0 && <p className="text-steel" style={{ fontSize: "0.88rem" }}>{t.noEntries}</p>}
         {preview?.registros.map((r) => (

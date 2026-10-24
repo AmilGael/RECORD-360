@@ -23,6 +23,9 @@ for (const theme of themes) {
     expect(look.radius).toBe("0px");
     expect(look.clip).toContain("polygon");
     expect(await page.locator(".raphel-app").count()).toBe(0);
+    // Today's body ground (globals.css), not the /app one.
+    const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bodyBg).toBe(theme === "dark" ? "rgb(30, 35, 40)" : "rgb(233, 231, 224)");
   });
 
   test(`/app wrapper carries the scoped tokens and the sheet root (${theme})`, async ({ page }) => {
@@ -45,5 +48,8 @@ for (const theme of themes) {
     expect(tokens.paper).toBe(theme === "dark" ? "#171412" : "#ece7dd");
     expect(tokens.backgroundSize).toContain("14px 14px");
     await expect(page.locator(".raphel-app > #sheet-root:last-child")).toHaveCount(1);
+    // body:has(.raphel-app) paints the ground behind the wrapper (iOS overscroll).
+    const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bodyBg).toBe(theme === "dark" ? "rgb(23, 20, 18)" : "rgb(236, 231, 221)");
   });
 }

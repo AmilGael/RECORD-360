@@ -36,7 +36,7 @@ export function PartidaVerifyButton({ partidaId, t }: { partidaId: string; t: T 
       {state && state.status === "broken" && (
         <span
           className="mono"
-          style={{ fontSize: "0.72rem", color: "var(--accent-deep)" }}
+          style={{ fontSize: "0.72rem", color: "var(--accent-text, var(--accent-deep))" }}
         >
           {t.verifyBroken}
         </span>
@@ -44,7 +44,7 @@ export function PartidaVerifyButton({ partidaId, t }: { partidaId: string; t: T 
       {state && state.status === "error" && (
         <span
           className="mono"
-          style={{ fontSize: "0.72rem", color: "var(--accent-deep)" }}
+          style={{ fontSize: "0.72rem", color: "var(--accent-text, var(--accent-deep))" }}
         >
           {t.verifyError}
         </span>

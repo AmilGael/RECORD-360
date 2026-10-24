@@ -23,7 +23,7 @@ export function PartidaDeleteButton({ partidaId, projectId, t }: { partidaId: st
       style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
     >
       <input type="hidden" name="partidaId" value={partidaId} />
-      <span className="mono" style={{ fontSize: "0.72rem", color: "var(--accent-deep)" }}>{t.delConfirm}</span>
+      <span className="mono" style={{ fontSize: "0.72rem", color: "var(--accent-text, var(--accent-deep))" }}>{t.delConfirm}</span>
       <SubmitButton className="btn btn-accent" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{t.yes}</SubmitButton>
       <button type="button" onClick={() => setConfirming(false)} className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{t.no}</button>
     </form>

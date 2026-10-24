@@ -20,7 +20,7 @@ export function ArchiveButton({ projectId, t }: { projectId: string; t: T }) {
   return (
     <form action={archiveProject} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
       <input type="hidden" name="projectId" value={projectId} />
-      <span className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-deep)" }}>{t.confirm}</span>
+      <span className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-text, var(--accent-deep))" }}>{t.confirm}</span>
       <SubmitButton className="btn btn-accent" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{t.yes}</SubmitButton>
       <button type="button" onClick={() => setConfirming(false)} className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{t.no}</button>
     </form>

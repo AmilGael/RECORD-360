@@ -11,10 +11,12 @@ colors:
   night-accent: "#ff6f43"
   night-accent-deep: "#e85a2c"
   night-on-accent: "#171412"
+  night-accent-text: "#ff7d55"
+  brass-fill: "#b08a2e"
   night-active: "#5bbd8d"
   night-merged: "#a388e4"
   night-blocked: "#e06a54"
-  night-brass: "#b08a2e"
+  night-brass: "#c9a347"
   night-line: "rgba(241, 231, 216, 0.12)"
   night-line-strong: "rgba(241, 231, 216, 0.22)"
   night-grid: "rgba(241, 231, 216, 0.03)"
@@ -28,10 +30,11 @@ colors:
   day-accent-deep: "#B83814"
   day-on-accent: "#19140F"
   day-on-accent-deep: "#ffffff"
-  day-active: "#276548"
+  day-accent-text: "#922a0c"
+  day-active: "#1f573c"
   day-merged: "#5d4492"
-  day-blocked: "#963826"
-  day-brass: "#6e5610"
+  day-blocked: "#8c3322"
+  day-brass: "#654e0d"
   day-line: "rgba(25, 20, 15, 0.14)"
   day-line-strong: "rgba(25, 20, 15, 0.26)"
   day-grid: "rgba(25, 20, 15, 0.045)"
@@ -141,13 +144,14 @@ The system is theme-dual and night-native. Night is the first-run default (`r360
 | `--ink-soft` | `#d4c7b7` | Secondary type, nav at rest |
 | `--steel` | `#b5a998` | Meta voice: kickers, mono metadata, placeholders |
 | `--accent` | `#ff6f43` | Primary action fill, active marks, progress bands |
-| `--accent-deep` | `#e85a2c` | Accent hover; accent used as text |
+| `--accent-deep` | `#e85a2c` | Accent hover fill |
+| `--accent-text` | `#ff7d55` | Accent used as small text (errors, costs, links, admin badge) |
 | `--on-accent` | `#171412` | Type on an accent fill |
 | `--on-accent-deep` | `#171412` | Type on an accent-deep fill |
 | `--state-active` | `#5bbd8d` | Open / healthy / done |
 | `--state-merged` | `#a388e4` | Merged change requests |
 | `--state-blocked` | `#e06a54` | Rejected / critical |
-| `--brass` | `#b08a2e` | Middle severity (supervisor, "important") |
+| `--brass` | `#c9a347` | Middle severity (supervisor, "important") |
 | `--line` | `rgba(241, 231, 216, 0.12)` | Hairlines and dividers |
 | `--line-strong` | `rgba(241, 231, 216, 0.22)` | Control borders, emphasized dividers |
 | `--grid` | `rgba(241, 231, 216, 0.03)` | Ground grid lines |
@@ -163,13 +167,14 @@ The system is theme-dual and night-native. Night is the first-run default (`r360
 | `--ink-soft` | `#4A433A` | Secondary type |
 | `--steel` | `#5A5348` | Meta voice |
 | `--accent` | `#E14A1F` | Primary action fill, active marks, progress bands |
-| `--accent-deep` | `#B83814` | Accent hover; accent used as text |
+| `--accent-deep` | `#B83814` | Accent hover fill |
+| `--accent-text` | `#922a0c` | Accent used as small text |
 | `--on-accent` | `#19140F` | Type on an accent fill |
 | `--on-accent-deep` | `#ffffff` | Type on an accent-deep fill |
-| `--state-active` | `#276548` | Open / healthy / done |
+| `--state-active` | `#1f573c` | Open / healthy / done |
 | `--state-merged` | `#5d4492` | Merged change requests |
-| `--state-blocked` | `#963826` | Rejected / critical |
-| `--brass` | `#6e5610` | Middle severity |
+| `--state-blocked` | `#8c3322` | Rejected / critical |
+| `--brass` | `#654e0d` | Middle severity |
 | `--line` | `rgba(25, 20, 15, 0.14)` | Hairlines |
 | `--line-strong` | `rgba(25, 20, 15, 0.26)` | Control borders |
 | `--grid` | `rgba(25, 20, 15, 0.045)` | Ground grid lines |
@@ -178,8 +183,11 @@ The system is theme-dual and night-native. Night is the first-run default (`r360
 
 - Ink and soft ink clear 4.5:1 on the ground in both themes (night 15.0 and 11.1; day 14.8 and 7.9).
 - **Type on the accent is dark in both themes.** White on the night accent is 2.8:1 and white on the day accent `#E14A1F` is 4.0:1, both under 4.5:1. Dark type reaches 6.6:1 (night) and 4.5:1 (day). On hover the day button deepens to `#B83814`, where dark type fails, so the type turns white (5.8:1). This is why `--on-accent` and `--on-accent-deep` exist: never hard-code `#fff` on an accent fill.
-- Small accent-colored text uses `--accent-deep`, never `--accent`. Day `--accent-deep` on the standard plane is 4.3:1, so keep it to bold or larger type there, or put it on the ground (4.7:1).
-- Day state colors and day brass are darker than the pre-2026 values so their text clears 4.5:1 on the planes.
+- **Accent as text uses `--accent-text`**, never `--accent` or `--accent-deep`: the pinned `--accent-deep` is for fills (day `#B83814` is only 3.9:1 on `--paper-3`; night `#e85a2c` is 4.2:1 on a 10% accent tint). `--accent-text` clears 4.5:1 on all three planes and on an 8 to 12% accent tint over them. Inline styles write `var(--accent-text, var(--accent-deep))` so a component rendered outside `/app` still has a color.
+- Badge text on its own tint clears 4.5:1: day state colors and day brass are darker than the pre-2026 values, night brass is lighter (`#c9a347`), and the night blocked tint is 8% (12% put `#e06a54` at 4.4:1). Night blocked text over a tint on `--paper-3` stays under 4.5:1 because the pinned color itself is only 4.65:1 there; keep critical chips off the raised plane.
+- `.btn-danger-soft` keeps its resting tint on hover (a deeper tint fails); the border carries the hover.
+- The supervisor avatar is filled `#b08a2e` in both themes, so its initials are dark (`#171412`, 5.7:1).
+- `.state-badge.is-active` keeps ink text; the green tint and border are the mark.
 
 **The Marks-Not-Hues Rule.** State is never carried by color alone. Every colored state (badge, dot, band, chip, lamp) sits beside its text label. A colored dot without a label is not a state.
 
@@ -211,6 +219,8 @@ A 1280px maximum container with 28px gutters (16px below 480px). The app shell i
 
 The app ground is a fine hairline grid: 1px lines at `--grid` on a 14px cell over `--paper`, with `background-attachment: fixed` so the grid stays put while the record scrolls. It is subtle enough that type set directly on it stays readable.
 
+Behind the wrapper, `body:has(.raphel-app)` (and its night form) paints the body in the same `--paper` value, so iOS overscroll never shows another color. These two selectors are the only ones in `raphel-app.css` not under `.raphel-app`; they cannot match the landing or auth screens, which never contain the class.
+
 Only the ground gets the grid. Cards, panels, the sidebar, the sheet and every other plane carry an opaque `--paper-2` (or `--paper`) fill, so the grid never shows inside them.
 
 ## Elevation and shadows
@@ -241,7 +251,7 @@ Archivo 700, 0.9rem, sentence case, `--radius-sm`, padding `0.72rem 1.2rem`.
 - **Primary** (`.btn-accent`): accent fill, `--on-accent` type; hover deepens to `--accent-deep` with `--on-accent-deep` type and lifts 1px.
 - **Ink** (`.btn-ink`): ink fill, ground type; hover turns accent with `--on-accent` type.
 - **Ghost** (`.btn-ghost`): transparent, `--line-strong` border; hover strengthens the border to ink.
-- **Soft danger** (`.btn-danger-soft`): blocked color at about 12% tint with a tinted border.
+- **Soft danger** (`.btn-danger-soft`): `--state-blocked-bg` tint with a tinted border; hover strengthens the border only.
 - Focus is a 2px accent outline, 2px offset.
 
 ### Inputs (`.input`, `.search-input`)
@@ -275,10 +285,10 @@ One component for the Partida preview and the create forms. A right-hand panel, 
 
 ### Do
 - **Do** express every color through the tokens so day derives from night automatically.
-- **Do** use `--on-accent` / `--on-accent-deep` for any type on an accent fill.
+- **Do** use `--on-accent` / `--on-accent-deep` for any type on an accent fill, and `--accent-text` for accent-colored type.
 - **Do** give every plane an opaque fill so the ground grid stays on the ground.
 - **Do** put a text label beside every colored state.
-- **Do** scope every new `/app` rule under `.raphel-app` in `raphel-app.css`.
+- **Do** scope every new `/app` rule under `.raphel-app` in `raphel-app.css` (a descendant or compound step, never a sibling combinator).
 
 ### Don't
 - **Don't** use hard offset shadows, chamfered corners or zero-radius planes inside `/app`.

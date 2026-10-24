@@ -45,7 +45,7 @@ export function BloqueCards({ projectId, bloques, ungroupedCount, canEdit, isOwn
               </div>
             </Link>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, flexWrap: "wrap", gap: 6 }}>
-              <Link href={`/app/projects/${projectId}?block=${b.id}`} className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-deep)", textDecoration: "none" }}>
+              <Link href={`/app/projects/${projectId}?block=${b.id}`} className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-text, var(--accent-deep))", textDecoration: "none" }}>
                 {t.openBloque}
               </Link>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

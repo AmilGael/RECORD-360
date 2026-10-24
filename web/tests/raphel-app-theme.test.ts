@@ -115,6 +115,22 @@ const DAY_TOKENS: Record<string, string> = {
   "--grid": "rgba(25,20,15,0.045)",
 };
 
+/**
+ * A selector is scoped when it starts with `.raphel-app` (or the night form)
+ * followed by end, a descendant/child step, or a compound on the wrapper
+ * itself (`.x`, `:x`, `[x]`), never a sibling combinator. The two body
+ * selectors are allowed whole: only /app pages contain .raphel-app.
+ */
+const BODY_GROUND = new Set(["body:has(.raphel-app)", 'body[data-theme="dark"]:has(.raphel-app)']);
+function isScoped(sel: string): boolean {
+  if (BODY_GROUND.has(sel)) return true;
+  const prefix = [NIGHT, DAY].find((p) => sel.startsWith(p));
+  if (!prefix) return false;
+  const rest = sel.slice(prefix.length);
+  if (/^\s*[~+]/.test(rest)) return false;
+  return rest === "" || /^[\s.:[>]/.test(rest);
+}
+
 function luminance(hex: string): number {
   const h = hex.replace("#", "");
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
@@ -131,6 +147,35 @@ function hexOf(map: Map<string, string>, token: string): string {
   const value = map.get(token);
   if (!value || !/^#[0-9a-f]{3,6}$/i.test(value)) throw new Error(`${token} is not a hex color: ${value}`);
   return value;
+}
+
+const toHex = (rgb: number[]) => "#" + rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+const rgbOf = (hex: string) => [0, 2, 4].map((i) => parseInt(hex.replace("#", "").slice(i, i + 2), 16));
+
+/** `color` laid at `alpha` over the opaque `ground`, as the browser composites a tint. */
+function over(color: string, alpha: number, ground: string): string {
+  const [c, g] = [rgbOf(color), rgbOf(ground)];
+  return toHex(c.map((v, i) => v * alpha + g[i] * (1 - alpha)));
+}
+
+/** The rgb and alpha of an `rgba(r, g, b, a)` token. */
+function rgbaOf(map: Map<string, string>, token: string): { hex: string; alpha: number } {
+  const m = (map.get(token) ?? "").match(/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\s*\)$/);
+  if (!m) throw new Error(`${token} is not an rgba() color: ${map.get(token)}`);
+  return { hex: toHex([+m[1], +m[2], +m[3]]), alpha: +m[4] };
+}
+
+/** Shadow layers without a blur radius (`x y 0 color`), insets excepted. */
+function hardLayers(value: string): string[] {
+  if (/^(none|var\([^)]*\))$/.test(value.trim())) return [];
+  return value
+    .split(/,(?![^(]*\))/)
+    .map((l) => l.trim())
+    .filter((l) => !/\binset\b/.test(l) && !/^var\(/.test(l))
+    .filter((l) => {
+      const lengths = l.replace(/\([^)]*\)/g, "").match(/-?\d*\.?\d+(px|rem|em)?/g) ?? [];
+      return lengths.length < 3 || /^-?0(\.0+)?(px|rem|em)?$/.test(lengths[2]);
+    });
 }
 
 describe("raphel-app.css tokens", () => {
@@ -156,17 +201,30 @@ describe("raphel-app.css tokens", () => {
 
   it("uses soft shadows only: every shadow token has a blur radius", () => {
     for (const map of [block(DAY), block(NIGHT)]) {
-      for (const token of ["--shadow-soft", "--shadow-card"]) {
+      for (const token of ["--shadow-soft", "--shadow-card", "--shadow-sheet"]) {
         const value = map.get(token);
         expect(value, token).toBeTruthy();
-        // A hard offset plane is `x y 0 color`; each layer here must blur.
-        for (const layer of value!.split(/,(?![^(]*\))/)) {
-          const lengths = layer.trim().match(/-?\d*\.?\d+px|\b0\b/g) ?? [];
-          expect(lengths.length, `${token}: ${layer}`).toBeGreaterThanOrEqual(3);
-          expect(lengths[2], `${token} blur: ${layer}`).not.toMatch(/^0(px)?$/);
-        }
+        expect(hardLayers(value!), token).toEqual([]);
       }
     }
+  });
+
+  it("the hard-shadow scan catches the retired offset planes", () => {
+    expect(hardLayers("2px 2px 0 rgba(0, 0, 0, 0.30)")).toHaveLength(1);
+    expect(hardLayers("6px 7px 0 var(--accent-deep)")).toHaveLength(1);
+    expect(hardLayers("0 1px 2px rgba(0, 0, 0, 0.22), 5px 6px 0px #000")).toHaveLength(1);
+    expect(hardLayers("0 1px 2px rgba(0, 0, 0, 0.22), 0 16px 34px -20px rgba(0, 0, 0, 0.5)")).toEqual([]);
+    expect(hardLayers("inset 2px 0 0 var(--accent)")).toEqual([]);
+    expect(hardLayers("none")).toEqual([]);
+  });
+
+  it("has no zero-blur box-shadow literal in any override rule", () => {
+    const hard: string[] = [];
+    for (const r of rules) {
+      const value = declarations(r.body).get("box-shadow");
+      if (value) hard.push(...hardLayers(value).map((l) => `${r.selector}: ${l}`));
+    }
+    expect(hard).toEqual([]);
   });
 });
 
@@ -176,10 +234,24 @@ describe("raphel-app.css scope", () => {
     const unscoped: string[] = [];
     for (const r of rules) {
       for (const sel of r.selector.split(",").map((s) => s.trim())) {
-        if (!(sel.startsWith(DAY) || sel.startsWith(NIGHT))) unscoped.push(`${r.atRule ?? ""} ${sel}`.trim());
+        if (!isScoped(sel)) unscoped.push(`${r.atRule ?? ""} ${sel}`.trim());
       }
     }
     expect(unscoped).toEqual([]);
+  });
+
+  it("the scope check rejects look-alike and sibling selectors", () => {
+    for (const ok of [".raphel-app", ".raphel-app .btn", ".raphel-app.grid-bg", ".raphel-app > #sheet-root", ".raphel-app ::selection", ".raphel-app:hover .x", ".raphel-app[data-x]", `${NIGHT} .btn`, "body:has(.raphel-app)", 'body[data-theme="dark"]:has(.raphel-app)']) {
+      expect(isScoped(ok), ok).toBe(true);
+    }
+    for (const bad of [".raphel-appx", ".raphel-app-x .btn", ".raphel-app ~ .btn", ".raphel-app + .btn", ".raphel-app~.btn", `${NIGHT} ~ .btn`, ".btn", "body", "body:has(.raphel-app) .btn", 'body[data-theme="dark"] .btn']) {
+      expect(isScoped(bad), bad).toBe(false);
+    }
+  });
+
+  it("paints the body behind the wrapper in the /app ground, only when the page holds .raphel-app", () => {
+    expect(block("body:has(.raphel-app)").get("background-color")).toBe(DAY_TOKENS["--paper"]);
+    expect(block('body[data-theme="dark"]:has(.raphel-app)').get("background-color")).toBe(NIGHT_TOKENS["--paper"]);
   });
 
   it("draws the fine 14px hairline grid on the .raphel-app.grid-bg ground", () => {
@@ -223,7 +295,49 @@ describe("raphel-app.css contrast (WCAG AA, 4.5:1)", () => {
       expect(contrast(hexOf(map, "--on-accent"), hexOf(map, "--accent"))).toBeGreaterThanOrEqual(4.5);
       expect(contrast(hexOf(map, "--on-accent-deep"), hexOf(map, "--accent-deep"))).toBeGreaterThanOrEqual(4.5);
     });
+
+    const planes = ["--paper", "--paper-2", "--paper-3"].map((t) => hexOf(map, t));
+
+    it(`${name}: --accent-text on every plane and on a 10-12% accent tint over it`, () => {
+      const text = hexOf(map, "--accent-text");
+      const accent = hexOf(map, "--accent");
+      for (const plane of planes) {
+        expect(contrast(text, plane), `on ${plane}`).toBeGreaterThanOrEqual(4.5);
+        for (const alpha of [0.08, 0.1, 0.12]) {
+          expect(contrast(text, over(accent, alpha, plane)), `on ${alpha} tint over ${plane}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+
+    // Badge text on its own tint. Night blocked (#e06a54, pinned) is checked
+    // on --paper and --paper-2 only: over --paper-3 even the bare color is 4.65:1
+    // and any tint drops it under 4.5:1.
+    const tinted: [string, string, number][] = [
+      ["--state-active", "--state-active-bg", 3],
+      ["--brass", "--brass-bg", 3],
+      ["--state-blocked", "--state-blocked-bg", name === "night" ? 2 : 3],
+    ];
+    for (const [text, bg, count] of tinted) {
+      it(`${name}: ${text} text on ${bg}`, () => {
+        const tint = rgbaOf(map, bg);
+        for (const plane of planes.slice(0, count)) {
+          expect(contrast(hexOf(map, text), over(tint.hex, tint.alpha, plane)), `over ${plane}`).toBeGreaterThanOrEqual(4.5);
+        }
+      });
+    }
   }
+
+  it("accent used as text points at --accent-text", () => {
+    for (const sel of [".raphel-app .form-error", ".raphel-app .cr-cost", ".raphel-app .role-badge.is-admin", ".raphel-app .aging-mark.is-14", ".raphel-app .media-group a"]) {
+      const rule = rules.find((r) => r.selector.split(",").map((s) => s.trim()).includes(sel));
+      expect(rule && declarations(rule.body).get("color"), sel).toBe("var(--accent-text)");
+    }
+  });
+
+  it("supervisor avatar initials are dark on the #b08a2e fill", () => {
+    const color = block(".raphel-app .avatar.role-supervisor").get("color")!;
+    expect(contrast(color, "#b08a2e")).toBeGreaterThanOrEqual(4.5);
+  });
 
   it("night accent takes dark text #171412", () => {
     expect(block(NIGHT).get("--on-accent")).toBe("#171412");

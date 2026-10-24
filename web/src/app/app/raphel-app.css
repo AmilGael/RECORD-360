@@ -28,13 +28,19 @@
      fill dark ink fails, so hover type turns white (5.8:1). */
   --on-accent: #19140F;
   --on-accent-deep: #ffffff;
-  --state-active: #276548;
-  --state-active-bg: rgba(39, 101, 72, 0.12);
+  /* Accent as small text. --accent-deep stays for fills; as text it is only
+     3.9:1 on --paper-3. This clears 4.5:1 on all three planes and on a 12%
+     accent tint over them. */
+  --accent-text: #922a0c;
+  /* Day state and brass colors are unpinned: dark enough that their text
+     clears 4.5:1 on their own tint over every plane. */
+  --state-active: #1f573c;
+  --state-active-bg: rgba(31, 87, 60, 0.12);
   --state-merged: #5d4492;
   --state-merged-bg: rgba(93, 68, 146, 0.12);
-  --state-blocked: #963826;
-  --state-blocked-bg: rgba(150, 56, 38, 0.10);
-  --brass: #6e5610;
+  --state-blocked: #8c3322;
+  --state-blocked-bg: rgba(140, 51, 34, 0.10);
+  --brass: #654e0d;
   --brass-bg: rgba(176, 138, 46, 0.14);
   --line: rgba(25, 20, 15, 0.14);
   --line-strong: rgba(25, 20, 15, 0.26);
@@ -61,13 +67,19 @@ body[data-theme="dark"] .raphel-app {
   /* White on #ff6f43 is 2.8:1; the night ground color reaches 6.6:1. */
   --on-accent: #171412;
   --on-accent-deep: #171412;
+  /* Accent as small text: clears 4.5:1 on all three planes and on a 12%
+     accent tint over them (#e85a2c on its tint is 4.2:1). */
+  --accent-text: #ff7d55;
   --state-active: #5bbd8d;
   --state-active-bg: rgba(91, 189, 141, 0.12);
   --state-merged: #a388e4;
   --state-merged-bg: rgba(163, 136, 228, 0.12);
+  /* #e06a54 is pinned; an 8% tint keeps its text at 4.7:1 over --paper-2
+     (12% was 4.4:1). */
   --state-blocked: #e06a54;
-  --state-blocked-bg: rgba(224, 106, 84, 0.12);
-  --brass: #b08a2e;
+  --state-blocked-bg: rgba(224, 106, 84, 0.08);
+  /* Brass is unpinned: lighter so its text clears 4.5:1 on its tint. */
+  --brass: #c9a347;
   --brass-bg: rgba(176, 138, 46, 0.16);
   --line: rgba(241, 231, 216, 0.12);
   --line-strong: rgba(241, 231, 216, 0.22);
@@ -79,6 +91,14 @@ body[data-theme="dark"] .raphel-app {
 }
 
 .raphel-app ::selection { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- body ground behind the wrapper ---------- */
+/* globals.css paints body with the old --paper, which shows during iOS
+   overscroll. Only /app pages contain .raphel-app, so these two selectors
+   (the only ones not under .raphel-app) never match landing or auth screens.
+   Literals, because body sits above the wrapper's tokens. */
+body:has(.raphel-app) { background-color: #ECE7DD; }
+body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
 
 /* ---------- ground: fine hairline grid ---------- */
 /* Replaces the diagonal-and-noise ground. Only the ground gets the grid:
@@ -114,23 +134,31 @@ body[data-theme="dark"] .raphel-app {
   border-radius: var(--radius-sm);
   font-size: 0.9rem; font-stretch: 100%; text-transform: none; letter-spacing: 0;
 }
-.raphel-app .btn-back { font-size: 0.8rem; }
 .raphel-app .btn-accent { color: var(--on-accent); }
 .raphel-app .btn-accent:hover { color: var(--on-accent-deep); }
 .raphel-app .btn-ink:hover { color: var(--on-accent); }
-.raphel-app .btn-danger-soft {
-  background: var(--state-blocked-bg);
-  border-color: color-mix(in srgb, var(--state-blocked) 34%, transparent);
-}
-.raphel-app .btn-danger-soft:hover {
-  background: color-mix(in srgb, var(--state-blocked) 18%, transparent);
-  border-color: var(--state-blocked);
-}
+/* Hover keeps the resting tint (a deeper tint drops the text under 4.5:1);
+   the border carries the hover. */
+.raphel-app .btn-danger-soft,
+.raphel-app .btn-danger-soft:hover { background: var(--state-blocked-bg); }
+.raphel-app .btn-danger-soft { border-color: color-mix(in srgb, var(--state-blocked) 34%, transparent); }
+.raphel-app .btn-danger-soft:hover { border-color: var(--state-blocked); }
+/* `.raphel-app .btn` outranks the compact sizes globals.css sets; restate them. */
+.raphel-app .btn-back { font-size: 0.74rem; }
+.raphel-app .notif-mark-read { font-size: 0.76rem; }
 .raphel-app .inline-edit .btn,
 .raphel-app .assignment-row .btn,
-.raphel-app .assignment-form .btn,
-.raphel-app .progress-edit .btn,
-.raphel-app .tag-edit .btn { font-size: 0.76rem; }
+.raphel-app .assignment-form .btn { font-size: 0.72rem; }
+.raphel-app .progress-edit .btn { font-size: 0.74rem; }
+.raphel-app .tag-edit .btn { font-size: 0.65rem; }
+
+/* ---------- accent as text ---------- */
+.raphel-app .icon-action.is-danger:hover,
+.raphel-app .form-error,
+.raphel-app .cr-cost,
+.raphel-app .media-group a,
+.raphel-app .role-badge.is-admin,
+.raphel-app .aging-mark.is-14 { color: var(--accent-text); }
 
 .raphel-app .panel-close { border-radius: var(--radius-sm); }
 
@@ -163,10 +191,8 @@ body[data-theme="dark"] .raphel-app {
 .raphel-app .cr-detail .chip,
 .raphel-app .tag-line .chip { border-radius: var(--radius-sm); }
 
-.raphel-app .state-badge.is-active {
-  color: var(--state-active);
-  border-color: color-mix(in srgb, var(--state-active) 35%, transparent);
-}
+/* Text stays ink (globals.css); the tinted fill and border are the mark. */
+.raphel-app .state-badge.is-active { border-color: color-mix(in srgb, var(--state-active) 35%, transparent); }
 .raphel-app .role-badge.is-manager { border-color: color-mix(in srgb, var(--state-active) 35%, transparent); }
 .raphel-app .role-badge.is-supervisor,
 .raphel-app .severity-chip.is-important {
@@ -178,6 +204,9 @@ body[data-theme="dark"] .raphel-app {
 /* ---------- avatars and lamps ---------- */
 .raphel-app .avatar { border-radius: 50%; }
 .raphel-app .avatar.role-admin { color: var(--on-accent); }
+/* globals.css fills this avatar with #b08a2e in both themes; light initials
+   on it are 2.6:1, dark ones 5.7:1. */
+.raphel-app .avatar.role-supervisor { color: #171412; }
 
 /* ---------- bars: thin tracks take fully rounded ends ---------- */
 .raphel-app .progress-track,
