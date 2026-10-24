@@ -12,6 +12,8 @@ import { SidebarDrawer } from "@/components/sidebar-drawer";
 import { NavTrail } from "@/components/nav-trail";
 import { countPendingItems } from "@/lib/notifications/pending";
 import { cookies } from "next/headers";
+// The /app look, scoped under .raphel-app so landing and auth screens keep globals.css.
+import "./raphel-app.css";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // DB-backed session freshness/revocation runs here (Node runtime — Prisma can't
@@ -40,7 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="grid-bg" style={{ minHeight: "100vh" }}>
+    <div className="raphel-app grid-bg" style={{ minHeight: "100vh" }}>
       <OfflineProvider />
       <Suspense fallback={null}>
         <NavTrail />
@@ -78,6 +80,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </SidebarDrawer>
         <main className="app-shell-main">{children}</main>
       </div>
+      {/* Portal target for the side sheet (Task 4): inside the wrapper so it gets the scoped tokens. */}
+      <div id="sheet-root" />
     </div>
   );
 }

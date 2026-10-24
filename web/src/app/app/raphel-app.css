@@ -1,0 +1,192 @@
+/*
+  Raphel /app look: "Cuaderno de Obra" (see DESIGN.md).
+
+  Every rule in this file is scoped under `.raphel-app` (the /app layout
+  wrapper) or `body[data-theme="dark"] .raphel-app`, so the landing page and
+  the login / activation / reset / request-access / offline screens keep
+  rendering from globals.css exactly as before. tests/raphel-app-theme.test.ts
+  fails on any unscoped selector, including selectors inside @media.
+
+  The tokens below override the inherited :root / body[data-theme] tokens for
+  the wrapper and its descendants only. globals.css rules that read tokens
+  (radius, shadows, colors) pick up the new look on their own; the overrides
+  further down fix what globals.css hard-codes for the retired look (zero
+  radius, the button chamfer, hard offset shadows, condensed caps).
+*/
+
+/* ---------- tokens: day (derived) ---------- */
+.raphel-app {
+  --paper: #ECE7DD;
+  --paper-2: #E3DDD0;
+  --paper-3: #DBD4C5;
+  --ink: #19140F;
+  --ink-soft: #4A433A;
+  --steel: #5A5348;
+  --accent: #E14A1F;
+  --accent-deep: #B83814;
+  /* White on #E14A1F is 4.0:1; dark ink reaches 4.5:1. On the deeper hover
+     fill dark ink fails, so hover type turns white (5.8:1). */
+  --on-accent: #19140F;
+  --on-accent-deep: #ffffff;
+  --state-active: #276548;
+  --state-active-bg: rgba(39, 101, 72, 0.12);
+  --state-merged: #5d4492;
+  --state-merged-bg: rgba(93, 68, 146, 0.12);
+  --state-blocked: #963826;
+  --state-blocked-bg: rgba(150, 56, 38, 0.10);
+  --brass: #6e5610;
+  --brass-bg: rgba(176, 138, 46, 0.14);
+  --line: rgba(25, 20, 15, 0.14);
+  --line-strong: rgba(25, 20, 15, 0.26);
+  --grid: rgba(25, 20, 15, 0.045);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow-soft: 0 1px 2px rgba(25, 20, 15, 0.05), 0 6px 16px -10px rgba(25, 20, 15, 0.10);
+  --shadow-card: 0 1px 2px rgba(25, 20, 15, 0.05), 0 12px 30px -14px rgba(25, 20, 15, 0.14);
+  --shadow-sheet: 0 1px 2px rgba(25, 20, 15, 0.05), 0 24px 60px -18px rgba(25, 20, 15, 0.22);
+  color: var(--ink);
+  color-scheme: light;
+}
+
+/* ---------- tokens: night (first-run default) ---------- */
+body[data-theme="dark"] .raphel-app {
+  --paper: #171412;
+  --paper-2: #1f1b18;
+  --paper-3: #292420;
+  --ink: #f1e7d8;
+  --ink-soft: #d4c7b7;
+  --steel: #b5a998;
+  --accent: #ff6f43;
+  --accent-deep: #e85a2c;
+  /* White on #ff6f43 is 2.8:1; the night ground color reaches 6.6:1. */
+  --on-accent: #171412;
+  --on-accent-deep: #171412;
+  --state-active: #5bbd8d;
+  --state-active-bg: rgba(91, 189, 141, 0.12);
+  --state-merged: #a388e4;
+  --state-merged-bg: rgba(163, 136, 228, 0.12);
+  --state-blocked: #e06a54;
+  --state-blocked-bg: rgba(224, 106, 84, 0.12);
+  --brass: #b08a2e;
+  --brass-bg: rgba(176, 138, 46, 0.16);
+  --line: rgba(241, 231, 216, 0.12);
+  --line-strong: rgba(241, 231, 216, 0.22);
+  --grid: rgba(241, 231, 216, 0.03);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.22), 0 8px 20px -12px rgba(0, 0, 0, 0.40);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.22), 0 16px 34px -20px rgba(0, 0, 0, 0.50);
+  --shadow-sheet: 0 1px 2px rgba(0, 0, 0, 0.22), 0 24px 60px -18px rgba(0, 0, 0, 0.60);
+  color-scheme: dark;
+}
+
+.raphel-app ::selection { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- ground: fine hairline grid ---------- */
+/* Replaces the diagonal-and-noise ground. Only the ground gets the grid:
+   every plane below carries an opaque fill. */
+.raphel-app.grid-bg {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 14px 14px;
+  background-attachment: fixed;
+}
+
+/* ---------- typography: sentence case, natural width ---------- */
+.raphel-app .h-xl,
+.raphel-app .h-lg,
+.raphel-app .h-md {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-stretch: 100%; text-transform: none; font-weight: 700;
+}
+.raphel-app .h-xl { font-size: 2.6rem; letter-spacing: -0.02em; line-height: 1; }
+.raphel-app .h-lg { font-size: 2rem; letter-spacing: -0.018em; line-height: 1.04; }
+.raphel-app .h-md { font-size: 1.35rem; letter-spacing: -0.012em; line-height: 1.1; }
+.raphel-app .notif-section-title { font-stretch: 100%; text-transform: none; font-weight: 700; letter-spacing: -0.01em; }
+
+.raphel-app .brand b { font-stretch: 100%; text-transform: none; letter-spacing: -0.02em; font-size: 1.25rem; }
+.raphel-app .brand .tag { border-radius: var(--radius-sm); }
+.raphel-app .sidebar-brand strong { font-stretch: 100%; text-transform: none; font-weight: 800; letter-spacing: -0.02em; }
+
+/* ---------- buttons ---------- */
+.raphel-app .btn {
+  clip-path: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-stretch: 100%; text-transform: none; letter-spacing: 0;
+}
+.raphel-app .btn-back { font-size: 0.8rem; }
+.raphel-app .btn-accent { color: var(--on-accent); }
+.raphel-app .btn-accent:hover { color: var(--on-accent-deep); }
+.raphel-app .btn-ink:hover { color: var(--on-accent); }
+.raphel-app .btn-danger-soft {
+  background: var(--state-blocked-bg);
+  border-color: color-mix(in srgb, var(--state-blocked) 34%, transparent);
+}
+.raphel-app .btn-danger-soft:hover {
+  background: color-mix(in srgb, var(--state-blocked) 18%, transparent);
+  border-color: var(--state-blocked);
+}
+.raphel-app .inline-edit .btn,
+.raphel-app .assignment-row .btn,
+.raphel-app .assignment-form .btn,
+.raphel-app .progress-edit .btn,
+.raphel-app .tag-edit .btn { font-size: 0.76rem; }
+
+.raphel-app .panel-close { border-radius: var(--radius-sm); }
+
+/* ---------- sidebar ---------- */
+.raphel-app .sidebar-link {
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-weight: 600; font-stretch: 100%;
+  text-transform: none; letter-spacing: 0;
+}
+.raphel-app .sidebar-pill { border-radius: var(--radius-sm); }
+
+/* ---------- planes: cards, plates, panels ---------- */
+.raphel-app .repo-card { border-radius: var(--radius); }
+.raphel-app .repo-card .repo-title { font-stretch: 100%; text-transform: none; letter-spacing: -0.005em; }
+.raphel-app .planos-card { border-radius: var(--radius); overflow: hidden; }
+.raphel-app .panel-entry { border-radius: var(--radius-sm); }
+.raphel-app .panel-thumb { border-radius: var(--radius-sm); }
+.raphel-app .panel-create-icon { border-radius: var(--radius-sm); color: var(--on-accent); box-shadow: none; }
+/* The workspace is a panel: an opaque fill keeps the ground grid out of it. */
+.raphel-app .workspace { background: var(--paper); }
+
+/* ---------- badges, chips, marks ---------- */
+.raphel-app .state-badge,
+.raphel-app .role-badge,
+.raphel-app .severity-chip,
+.raphel-app .aging-mark,
+.raphel-app .sync-chip,
+.raphel-app .capture-notice,
+.raphel-app .tab .soon,
+.raphel-app .cr-detail .chip,
+.raphel-app .tag-line .chip { border-radius: var(--radius-sm); }
+
+.raphel-app .state-badge.is-active {
+  color: var(--state-active);
+  border-color: color-mix(in srgb, var(--state-active) 35%, transparent);
+}
+.raphel-app .role-badge.is-manager { border-color: color-mix(in srgb, var(--state-active) 35%, transparent); }
+.raphel-app .role-badge.is-supervisor,
+.raphel-app .severity-chip.is-important {
+  color: var(--brass); background: var(--brass-bg);
+  border-color: color-mix(in srgb, var(--brass) 35%, transparent);
+}
+.raphel-app .severity-chip.is-critical { border-color: color-mix(in srgb, var(--state-blocked) 35%, transparent); }
+
+/* ---------- avatars and lamps ---------- */
+.raphel-app .avatar { border-radius: 50%; }
+.raphel-app .avatar.role-admin { color: var(--on-accent); }
+
+/* ---------- bars: thin tracks take fully rounded ends ---------- */
+.raphel-app .progress-track,
+.raphel-app .dash-health-track,
+.raphel-app .panel-progress-track { border-radius: var(--radius-sm); }
+.raphel-app .analitica-author-track { border-radius: var(--radius-sm); overflow: hidden; }
+
+/* ---------- phone sheet (block workspace preview) ---------- */
+@media (max-width: 899px) {
+  .raphel-app .workspace-panel { border-radius: var(--radius) var(--radius) 0 0; }
+  .raphel-app .panel-grab { border-radius: var(--radius-sm); }
+}
