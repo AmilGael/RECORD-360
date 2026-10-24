@@ -14,7 +14,11 @@ export function foldedValue(value: string): Prisma.Sql {
   return Prisma.sql`translate(lower(${value}), ${FROM}, ${TO})`;
 }
 
-/** `column` folded LIKE the already-escaped pattern, with `\` as the escape. */
+/**
+ * `column` folded LIKE the escaped pattern folded the same way, with `\` as the
+ * escape. Both sides go through one SQL expression, so they cannot disagree.
+ * The escapes survive the fold: lower/translate never touch `\`, `%` or `_`.
+ */
 export function foldedLike(column: Prisma.Sql, pattern: string): Prisma.Sql {
-  return Prisma.sql`${foldedExpr(column)} LIKE ('%' || ${pattern} || '%') ESCAPE '\\'`;
+  return Prisma.sql`${foldedExpr(column)} LIKE ('%' || ${foldedValue(pattern)} || '%') ESCAPE '\\'`;
 }

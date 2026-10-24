@@ -15,6 +15,8 @@ const SPANISH = [
   "àäâèëêìïîòöôùüûç",
   "Plomeria",
   "Vaciado losa",
+  "João Conceição",
+  "ÃÕ ãõ",
 ];
 
 describe("foldForSearch", () => {
@@ -25,11 +27,13 @@ describe("foldForSearch", () => {
     expect(foldForSearch("Cerámica")).toBe("ceramica");
     expect(foldForSearch("PAÑO")).toBe("pano");
     expect(foldForSearch("Plomeria")).toBe("plomeria");
-    expect([...SQL_FOLD_FROM].length).toBe(44);
-    expect([...SQL_FOLD_TO].length).toBe(44);
+    expect([...SQL_FOLD_FROM].length).toBe(48);
+    expect([...SQL_FOLD_TO].length).toBe(48);
   });
 
-  it("escapes LIKE wildcards after folding", () => {
+  it("leaves the query unfolded (foldedLike folds it in SQL) and escapes LIKE wildcards", () => {
+    expect(searchLikePattern(" Mampostería ")).toBe("Mampostería");
+    expect(searchLikePattern("   ")).toBeNull();
     expect(searchLikePattern("50%")).toBe("50\\%");
     expect(searchLikePattern("a_b")).toBe("a\\_b");
     expect(searchLikePattern(" 100\\ ")).toBe("100\\\\");
@@ -42,6 +46,18 @@ describe("SQL fold", () => {
       const rows = await prisma.$queryRaw<{ folded: string }[]>(Prisma.sql`SELECT ${foldedValue(name)} AS folded`);
       expect(rows[0]?.folded).toBe(foldForSearch(name));
     }
+  });
+
+  it("matches an exact spelling even for letters the SQL map does not fold", async () => {
+    // Folding the query in JS used to turn "Škoda" into "skoda" while the
+    // column stayed "škoda", so typing the name exactly found nothing.
+    const rows = await prisma.$queryRaw<{ exact: boolean; unaccentedPt: boolean; spanish: boolean }[]>(Prisma.sql`
+      SELECT
+        ${foldedLike(Prisma.raw(`'Taller Škoda'`), searchLikePattern("Škoda")!)} AS exact,
+        ${foldedLike(Prisma.raw(`'Visita de João'`), searchLikePattern("joao")!)} AS "unaccentedPt",
+        ${foldedLike(Prisma.raw(`'Mampostería'`), searchLikePattern("MAMPOSTERIA")!)} AS spanish
+    `);
+    expect(rows[0]).toEqual({ exact: true, unaccentedPt: true, spanish: true });
   });
 
   it("matches 50% and a_b literally", async () => {
