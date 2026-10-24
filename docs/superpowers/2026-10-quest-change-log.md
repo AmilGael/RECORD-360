@@ -306,6 +306,7 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
 - **Rules for future work:**
   - Do not add `AWS_LAMBDA_JS_RUNTIME` to `netlify.toml`. Netlify ignores that variable in the config file. Functions follow the build Node version unless that variable is set in the Netlify UI, CLI, or API.
   - Stay on Node 22 until a later quest. Do not bump `pdfjs-dist` in a drive-by.
+  - `web/.nvmrc` is the one Node version source. CI reads it (`node-version-file`). `netlify.toml` repeats it only because the Netlify UI still holds a stale `NODE_VERSION=20` and the file overrides the UI; `tests/node-version.test.ts` fails if they differ. Delete the UI variable (production and deploy-preview), then the `netlify.toml` line can go. `engines` is a floor (`>=22`), so Netlify's Node 24 fallback is not out of range.
 - **How to verify:** on Node v22.23.3: lint, `tsc --noEmit`, `npm test` (784), `npm run build`. `E2E_PROD=1 npx playwright test e2e/obra-search.spec.ts e2e/journey-resident.spec.ts e2e/journey-manager.spec.ts --workers=1`: 10 passed, 2 skipped (resident is the phone project, manager is the desktop project).
 - **Known limits:**
   - If the Netlify site already has `AWS_LAMBDA_JS_RUNTIME` set to `nodejs20.x`, that override keeps functions on Node 20 after this change. Remove it or set `nodejs22.x`, then redeploy. It is not in the repo.
