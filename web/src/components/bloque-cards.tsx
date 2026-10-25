@@ -4,7 +4,8 @@ import { closeSegmentForm, reopenSegmentForm } from "@/app/actions/lifecycle";
 import { InlineActionForm } from "@/components/inline-action-form";
 import { SubmitButton } from "@/components/submit-button";
 import { DeleteSegmentButton } from "@/components/delete-segment-button";
-import { Layers, Plus } from "@/components/icons";
+import { Plus } from "@/components/icons";
+import { BloqueLabel } from "@/components/bloque-label";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 
 export type BloqueCard = { id: string; name: string; progress: number; count: number; deletable: boolean; closedAt: Date | string | null };
@@ -32,10 +33,8 @@ export function BloqueCards({ projectId, bloques, ungroupedCount, canEdit, isOwn
           return (
           <div key={b.id} className="card" style={{ padding: 14 }}>
             <Link href={`/app/projects/${projectId}?block=${b.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                <Layers size={14} />
-                <strong>{b.name}</strong>
-                {isClosed && <span className="state-badge is-archived">{t.blockClosed}</span>}
+              <div style={{ marginBottom: 8 }}>
+                <BloqueLabel name={b.name} closed={isClosed} closedLabel={t.blockClosed} />
               </div>
               <div className="mono text-steel" style={{ fontSize: "0.72rem", marginBottom: 8 }}>
                 {b.count} {t.bloqueCard} · {b.progress}%
@@ -67,9 +66,8 @@ export function BloqueCards({ projectId, bloques, ungroupedCount, canEdit, isOwn
         })}
         {ungroupedCount > 0 && (
           <Link href={`/app/projects/${projectId}?block=${UNGROUPED_FILTER}`} className="card" style={{ padding: 14, textDecoration: "none", color: "inherit" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Layers size={14} />
-              <strong>{t.ungrouped}</strong>
+            <div style={{ marginBottom: 8 }}>
+              <BloqueLabel name={t.ungrouped} />
             </div>
             <div className="mono text-steel" style={{ fontSize: "0.72rem" }}>{ungroupedCount} {t.bloqueCard}</div>
           </Link>

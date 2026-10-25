@@ -324,3 +324,9 @@ body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
 .raphel-app .project-tabs .tab { flex: none; white-space: nowrap; overflow-wrap: normal; }
 /* The row clips overflow, so keep the focus ring inside it. */
 .raphel-app .project-tabs .tab:focus-visible { outline-offset: -3px; }
+
+/* ---------- bloque label (components/bloque-label.tsx) ---------- */
+/* Icon beside the name, everywhere; a long name wraps beside the icon. */
+.raphel-app .bloque-label { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-width: 0; max-width: 100%; }
+.raphel-app .bloque-label > svg { flex: none; }
+.raphel-app .bloque-label-name { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
