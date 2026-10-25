@@ -49,5 +49,5 @@ export function spaceHref(
   block: string,
   space: string,
 ): string {
-  return projectHrefWithParams(projectId, { ...preserved, tab: "code", block, space });
+  return projectHrefWithParams(projectId, { ...preserved, block, space });
 }

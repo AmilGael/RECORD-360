@@ -104,7 +104,7 @@ export default async function PartidaPage({
   // The partida's place in its bloque workspace: the Volver fallback and the
   // bloque crumb both land there with this partida selected.
   const bloqueHref = projectHrefWithParams(partida.projectId, {
-    tab: "code", block: partida.segment?.id ?? UNGROUPED_FILTER, p: partida.id,
+    block: partida.segment?.id ?? UNGROUPED_FILTER, p: partida.id,
   });
   const syncErrors = {
     session_expired: t.offlineCapture.errorSessionExpired,

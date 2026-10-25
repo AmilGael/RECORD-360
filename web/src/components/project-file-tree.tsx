@@ -7,6 +7,7 @@ import { Folder, Search } from "@/components/icons";
 import { RenameSegmentForm } from "@/components/project-edit-controls";
 import { applyPartidaNameFilter, shouldAdoptUrlQuery } from "@/lib/project/partida-filter";
 import { projectProgress } from "@/lib/project/progress";
+import { projectTabHref } from "@/lib/project/tabs";
 import { formatTimestamp } from "@/lib/format/datetime";
 import { activityAging } from "@/lib/partida/aging";
 import type { Lang } from "@/i18n/dictionaries";
@@ -197,7 +198,7 @@ export function ProjectFileTree({
           <SubmitButton className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.filter}</SubmitButton>
           {named.hasFilters && (
             <Link
-              href={`/app/projects/${projectId}?tab=code&block=${encodeURIComponent(filters.block)}`}
+              href={projectTabHref(projectId, "partidas", { block: filters.block })}
               // Clear the box here too: when the page loaded with no q, the
               // navigation leaves filters.q unchanged, so the sync effect never
               // runs and the typed name would keep filtering the list.

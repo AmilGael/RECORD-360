@@ -15,6 +15,7 @@ import { loadCompanySealPng } from "@/lib/report/seal";
 import { parseRangeValue } from "@/lib/report/params";
 import { buildInformeIdempotencyKey } from "@/lib/informes/idempotency";
 import { notifyEvent } from "@/lib/notifications/events";
+import { projectTabHref } from "@/lib/project/tabs";
 import { Prisma } from "@prisma/client";
 
 export type InformeResult =
@@ -188,7 +189,7 @@ export async function createInforme(_prev: InformeResult | null, formData: FormD
       includeActor: true,
       recipientIds: [requester.id],
       projectId: data.project.id,
-      link: `/app/projects/${data.project.id}?tab=informes`,
+      link: projectTabHref(data.project.id, "informes"),
     };
 
     try {

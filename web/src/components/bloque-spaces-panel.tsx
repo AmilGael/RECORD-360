@@ -21,7 +21,7 @@ type SegmentSummary = { id: string; name: string; progress: number; count: numbe
 // product decision. This reverses the earlier WS4F call to keep "Planos" here
 // as the only place to attach a document to a specific bloque — that upload
 // path is intentionally gone; project-wide plano uploads live on the project's
-// own Planos tab (?tab=planos). Documents already attached to a segment stay in
+// own Planos tab (/app/projects/<id>/planos). Documents already attached to a segment stay in
 // the database but are no longer surfaced here. The kind-backed rendering below
 // is still live: "Ideas" uses it.
 export type SpaceKey = "cuaderno" | "solicitudes" | "ideas" | "media" | "recordatorios";

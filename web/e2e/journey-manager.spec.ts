@@ -65,7 +65,7 @@ async function openObra(page: Page, tab: string): Promise<string> {
   const href = await obra.getAttribute("href");
   if (!href) throw new Error("obra has no href");
   const pathOnly = new URL(href, "http://localhost").pathname;
-  await page.goto(`${pathOnly}?tab=${tab}`);
+  await page.goto(`${pathOnly}/${tab}`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { level: 1, name: OBRA })).toBeVisible();
   return pathOnly;
@@ -100,7 +100,7 @@ test("manager: plano, critical alert, resident inbox, analítica, informes", asy
   await shot(page, "plano");
   await assertNoHorizontalOverflow(page, "Planos");
 
-  await page.goto(`${obraPath}?tab=cambios`);
+  await page.goto(`${obraPath}/solicitudes`);
   await page.waitForLoadState("networkidle");
   await page.getByRole("radio", { name: t.requests.kindAlert }).check();
   await page.getByRole("radio", { name: t.requests.severityCritical }).check();
@@ -129,7 +129,7 @@ test("manager: plano, critical alert, resident inbox, analítica, informes", asy
 
   await signOut(page);
   await loginAs(page, "admin");
-  await page.goto(`${obraPath}?tab=analitica`);
+  await page.goto(`${obraPath}/analitica`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: t.project.analitica.weeklyTitle })).toBeVisible();
   await expect(page.getByRole("heading", { name: t.project.analitica.statusTitle })).toBeVisible();
@@ -159,11 +159,11 @@ test("manager: plano, critical alert, resident inbox, analítica, informes", asy
   expect((await resolved).status()).toBeLessThan(500);
   await expect(page.getByText(t.changes.states.REJECTED, { exact: true })).toBeVisible();
 
-  await page.goto(`${obraPath}?tab=analitica`);
+  await page.goto(`${obraPath}/analitica`);
   await page.waitForLoadState("networkidle");
   await expect(page.locator("section.analitica-alerts").getByRole("link", { name: title })).toHaveCount(0);
 
-  await page.goto(`${obraPath}?tab=informes`);
+  await page.goto(`${obraPath}/informes`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByText(t.informes.empty, { exact: true })).toBeVisible();
   await shot(page, "informes");
