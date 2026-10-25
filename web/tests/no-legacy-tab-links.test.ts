@@ -16,14 +16,15 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-describe("no legacy ?tab= links", () => {
+describe("no legacy tab param", () => {
   it("appears nowhere in src except the legacy redirect", () => {
     const offenders: string[] = [];
     for (const file of sourceFiles(SRC)) {
       if (file === ALLOWED) continue;
       const lines = readFileSync(file, "utf8").split("\n");
       lines.forEach((line, i) => {
-        if (/[?&]tab=/.test(line)) offenders.push(`${path.relative(SRC, file)}:${i + 1}: ${line.trim()}`);
+        // Query strings, and hidden form fields that would post one.
+        if (/[?&]tab=|name="tab"/.test(line)) offenders.push(`${path.relative(SRC, file)}:${i + 1}: ${line.trim()}`);
       });
     }
     expect(offenders).toEqual([]);

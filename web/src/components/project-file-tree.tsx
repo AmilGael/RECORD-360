@@ -1,15 +1,13 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { createPartida } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
-import { Folder, Search } from "@/components/icons";
 import { RenameSegmentForm } from "@/components/project-edit-controls";
+import { BloqueLabel } from "@/components/bloque-label";
+import { PartidaFilterBar, type PartidaFacets } from "@/components/partida-filter-bar";
+import { PartidaCardGrid } from "@/components/partida-card-grid";
 import { applyPartidaNameFilter, shouldAdoptUrlQuery } from "@/lib/project/partida-filter";
-import { projectProgress } from "@/lib/project/progress";
-import { projectTabHref } from "@/lib/project/tabs";
-import { formatTimestamp } from "@/lib/format/datetime";
-import { activityAging } from "@/lib/partida/aging";
+import { partidaCardModel } from "@/lib/partida/card-model";
 import type { Lang } from "@/i18n/dictionaries";
 
 export type PartidaTreeRow = {
@@ -20,85 +18,33 @@ export type PartidaTreeRow = {
   completedAt?: string | null;
   tags?: { tag: { name: string } }[];
   lastActivityAt?: string | null;
+  recordCount?: number;
 };
 
 type TreeT = {
   ungrouped: string; newPartida: string; add: string;
   segmentPlaceholder: string; newSegment: string; addSegment: string;
   rename: string; save: string; move: string; moveTo: string;
-  searchPartidas: string; allBlocks: string; filter: string; clear: string; noResults: string;
+  searchPartidas: string; allBlocks: string; filter: string; clear: string; noResults: string; empty: string;
   facetTags: string; facetProgress: string; facetProgressMin: string; facetProgressMax: string;
   facetOpenCambios: string; facetCreated: string;
   blockClosedNoCreate: string;
   concluded: string; aging7: string; aging14: string; noActivity: string;
+  recordsOne: string; recordsMany: string; statusNotStarted: string; statusInProgress: string;
 };
 
 type ActiveBlock = { id: string; name: string; closedAt: Date | string | null } | null;
 
-type FacetsState = {
-  tagCounts: [string, number][];
-  selected: { tags: string[]; progressMin: number | null; progressMax: number | null; openCambios: boolean; createdFrom: string; createdTo: string };
-  hasActive: boolean;
+type FilterState = { q: string; block: string; tags: string[]; progressMin: number | null; progressMax: number | null; openCambios: boolean; createdFrom: Date | null; createdTo: Date | null; total: number; hasFilters: boolean;
+  /** Partidas in the bloque before any filter, so an empty grid can say which empty it is. */
+  scopeTotal: number;
 };
 
-type FilterState = { q: string; block: string; tags: string[]; progressMin: number | null; progressMax: number | null; openCambios: boolean; createdFrom: Date | null; createdTo: Date | null; total: number; hasFilters: boolean };
-
-function FileRow({
-  pa, selectedId, lang, t, onSelect, rowRef,
-}: {
-  pa: PartidaTreeRow;
-  selectedId?: string;
-  lang: Lang;
-  t: TreeT;
-  onSelect: (id: string) => void;
-  rowRef: (id: string, el: HTMLButtonElement | null) => void;
-}) {
-  const selected = pa.id === selectedId;
-  const aging = activityAging(pa.lastActivityAt);
-  const concluded = Boolean(pa.completedAt);
-  const rowClass = [
-    "tree-row",
-    selected ? "is-active" : "",
-    aging === "14" ? "is-aging-14" : "",
-  ].filter(Boolean).join(" ");
-  return (
-    <div className={rowClass}>
-      <button
-        type="button"
-        className="tree-file"
-        aria-pressed={selected}
-        aria-label={`${pa.name} — ${pa.progressPct}%`}
-        title={pa.name}
-        onClick={() => onSelect(pa.id)}
-        ref={(el) => rowRef(pa.id, el)}
-      >
-        <span className="tree-file-name">{pa.name}</span>
-        <span className="pct">{pa.progressPct}%</span>
-      </button>
-      <div className="tree-row-meta">
-        {concluded && <span className="state-badge is-concluded">{t.concluded}</span>}
-        {pa.tags && pa.tags.length > 0 && pa.tags.map((x) => (
-          <span key={x.tag.name} className="chip">{x.tag.name}</span>
-        ))}
-        <span className={`tree-activity${aging === "7" ? " is-aging-7" : ""}`}>
-          {pa.lastActivityAt
-            ? formatTimestamp(new Date(pa.lastActivityAt), lang)
-            : t.noActivity}
-        </span>
-        {aging && (
-          <span className={`aging-mark is-${aging}`}>{aging === "14" ? t.aging14 : t.aging7}</span>
-        )}
-      </div>
-      <span className="tree-row-track" aria-hidden="true" />
-      <span
-        className={`tree-row-band${concluded ? " is-done" : ""}`}
-        style={{ width: `${Math.min(Math.max(pa.progressPct, 0), 100)}%` }}
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
-
+/**
+ * The bloque workspace's list side: search bar, then the partidas as cards.
+ * Owns the name query so typing filters the cards at once, while `q` follows
+ * into the URL (replaceState, no navigation) for sharing and reloads.
+ */
 export function ProjectFileTree({
   projectId, segments, ungrouped, selectedId, isAdmin, filters, facets, activeBlock, lang, t, onSelect, rowRef,
 }: {
@@ -108,7 +54,7 @@ export function ProjectFileTree({
   selectedId?: string;
   isAdmin: boolean;
   filters: FilterState;
-  facets: FacetsState;
+  facets: PartidaFacets;
   activeBlock: ActiveBlock;
   lang: Lang;
   t: TreeT;
@@ -145,95 +91,50 @@ export function ProjectFileTree({
     return () => window.clearTimeout(id);
   }, [q]);
 
+  const now = new Date();
+  const toCard = (row: PartidaTreeRow, blockName: string) => partidaCardModel(row, {
+    lang, now, blockName,
+    recordCount: row.recordCount ?? 0,
+    lastActivityAt: row.lastActivityAt ? new Date(row.lastActivityAt) : null,
+  });
+  const cards = [
+    ...named.segments.flatMap((s) => s.partidas.map((row) => toCard(row, s.name))),
+    ...named.ungrouped.map((row) => toCard(row, t.ungrouped)),
+  ];
+
   return (
     <div className="tree">
-      <form action={`/app/projects/${projectId}`} className="tree-filter">
-        <input type="hidden" name="tab" value="code" />
-        <label className="search-wrap" style={{ marginBottom: 0 }}>
-          <span className="icon"><Search size={13} /></span>
-          <input
-            name="q"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t.searchPartidas}
-            className="search-input"
-          />
-        </label>
-        {/* WS4F: the active block is fixed by the workspace context (Bloques
-            overview / space nav switch it), not by a second selector nested
-            inside this filter form — a hidden field just preserves it across
-            facet-only submissions. */}
-        <input type="hidden" name="block" value={filters.block} />
-        <details className="facet-panel" open={facets.hasActive}>
-          <summary className="form-label" style={{ cursor: "pointer" }}>{t.filter}</summary>
-          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-            {facets.tagCounts.length > 0 && (
-              <div>
-                <div className="form-label">{t.facetTags}</div>
-                {facets.tagCounts.map(([name, count]) => (
-                  <label key={name} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.8rem" }}>
-                    <input type="checkbox" name="tags" value={name} defaultChecked={facets.selected.tags.includes(name)} />
-                    {name} <span className="mono text-steel" style={{ fontSize: "0.66rem" }}>({count})</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <span className="form-label" style={{ margin: 0 }}>{t.facetProgress}</span>
-              <input name="pmin" type="number" min={0} max={100} defaultValue={facets.selected.progressMin ?? ""} placeholder={t.facetProgressMin} className="input" style={{ width: 80 }} />
-              <input name="pmax" type="number" min={0} max={100} defaultValue={facets.selected.progressMax ?? ""} placeholder={t.facetProgressMax} className="input" style={{ width: 80 }} />
-            </div>
-            <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.8rem" }}>
-              <input type="checkbox" name="cambios" value="open" defaultChecked={facets.selected.openCambios} />
-              {t.facetOpenCambios}
-            </label>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <span className="form-label" style={{ margin: 0 }}>{t.facetCreated}</span>
-              <input name="ffrom" type="date" className="input" style={{ width: 140 }} defaultValue={facets.selected.createdFrom} />
-              <input name="fto" type="date" className="input" style={{ width: 140 }} defaultValue={facets.selected.createdTo} />
-            </div>
-          </div>
-        </details>
-        <div style={{ display: "flex", gap: 8 }}>
-          <SubmitButton className="btn btn-ghost" style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}>{t.filter}</SubmitButton>
-          {named.hasFilters && (
-            <Link
-              href={projectTabHref(projectId, "partidas", { block: filters.block })}
-              // Clear the box here too: when the page loaded with no q, the
-              // navigation leaves filters.q unchanged, so the sync effect never
-              // runs and the typed name would keep filtering the list.
-              onClick={() => { lastWritten.current = ""; setQ(""); }}
-              className="btn btn-ghost"
-              style={{ padding: "0.45rem 0.7rem", fontSize: "0.74rem" }}
-            >
-              {t.clear}
-            </Link>
-          )}
-        </div>
-      </form>
-      {named.hasFilters && named.total === 0 && (
-        <div className="tree-empty">{t.noResults}</div>
-      )}
-      {named.segments.map((s) => (
-        <div key={s.id}>
-          <div className="tree-folder">
-            <span className="tree-folder-name" title={s.name}><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{s.name}</span>
-            <span className="pct">{projectProgress(s.partidas)}%</span>
-            {isAdmin && <RenameSegmentForm segmentId={s.id} currentName={s.name} t={t} />}
-          </div>
-          {s.partidas.map((pa) => (
-            <FileRow key={pa.id} pa={pa} selectedId={selectedId} lang={lang} t={t} onSelect={onSelect} rowRef={rowRef} />
-          ))}
-        </div>
-      ))}
-      {named.ungrouped.length > 0 && (
-        <div>
-          <div className="tree-folder" style={{ opacity: 0.7 }}><span className="tree-folder-name"><Folder size={12} style={{ verticalAlign: -2, marginRight: 6 }} />{t.ungrouped}</span></div>
-          {named.ungrouped.map((pa) => (
-            <FileRow key={pa.id} pa={pa} selectedId={selectedId} lang={lang} t={t} onSelect={onSelect} rowRef={rowRef} />
-          ))}
+      <PartidaFilterBar
+        projectId={projectId}
+        block={filters.block}
+        q={q}
+        onQueryChange={setQ}
+        // Clear the box here too: when the page loaded with no q, the
+        // navigation leaves filters.q unchanged, so the sync effect never
+        // runs and the typed name would keep filtering the cards.
+        onClear={() => { lastWritten.current = ""; setQ(""); }}
+        hasFilters={named.hasFilters}
+        facets={facets}
+        t={t}
+      />
+      {activeBlock && (
+        <div className="partida-grid-head">
+          <BloqueLabel name={activeBlock.name} />
+          {isAdmin && <RenameSegmentForm segmentId={activeBlock.id} currentName={activeBlock.name} t={t} />}
         </div>
       )}
+      <PartidaCardGrid
+        cards={cards}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        emptyLabel={filters.scopeTotal === 0 ? t.empty : t.noResults}
+        cardRef={rowRef}
+        t={{
+          recordsOne: t.recordsOne, recordsMany: t.recordsMany, noActivity: t.noActivity,
+          statusNotStarted: t.statusNotStarted, statusInProgress: t.statusInProgress, statusConcluded: t.concluded,
+          aging7: t.aging7, aging14: t.aging14,
+        }}
+      />
       {isAdmin && (
         <div className="tree-actions">
           {activeBlock?.closedAt ? (

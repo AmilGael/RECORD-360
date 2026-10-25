@@ -137,13 +137,25 @@ export default async function ProjectPage({
       })()
     : { segments: [], ungrouped: [], total: 0, hasFilters: false };
 
+  // Partidas in the workspace's bloque before any filter: tells "this bloque has
+  // none yet" apart from "nothing matches". `block` itself counts as a filter in
+  // filterPartidaGroups, so hasFilters cannot.
+  const scopeTotal = blockParam === UNGROUPED_FILTER
+    ? project.partidas.length
+    : project.segments.find((s) => s.id === blockParam)?.partidas.length ?? 0;
   const visiblePartidaIds = inBloqueView
     ? [
       ...filteredPartidas.segments.flatMap((s) => s.partidas.map((p) => p.id)),
       ...filteredPartidas.ungrouped.map((p) => p.id),
     ]
     : [];
-  const lastActivity = inBloqueView ? await lastActivityByPartidaIds(visiblePartidaIds) : new Map<string, string>();
+  const [lastActivity, recordCounts] = inBloqueView && visiblePartidaIds.length
+    ? await Promise.all([
+        lastActivityByPartidaIds(visiblePartidaIds),
+        prisma.registro.groupBy({ by: ["partidaId"], where: { partidaId: { in: visiblePartidaIds } }, _count: { _all: true } })
+          .then((rows) => new Map(rows.map((r) => [r.partidaId, r._count._all]))),
+      ])
+    : [new Map<string, string>(), new Map<string, number>()];
   const toTreeRow = (p: { id: string; name: string; progressPct: number; segmentId?: string | null; completedAt: Date | null; tags: { tag: { name: string } }[] }) => ({
     id: p.id,
     name: p.name,
@@ -152,6 +164,7 @@ export default async function ProjectPage({
     completedAt: p.completedAt ? p.completedAt.toISOString() : null,
     tags: p.tags,
     lastActivityAt: lastActivity.get(p.id) ?? null,
+    recordCount: recordCounts.get(p.id) ?? 0,
   });
   const treeSegments = filteredPartidas.segments.map((s) => {
     const source = project.segments.find((g) => g.id === s.id);
@@ -333,7 +346,7 @@ export default async function ProjectPage({
         selectedId={initialPreview ? selectedId : undefined}
         initialPreview={initialPreview}
         canEdit={canEditStructure}
-        filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters }}
+        filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters, scopeTotal }}
         facets={{
           tagCounts: [...tagCounts.entries()],
           selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios, createdFrom: String(ffrom ?? ""), createdTo: String(fto ?? "") },
@@ -347,7 +360,9 @@ export default async function ProjectPage({
           addSegment: P.addSegment, rename: P.rename, save: P.save,
           move: P.move, moveTo: P.moveTo, searchPartidas: P.searchPartidas,
           allBlocks: P.allBlocks, filter: P.filter, clear: P.clear,
-          noResults: P.noResults,
+          noResults: P.noResults, empty: P.empty,
+          recordsOne: P.recordsOne, recordsMany: P.recordsMany,
+          statusNotStarted: P.analitica.notStarted, statusInProgress: P.analitica.inProgress,
           facetTags: P.facetTags, facetProgress: P.facetProgress,
           facetProgressMin: P.facetProgressMin, facetProgressMax: P.facetProgressMax,
           facetOpenCambios: P.facetOpenCambios, facetCreated: P.facetCreated,

@@ -63,6 +63,8 @@ for (const lang of langs) {
 
     await box.fill("zzzzzz");
     await expect(page.getByText(t.project.noResults, { exact: true })).toBeVisible();
+    // A search with no match says so; it is not the "no partidas yet" label.
+    await expect(page.getByText(t.project.empty, { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: startsWith(MATCH) })).toHaveCount(0);
     expect(await marker(page)).toBe(1);
     await expect(page).toHaveURL(/[?&]q=zzzzzz/);
@@ -111,5 +113,20 @@ for (const lang of langs) {
     await expect(page.getByRole("button", { name: startsWith(MATCH) })).toHaveCount(0);
     await expect(page.getByRole("button", { name: startsWith(HIDDEN_PANEL) })).toBeVisible();
     expect(new URL(page.url()).searchParams.get("p")).toBeTruthy();
+  });
+
+  test(`bloque with no partidas shows its empty label (${lang})`, async ({ page }) => {
+    await setLang(page, lang);
+    await loginAs(page, "admin");
+    await openObra(page);
+    // A bloque id with no partidas renders the same empty workspace as a new
+    // bloque, without writing one into the shared data.
+    const url = new URL(page.url());
+    url.searchParams.set("block", "e2e-bloque-sin-partidas");
+    await page.goto(url.toString());
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByText(t.project.empty, { exact: true })).toBeVisible();
+    await expect(page.getByText(t.project.noResults, { exact: true })).toHaveCount(0);
+    await expect(page.locator("button.partida-card-btn")).toHaveCount(0);
   });
 }

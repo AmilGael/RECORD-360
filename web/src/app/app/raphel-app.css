@@ -330,3 +330,65 @@ body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
 .raphel-app .bloque-label { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-width: 0; max-width: 100%; }
 .raphel-app .bloque-label > svg { flex: none; }
 .raphel-app .bloque-label-name { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+
+/* ---------- partida cards (components/partida-card-grid.tsx) ---------- */
+.raphel-app .partida-grid-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin: 12px 0 10px;
+}
+.raphel-app .partida-grid {
+  list-style: none; margin: 10px 0 0; padding: 0;
+  display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+}
+.raphel-app .partida-grid-empty { color: var(--steel); font-size: 0.86rem; padding: 18px 8px; margin: 0; }
+.raphel-app .partida-card-btn {
+  position: relative; overflow: hidden; width: 100%; height: 100%;
+  display: flex; align-items: stretch; gap: 0; padding: 0; text-align: left; cursor: pointer;
+  font: inherit; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+.raphel-app .partida-card-btn:hover { border-color: var(--line-strong); }
+.raphel-app .partida-card-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Selected: the accent edge runs down the bloque strip side. */
+.raphel-app .partida-card.is-selected .partida-card-btn { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent), var(--shadow-card); }
+/* 14 days quiet: the same accent rule along the top the old rows carried. */
+.raphel-app .partida-card.is-aging-14 .partida-card-btn { box-shadow: inset 0 3px 0 var(--accent), var(--shadow-card); }
+.raphel-app .partida-card.is-selected.is-aging-14 .partida-card-btn { box-shadow: inset 3px 0 0 var(--accent), inset 0 3px 0 var(--accent), var(--shadow-card); }
+.raphel-app .partida-card-bloque {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 34px; padding: 10px 0 14px;
+  background: var(--paper-2); border-right: 1px solid var(--line); color: var(--ink-soft);
+}
+.raphel-app .partida-card-body {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 14px 16px;
+}
+.raphel-app .partida-card-name { font-size: 1.02rem; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.raphel-app .partida-card-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px;
+  font-size: 0.7rem; color: var(--steel); letter-spacing: 0.02em;
+}
+.raphel-app .partida-card-meta .is-aging-7 { color: var(--brass); }
+.raphel-app .partida-card-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.72rem; }
+.raphel-app .partida-card-track {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--paper-3);
+}
+.raphel-app .partida-card-band { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--accent); }
+.raphel-app .partida-card-band.is-done { background: var(--state-active); }
+
+/* Vertical bloque label: reads bottom to top, icon first, long names cut. */
+.raphel-app .bloque-label.is-vertical {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  flex-wrap: nowrap; max-height: 9rem; overflow: hidden;
+  font-size: 0.68rem; letter-spacing: 0.04em;
+}
+.raphel-app .bloque-label.is-vertical .bloque-label-name {
+  font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal;
+}
+
+/* Phone bottom sheet (until Task 10 moves the preview into the side sheet):
+   scrolling a card into view keeps it above the sheet. */
+@media (max-width: 899px) {
+  .raphel-app .workspace.is-sheet-open .partida-card-btn { scroll-margin-bottom: calc(55dvh + var(--safe-b)); }
+}

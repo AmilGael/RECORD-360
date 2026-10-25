@@ -70,7 +70,7 @@ test("phone: last row and Volver stay above the open sheet @load", async ({ page
       window.scrollBy(0, el.getBoundingClientRect().bottom - sheetTop + 8);
     });
     await expect.poll(async () => page.evaluate((name) => {
-      const row = [...document.querySelectorAll("button.tree-file")].find((el) => (el.textContent ?? "").includes(name));
+      const row = [...document.querySelectorAll("button.partida-card-btn")].find((el) => (el.textContent ?? "").includes(name));
       const panel = document.querySelector(".workspace-panel.is-open");
       if (!row || !panel) return false;
       const rb = row.getBoundingClientRect();
