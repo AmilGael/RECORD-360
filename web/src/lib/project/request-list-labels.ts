@@ -17,5 +17,6 @@ export function requestListLabels(t: Dict) {
     gpsAcquiring: t.requests.gpsAcquiring, gpsAcquired: t.requests.gpsAcquired, gpsDenied: t.requests.gpsDenied,
     gpsUnavailable: t.requests.gpsUnavailable, gpsTimeout: t.requests.gpsTimeout, gpsInvalid: t.requests.gpsInvalid,
     gpsRetry: t.requests.gpsRetry,
+    close: t.project.panelClose,
   };
 }

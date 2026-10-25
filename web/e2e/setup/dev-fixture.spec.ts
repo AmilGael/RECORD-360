@@ -2,6 +2,7 @@ import { test, expect } from "../helpers/guards";
 import { credentialsFor, loginAs } from "../helpers/auth";
 import { setLang } from "../helpers/prefs";
 import { dictionaries } from "../../src/i18n/dictionaries";
+import { expectWorkspaceReady, submitNewPartida } from "../helpers/partida";
 
 // Permanent local demo data for later quests. Run with:
 //   E2E_SETUP=1 npx playwright test --grep @setup --project desktop
@@ -45,14 +46,18 @@ test("creates the E2E Obra Demo fixture @setup", async ({ page }, testInfo) => {
   const projectUrl = new URL(page.url()).pathname;
   // Client navigation updates the URL while loading.tsx is still showing, so
   // existence checks must wait for the rendered page, not the skeleton.
-  const bloqueForm = page.getByPlaceholder(t.project.newSegment);
-  await expect(bloqueForm).toBeVisible();
+  const newBloque = page.getByRole("button", { name: t.project.newBloque, exact: true });
+  await expect(newBloque).toBeVisible();
 
   for (const bloque of Object.keys(BLOQUES)) {
     const bloqueLink = page.getByRole("link", { name: startsWith(bloque) });
     if ((await bloqueLink.count()) > 0) continue;
-    await bloqueForm.fill(bloque);
-    await page.getByRole("button", { name: t.project.addSegment, exact: true }).click();
+    // The create forms open in the side sheet behind their button.
+    await newBloque.click();
+    const sheet = page.getByRole("dialog", { name: t.project.newBloque });
+    await sheet.getByPlaceholder(t.project.newSegment).fill(bloque);
+    await sheet.getByRole("button", { name: t.project.add, exact: true }).click();
+    await expect(sheet).toHaveCount(0);
     await expect(bloqueLink).toBeVisible();
     created.push(`bloque ${bloque}`);
   }
@@ -61,13 +66,11 @@ test("creates the E2E Obra Demo fixture @setup", async ({ page }, testInfo) => {
     await page.goto(projectUrl);
     await page.getByRole("link", { name: startsWith(bloque) }).click();
     await page.waitForURL(/[?&]block=/);
-    const partidaForm = page.getByPlaceholder(t.project.newPartida);
-    await expect(partidaForm).toBeVisible();
+    await expectWorkspaceReady(page, t);
     for (const partida of partidas) {
       const partidaRow = page.getByRole("button", { name: startsWith(partida) });
       if ((await partidaRow.count()) > 0) continue;
-      await partidaForm.fill(partida);
-      await page.getByRole("button", { name: t.project.add, exact: true }).click();
+      await submitNewPartida(page, t, partida);
       await expect(partidaRow).toBeVisible();
       created.push(`partida ${bloque} / ${partida}`);
     }

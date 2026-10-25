@@ -1,9 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPartida } from "@/app/actions/admin";
-import { SubmitButton } from "@/components/submit-button";
 import { RenameSegmentForm } from "@/components/project-edit-controls";
 import { BloqueLabel } from "@/components/bloque-label";
+import { NewPartidaSheet } from "@/components/new-record-sheets";
 import { PartidaFilterBar, type PartidaFacets } from "@/components/partida-filter-bar";
 import { PartidaCardGrid } from "@/components/partida-card-grid";
 import { applyPartidaNameFilter, shouldAdoptUrlQuery } from "@/lib/project/partida-filter";
@@ -31,6 +30,7 @@ type TreeT = {
   blockClosedNoCreate: string;
   concluded: string; aging7: string; aging14: string; noActivity: string;
   recordsOne: string; recordsMany: string; statusNotStarted: string; statusInProgress: string;
+  newPartidaButton: string; close: string;
 };
 
 type ActiveBlock = { id: string; name: string; closedAt: Date | string | null } | null;
@@ -116,10 +116,27 @@ export function ProjectFileTree({
         facets={facets}
         t={t}
       />
-      {activeBlock && (
+      {(activeBlock || isAdmin) && (
         <div className="partida-grid-head">
-          <BloqueLabel name={activeBlock.name} />
-          {isAdmin && <RenameSegmentForm segmentId={activeBlock.id} currentName={activeBlock.name} t={t} />}
+          {activeBlock ? <BloqueLabel name={activeBlock.name} /> : <span />}
+          {isAdmin && (
+            <div className="partida-grid-actions">
+              {activeBlock && <RenameSegmentForm segmentId={activeBlock.id} currentName={activeBlock.name} t={t} />}
+              {activeBlock?.closedAt ? (
+                <p className="text-steel" style={{ fontSize: "0.8rem", margin: 0 }}>{t.blockClosedNoCreate}</p>
+              ) : (
+                // WS4C: creation always targets the active block implicitly — no
+                // free-typed segment name and no "create another block" control
+                // here (block creation stays at the project overview level, via
+                // BloqueCards' own Nuevo bloque sheet).
+                <NewPartidaSheet
+                  projectId={projectId}
+                  segmentName={activeBlock?.name ?? null}
+                  t={{ newPartidaButton: t.newPartidaButton, newPartida: t.newPartida, add: t.add, close: t.close }}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
       <PartidaCardGrid
@@ -133,24 +150,6 @@ export function ProjectFileTree({
           aging7: t.aging7, aging14: t.aging14,
         }}
       />
-      {isAdmin && (
-        <div className="tree-actions">
-          {activeBlock?.closedAt ? (
-            <p className="text-steel" style={{ fontSize: "0.8rem" }}>{t.blockClosedNoCreate}</p>
-          ) : (
-            // WS4C: creation always targets the active block implicitly — no
-            // free-typed segment name and no "create another block" control
-            // here (block creation stays at the project overview level, via
-            // BloqueCards' own add-bloque form).
-            <form action={createPartida} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <input type="hidden" name="projectId" value={projectId} />
-              {activeBlock && <input type="hidden" name="segment" value={activeBlock.name} />}
-              <input name="name" placeholder={t.newPartida} required className="input" />
-              <SubmitButton className="btn btn-accent" style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem" }}>{t.add}</SubmitButton>
-            </form>
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { ChangeStatus, RequestKind, RequestSeverity } from "@prisma/client";
 import { formatTimestamp } from "@/lib/format/datetime";
 import type { Lang } from "@/i18n/dictionaries";
-import { CambiosCreate } from "@/components/cambios-create";
+import type { CambiosCreate } from "@/components/cambios-create";
+import { CambiosCreateSheet } from "@/components/cambios-create-sheet";
 
 type Row = {
   id: string; code: string; title: string; status: ChangeStatus;
@@ -11,7 +12,7 @@ type Row = {
   seal: string | null; segmentCount: number;
 };
 type ListT = {
-  empty: string; states: Record<ChangeStatus, string>;
+  empty: string; states: Record<ChangeStatus, string>; close: string;
 } & React.ComponentProps<typeof CambiosCreate>["t"];
 
 const dotClass: Record<ChangeStatus, string> = { OPEN: "open", INTEGRATED: "merged", REJECTED: "rej" };
@@ -31,7 +32,8 @@ export function CambiosList({
   const severityLabel = (s: RequestSeverity) => (s === "CRITICAL" ? t.severityCritical : t.severityImportant);
   return (
     <div>
-      <CambiosCreate projectId={projectId} segments={partidas} fixedSegment={fixedSegment} t={t} />
+      {/* The form opens in the side sheet; the list stays on the page under its button. */}
+      <CambiosCreateSheet projectId={projectId} segments={partidas} fixedSegment={fixedSegment} t={t} closeLabel={t.close} />
       <div className="repo-list">
         {rows.length === 0 && <div className="repo-list-empty">{t.empty}</div>}
         {rows.map((r) => (

@@ -363,6 +363,7 @@ export default async function ProjectPage({
           noResults: P.noResults, empty: P.empty,
           recordsOne: P.recordsOne, recordsMany: P.recordsMany,
           statusNotStarted: P.analitica.notStarted, statusInProgress: P.analitica.inProgress,
+          newPartidaButton: P.newPartidaButton, close: P.panelClose,
           facetTags: P.facetTags, facetProgress: P.facetProgress,
           facetProgressMin: P.facetProgressMin, facetProgressMax: P.facetProgressMax,
           facetOpenCambios: P.facetOpenCambios, facetCreated: P.facetCreated,
@@ -440,6 +441,7 @@ export default async function ProjectPage({
         t={{
           bloquesTitle: P.bloquesTitle, bloqueCard: P.bloqueCard, openBloque: P.openBloque, ungrouped: P.ungrouped, newSegment: P.newSegment, addSegment: P.addSegment, deleteBloque: P.deleteBloque, deleteBloqueConfirm: P.deleteBloqueConfirm, yes: P.yes, no: P.no,
           blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
+          newBloque: P.newBloque, add: P.add, close: P.panelClose,
         }}
       />
       <ObraSearch

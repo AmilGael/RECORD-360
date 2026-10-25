@@ -348,3 +348,51 @@ describe("raphel-app.css contrast (WCAG AA, 4.5:1)", () => {
     expect(block(".raphel-app .btn-accent:hover").get("color")).toBe("var(--on-accent-deep)");
   });
 });
+
+describe("raphel-app.css progress pulse", () => {
+  const GLOBALS = stripComments(readFileSync(path.resolve(__dirname, "../src/app/globals.css"), "utf8"));
+  const BANDS = [".raphel-app .progress-fill", ".raphel-app .plate-band", ".raphel-app .dash-health-fill"];
+  const selectors = (r: Rule) => r.selector.split(",").map((s) => s.trim().replace(/:not\([^)]*\)/g, ""));
+  const pulseRules = rules.filter((r) => r.atRule === null && selectors(r).includes(".raphel-app .pulse-band"));
+
+  /** Properties a @keyframes block animates, looked up in either stylesheet. */
+  function keyframeProps(name: string): string[] {
+    for (const source of [css, GLOBALS]) {
+      const at = source.search(new RegExp(`@keyframes\\s+${name}\\s*\\{`));
+      if (at === -1) continue;
+      const open = source.indexOf("{", at);
+      const body = source.slice(open + 1, matchBrace(source, open));
+      return [...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]);
+    }
+    throw new Error(`@keyframes ${name} not found`);
+  }
+
+  it("defines .pulse-band on the progress bands", () => {
+    expect(pulseRules.length).toBeGreaterThan(0);
+    const covered = pulseRules.flatMap(selectors);
+    for (const band of BANDS) expect(covered, band).toContain(band);
+  });
+
+  it("keeps the bar-grow entrance and loops after it", () => {
+    const animation = pulseRules.map((r) => declarations(r.body).get("animation") ?? "").join(",");
+    expect(animation).toContain("bar-grow");
+    expect(animation).toMatch(/infinite/);
+  });
+
+  it("animates opacity or transform only (never width)", () => {
+    const animation = pulseRules.map((r) => declarations(r.body).get("animation") ?? "").join(",");
+    const names = [...animation.matchAll(/\b(bar-grow|raphel-[a-z-]+)\b/g)].map((m) => m[1]);
+    expect(names.length).toBeGreaterThan(1);
+    for (const name of names) {
+      for (const prop of keyframeProps(name)) expect(["opacity", "transform"], `${name} animates ${prop}`).toContain(prop);
+    }
+  });
+
+  it("is switched off under prefers-reduced-motion", () => {
+    const off = rules.filter((r) =>
+      r.atRule !== null && /prefers-reduced-motion:\s*reduce/.test(r.atRule) &&
+      selectors(r).includes(".raphel-app .pulse-band") &&
+      norm(declarations(r.body).get("animation") ?? "") === "none");
+    expect(off.length).toBeGreaterThan(0);
+  });
+});

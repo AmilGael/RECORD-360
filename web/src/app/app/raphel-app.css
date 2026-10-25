@@ -389,3 +389,43 @@ body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
 .raphel-app .bloque-label.is-vertical .bloque-label-name {
   font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal;
 }
+
+/* ---------- create triggers (components/new-record-sheets.tsx) ---------- */
+/* "Nuevo bloque" sits in the bloque grid as a card-shaped button. */
+.raphel-app .new-bloque-trigger {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 96px; padding: 14px; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--ink-soft);
+  background: transparent; border: 1px dashed var(--line-strong); box-shadow: none;
+}
+.raphel-app .new-bloque-trigger:hover { color: var(--ink); border-color: var(--accent); }
+.raphel-app .new-bloque-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.raphel-app .partida-grid-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- progress pulse ---------- */
+/* After the bar-grow entrance (transform, from globals.css), unfinished bands
+   breathe slowly on opacity. Concluded bands stay still: a pulse would read as
+   work still going on. */
+.raphel-app .pulse-band,
+.raphel-app .progress-fill:not(.is-done),
+.raphel-app .plate-band:not(.is-done),
+.raphel-app .dash-health-fill,
+.raphel-app .partida-card-band:not(.is-done),
+.raphel-app .panel-progress-band:not(.is-done) {
+  transform-origin: left;
+  animation:
+    bar-grow 0.55s var(--ease) 0.15s backwards,
+    raphel-band-pulse 3.2s ease-in-out 0.9s infinite;
+}
+@keyframes raphel-band-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .raphel-app .pulse-band,
+  .raphel-app .progress-fill,
+  .raphel-app .plate-band,
+  .raphel-app .dash-health-fill,
+  .raphel-app .partida-card-band,
+  .raphel-app .panel-progress-band { animation: none; }
+}

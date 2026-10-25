@@ -3,7 +3,7 @@ import { test, expect } from "./helpers/guards";
 import { loginAs } from "./helpers/auth";
 import { setLang, setTheme, type Theme } from "./helpers/prefs";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
-import { OBRA, createPartidaInWorkspace, selectPartida, startsWith, type T } from "./helpers/partida";
+import { OBRA, createPartidaInWorkspace, expectWorkspaceReady, selectPartida, startsWith, type T } from "./helpers/partida";
 
 // The partida preview opens in the side sheet (components/sheet.tsx): a
 // right-hand panel from 640px up, the whole screen below. `?p=` names the open
@@ -36,7 +36,7 @@ async function openBloque(page: Page, t: T) {
   if (!bloqueHref) throw new Error("bloque has no href");
   await page.goto(bloqueHref);
   await page.waitForLoadState("networkidle");
-  await expect(page.locator(`input[placeholder="${t.project.newPartida}"]:visible`).first()).toBeVisible();
+  await expectWorkspaceReady(page, t);
 }
 
 const sheet = (page: Page, name: string) => page.getByRole("dialog", { name });
