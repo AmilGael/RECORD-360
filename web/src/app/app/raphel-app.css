@@ -251,11 +251,14 @@ body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
 .raphel-app .panel-progress-track { border-radius: var(--radius-sm); }
 .raphel-app .analitica-author-track { border-radius: var(--radius-sm); overflow: hidden; }
 
-/* ---------- phone sheet (block workspace preview) ---------- */
-@media (max-width: 899px) {
-  .raphel-app .workspace-panel { border-radius: var(--radius) var(--radius) 0 0; }
-  .raphel-app .panel-grab { border-radius: var(--radius-sm); }
-}
+/* ---------- block workspace ---------- */
+/* The partida preview opens in the side sheet, so the workspace is one column:
+   the card grid takes the full width and scrolls with the page (no inner
+   scroll box, so the search bar is no longer sticky inside one). */
+.raphel-app .workspace { grid-template-columns: 1fr; min-height: 0; }
+.raphel-app .workspace-list { max-height: none; overflow: visible; border-right: 0; }
+.raphel-app .workspace-list .tree-filter { position: static; }
+.raphel-app .partida-preview-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 
 /* ---------- side sheet (components/sheet.tsx) ---------- */
 /* z-index 70 clears the sticky appbar (40) and the phone drawer (55-60). */
@@ -385,10 +388,4 @@ body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
 }
 .raphel-app .bloque-label.is-vertical .bloque-label-name {
   font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal;
-}
-
-/* Phone bottom sheet (until Task 10 moves the preview into the side sheet):
-   scrolling a card into view keeps it above the sheet. */
-@media (max-width: 899px) {
-  .raphel-app .workspace.is-sheet-open .partida-card-btn { scroll-margin-bottom: calc(55dvh + var(--safe-b)); }
 }

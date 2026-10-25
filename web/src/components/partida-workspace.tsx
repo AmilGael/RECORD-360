@@ -10,6 +10,7 @@ import type { Lang } from "@/i18n/dictionaries";
 import type { PartidaPreview } from "@/lib/partida/preview";
 import { PartidaPanelView, type PanelCopy, type PartidaPanelShell } from "@/components/partida-panel";
 import { ProjectFileTree, type PartidaTreeRow } from "@/components/project-file-tree";
+import { Sheet } from "@/components/sheet";
 
 type SegmentGroup = { id: string; name: string; closedAt: string | null; partidas: PartidaTreeRow[] };
 
@@ -80,24 +81,6 @@ const PANEL_ACTIONS: Record<PanelAction, (prev: FormError | null, formData: Form
   tags: setPartidaTagsForm,
 };
 
-const PHONE_SHEET = "(max-width: 899px)";
-
-function revealRowAboveSheet(row: HTMLElement) {
-  if (!window.matchMedia(PHONE_SHEET).matches) return;
-  const panel = document.querySelector(".workspace-panel.is-open");
-  const sheetTop = panel instanceof HTMLElement
-    ? panel.getBoundingClientRect().top
-    : window.innerHeight * 0.45;
-  const rect = row.getBoundingClientRect();
-  const overflow = rect.bottom - sheetTop + 8;
-  if (overflow <= 0 && rect.top >= 0) return;
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.scrollBy({
-    top: overflow > 0 ? overflow : rect.top,
-    behavior: reduce ? "auto" : "smooth",
-  });
-}
-
 export function PartidaWorkspace({
   projectId,
   segments: initialSegments,
@@ -136,11 +119,7 @@ export function PartidaWorkspace({
   const [offline, setOffline] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const openedByPush = useRef(false);
   const skipFirstFetch = useRef(Boolean(initialPreview && initialPreview.id === initialSelectedId));
-  const headingEl = useRef<HTMLHeadingElement | null>(null);
-  const rowEls = useRef(new Map<string, HTMLButtonElement>());
-  const prevSelected = useRef(initialSelectedId);
 
   useEffect(() => {
     setRows({ segments: initialSegments, ungrouped: initialUngrouped });
@@ -161,76 +140,25 @@ export function PartidaWorkspace({
     setRows((current) => patchGroups(current, id, patch));
   }, []);
 
-  // Native history is patched by Next 15.5 onto ACTION_RESTORE (no RSC fetch).
-  // Pass null, not history.state: a __NA payload skips the patch.
-  const writeP = useCallback((id: string | null, mode: "push" | "replace") => {
+  // `?p=` names the open partida, always written with replaceState: the sheet
+  // owns the one history entry (lib/ui/sheet-history.ts), so Back closes it.
+  // This runs after the sheet's own effect (child effects first), so `p` lands
+  // on the sheet's entry and the entry underneath never carries it: popping
+  // back, by gesture or by Escape, lands on the workspace without `p`.
+  // State is { sheet: true } on the sheet's entry, else null: no __NA, so
+  // Next 15.5's patched replaceState copies its internals in and syncs the
+  // router's URL, while the flag the sheet checks before popping survives.
+  useEffect(() => {
     const url = new URL(window.location.href);
-    if (id) url.searchParams.set("p", id);
+    if (selectedId) url.searchParams.set("p", selectedId);
     else url.searchParams.delete("p");
-    if (mode === "push") window.history.pushState(null, "", url);
-    else window.history.replaceState(null, "", url);
-  }, []);
-
-  const select = useCallback((id: string) => {
-    const had = new URL(window.location.href).searchParams.get("p");
-    if (had) writeP(id, "replace");
-    else {
-      writeP(id, "push");
-      openedByPush.current = true;
-    }
-    setSelectedId(id);
-  }, [writeP]);
-
-  const closePanel = useCallback(() => {
-    if (openedByPush.current) {
-      openedByPush.current = false;
-      window.history.back();
-      return;
-    }
-    writeP(null, "replace");
-    setSelectedId(undefined);
-  }, [writeP]);
-
-  useEffect(() => {
-    const onPop = () => {
-      openedByPush.current = false;
-      const p = new URL(window.location.href).searchParams.get("p") ?? undefined;
-      setSelectedId(p);
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectedId) {
-        e.preventDefault();
-        closePanel();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, closePanel]);
-
-  useEffect(() => {
-    const phoneSheet = Boolean(selectedId) && window.matchMedia(PHONE_SHEET).matches;
-    document.documentElement.classList.toggle("sheet-open", phoneSheet);
-    return () => document.documentElement.classList.remove("sheet-open");
+    if (url.href === window.location.href) return;
+    const onSheetEntry = (window.history.state as { sheet?: boolean } | null)?.sheet === true;
+    window.history.replaceState(onSheetEntry ? { sheet: true } : null, "", url);
   }, [selectedId]);
 
-  useEffect(() => {
-    if (selectedId && selectedId !== prevSelected.current) {
-      headingEl.current?.focus({ preventScroll: true });
-      const row = rowEls.current.get(selectedId);
-      if (row) {
-        requestAnimationFrame(() => requestAnimationFrame(() => revealRowAboveSheet(row)));
-      }
-    }
-    if (!selectedId && prevSelected.current) {
-      rowEls.current.get(prevSelected.current)?.focus({ preventScroll: true });
-    }
-    prevSelected.current = selectedId;
-  }, [selectedId]);
+  const select = useCallback((id: string) => setSelectedId(id), []);
+  const closePanel = useCallback(() => setSelectedId(undefined), []);
 
   useEffect(() => {
     if (!selectedId) {
@@ -303,7 +231,7 @@ export function PartidaWorkspace({
   const shell = findShell(optRows.segments, optRows.ungrouped, selectedId);
 
   return (
-    <div className={`workspace${selectedId ? " is-sheet-open" : ""}`}>
+    <div className="workspace">
       <div className="workspace-list">
         <ProjectFileTree
           projectId={projectId}
@@ -317,38 +245,40 @@ export function PartidaWorkspace({
           lang={lang}
           t={treeT}
           onSelect={select}
-          rowRef={(id, el) => {
-            if (el) rowEls.current.set(id, el);
-            else rowEls.current.delete(id);
-          }}
         />
       </div>
-      <PartidaPanelView
-        shell={shell}
-        preview={optPreview}
-        canEdit={canEdit}
-        lang={lang}
-        t={panelT}
-        open={Boolean(selectedId)}
-        headingRef={(el) => { headingEl.current = el; }}
-        formError={formError}
-        busy={busy}
-        offline={offline}
-        segments={segmentOptions}
+      <Sheet
+        open={Boolean(shell)}
+        title={optPreview?.name ?? shell?.name ?? ""}
         onClose={closePanel}
-        onProgress={(id, progressPct) => run("progress", id, { progressPct: String(progressPct) }, { progressPct }, { progressPct })}
-        onConclude={(id) => {
-          const completedAt = new Date().toISOString();
-          run("conclude", id, {}, { completedAt, progressPct: 100 }, { completedAt, progressPct: 100 });
-        }}
-        onReopen={(id) => run("reopen", id, {}, { completedAt: null }, { completedAt: null })}
-        onRename={(id, name) => run("rename", id, { name }, { name }, { name })}
-        onMove={(id, segmentId) => run("move", id, { segmentId }, {}, { segmentId: segmentId || null })}
-        onTags={(id, tags) => {
-          const names = tags.split(",").map((x) => x.trim()).filter(Boolean);
-          run("tags", id, { tags }, { tags: names }, { tags: names.map((name) => ({ tag: { name } })) });
-        }}
-      />
+        closeLabel={panelT.panelClose}
+      >
+        {shell && (
+          <PartidaPanelView
+            shell={shell}
+            preview={optPreview}
+            canEdit={canEdit}
+            lang={lang}
+            t={panelT}
+            formError={formError}
+            busy={busy}
+            offline={offline}
+            segments={segmentOptions}
+            onProgress={(id, progressPct) => run("progress", id, { progressPct: String(progressPct) }, { progressPct }, { progressPct })}
+            onConclude={(id) => {
+              const completedAt = new Date().toISOString();
+              run("conclude", id, {}, { completedAt, progressPct: 100 }, { completedAt, progressPct: 100 });
+            }}
+            onReopen={(id) => run("reopen", id, {}, { completedAt: null }, { completedAt: null })}
+            onRename={(id, name) => run("rename", id, { name }, { name }, { name })}
+            onMove={(id, segmentId) => run("move", id, { segmentId }, {}, { segmentId: segmentId || null })}
+            onTags={(id, tags) => {
+              const names = tags.split(",").map((x) => x.trim()).filter(Boolean);
+              run("tags", id, { tags }, { tags: names }, { tags: names.map((name) => ({ tag: { name } })) });
+            }}
+          />
+        )}
+      </Sheet>
     </div>
   );
 }

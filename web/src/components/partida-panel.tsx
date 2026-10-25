@@ -3,6 +3,7 @@ import type { Lang } from "@/i18n/dictionaries";
 import type { PartidaPreview } from "@/lib/partida/preview";
 import { formatRecordTime } from "@/lib/format/datetime";
 import { Pin } from "@/components/icons";
+import { BloqueLabel } from "@/components/bloque-label";
 
 export type PartidaPanelShell = {
   id: string;
@@ -37,19 +38,20 @@ export type PanelCopy = {
 
 type SegmentOption = { id: string; name: string };
 
+/**
+ * The partida preview's body. The workspace renders it inside the side sheet,
+ * which carries the title (the partida name) and the close button.
+ */
 export function PartidaPanelView({
   shell,
   preview,
   canEdit,
   lang,
   t,
-  open,
-  headingRef,
   formError,
   busy,
   offline,
   segments,
-  onClose,
   onProgress,
   onConclude,
   onReopen,
@@ -57,18 +59,15 @@ export function PartidaPanelView({
   onMove,
   onTags,
 }: {
-  shell: PartidaPanelShell | null;
+  shell: PartidaPanelShell;
   preview: PartidaPreview | null;
   canEdit: boolean;
   lang: Lang;
   t: PanelCopy;
-  open: boolean;
-  headingRef: (el: HTMLHeadingElement | null) => void;
   formError: string | null;
   busy: boolean;
   offline: boolean;
   segments: SegmentOption[];
-  onClose: () => void;
   onProgress: (partidaId: string, progressPct: number) => void;
   onConclude: (partidaId: string) => void;
   onReopen: (partidaId: string) => void;
@@ -76,14 +75,6 @@ export function PartidaPanelView({
   onMove: (partidaId: string, segmentId: string) => void;
   onTags: (partidaId: string, tags: string) => void;
 }) {
-  if (!open || !shell) {
-    return (
-      <div className="workspace-panel" aria-hidden="true" inert>
-        <div className="viewport"><div className="empty">{t.empty}</div></div>
-      </div>
-    );
-  }
-
   const name = preview?.name ?? shell.name;
   const progressPct = preview?.progressPct ?? shell.progressPct;
   const completedAt = preview?.completedAt ?? shell.completedAt;
@@ -94,18 +85,12 @@ export function PartidaPanelView({
   const showEdit = canEdit;
 
   return (
-    <div className="workspace-panel is-open" role="region" aria-label={name}>
-      <div className="panel-grab" aria-hidden="true" />
-      <div className="viewport">
-        <div className="panel-toolbar">
-          <div style={{ minWidth: 0 }}>
-            {segmentName && <div className="kicker">{segmentName}</div>}
-            <h2 className="h-md" tabIndex={-1} ref={headingRef} style={{ margin: "4px 0 6px" }}>{name}</h2>
-            {concluded
-              ? <span className="state-badge is-concluded">{t.concluded}</span>
-              : <span className="state-badge is-active">{progressPct}%</span>}
-          </div>
-          <button type="button" className="panel-close" onClick={onClose}>{t.panelClose}</button>
+    <div className="partida-preview">
+        <div className="partida-preview-head">
+          {segmentName && <BloqueLabel name={segmentName} />}
+          {concluded
+            ? <span className="state-badge is-concluded">{t.concluded}</span>
+            : <span className="state-badge is-active">{progressPct}%</span>}
         </div>
         <div className="panel-progress-track" aria-hidden="true">
           <i className={`panel-progress-band${concluded ? " is-done" : ""}`} style={{ width: `${Math.min(Math.max(progressPct, 0), 100)}%` }} />
@@ -251,7 +236,6 @@ export function PartidaPanelView({
             </form>
           </details>
         )}
-      </div>
     </div>
   );
 }

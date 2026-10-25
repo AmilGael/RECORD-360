@@ -70,13 +70,10 @@ function render(canEdit: boolean, extra?: { completedAt?: string | null; segment
     canEdit,
     lang: "es",
     t: panelT(),
-    open: true,
-    headingRef: noop,
     formError: null,
     busy: false,
     offline: false,
     segments: [{ id: "s1", name: "Cocina" }],
-    onClose: noop,
     onProgress: noop,
     onConclude: noop,
     onReopen: noop,
@@ -97,9 +94,16 @@ describe("activityAging", () => {
 });
 
 describe("PartidaPanelView edit chrome", () => {
+  it("leaves the title to the side sheet: shows the bloque, no heading of its own", () => {
+    const html = render(false);
+    // The sheet's h2 is the partida name; a second one would double every
+    // "heading named X" lookup.
+    expect(html).toContain("Cocina");
+    expect(html).not.toContain("<h2");
+  });
+
   it("hides Editar partida, progress, Concluir and Reabrir when canEdit is false", () => {
     const html = render(false);
-    expect(html).toContain("Losa N3");
     expect(html).toContain("Nuevo registro");
     expect(html).not.toContain("Editar partida");
     expect(html).not.toContain('id="panel-progress-p1"');

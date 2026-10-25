@@ -46,7 +46,7 @@ type FilterState = { q: string; block: string; tags: string[]; progressMin: numb
  * into the URL (replaceState, no navigation) for sharing and reloads.
  */
 export function ProjectFileTree({
-  projectId, segments, ungrouped, selectedId, isAdmin, filters, facets, activeBlock, lang, t, onSelect, rowRef,
+  projectId, segments, ungrouped, selectedId, isAdmin, filters, facets, activeBlock, lang, t, onSelect,
 }: {
   projectId: string;
   segments: { id: string; name: string; partidas: PartidaTreeRow[] }[];
@@ -59,7 +59,6 @@ export function ProjectFileTree({
   lang: Lang;
   t: TreeT;
   onSelect: (id: string) => void;
-  rowRef: (id: string, el: HTMLButtonElement | null) => void;
 }) {
   const [q, setQ] = useState(filters.q);
   // The last q this box wrote to the URL. A refresh echoes it (or an older one)
@@ -128,7 +127,6 @@ export function ProjectFileTree({
         selectedId={selectedId}
         onSelect={onSelect}
         emptyLabel={filters.scopeTotal === 0 ? t.empty : t.noResults}
-        cardRef={rowRef}
         t={{
           recordsOne: t.recordsOne, recordsMany: t.recordsMany, noActivity: t.noActivity,
           statusNotStarted: t.statusNotStarted, statusInProgress: t.statusInProgress, statusConcluded: t.concluded,
