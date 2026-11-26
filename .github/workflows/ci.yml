@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# A new push to a PR cancels that PR's older run; runs on main always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: lint · test · build
@@ -68,3 +73,128 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Playwright against a production build on a fresh, throwaway database.
+  # One job per Playwright project (phone, desktop), each with its own Postgres,
+  # so the two halves share no rows. Specs share accounts and the inbox inside a
+  # project (mark-all-read, login lockout), so each half runs on one worker.
+  e2e:
+    name: e2e · ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [phone, desktop]
+
+    defaults:
+      run:
+        working-directory: web
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: record360_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/record360_e2e
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/record360_e2e
+      AUTH_SECRET: ci-placeholder-not-a-real-secret
+      AUTH_TRUST_HOST: "true"
+      APP_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Throwaway accounts, created below in this job's own empty database.
+      # No S3_BUCKET (uploads go to local disk) and no RESEND_API_KEY (email is
+      # only logged), so this job needs no secrets.
+      E2E_ADMIN_EMAIL: e2e-admin@raphel.test
+      E2E_ADMIN_PASSWORD: ci-e2e-admin-not-secret
+      E2E_RESIDENT_EMAIL: e2e-resident@raphel.test
+      E2E_RESIDENT_PASSWORD: ci-e2e-resident-not-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed e2e accounts (admin + resident, same company)
+        run: |
+          ADMIN_EMAIL="$E2E_ADMIN_EMAIL" ADMIN_ROLE=ADMIN ADMIN_NAME="E2E Admin" \
+            ADMIN_COMPANY="E2E Constructora" ADMIN_PASSWORD="$E2E_ADMIN_PASSWORD" \
+            npx tsx scripts/create-admin.ts
+          ADMIN_EMAIL="$E2E_RESIDENT_EMAIL" ADMIN_ROLE=RESIDENT ADMIN_NAME="E2E Residente" \
+            ADMIN_COMPANY="E2E Constructora" ADMIN_PASSWORD="$E2E_RESIDENT_PASSWORD" \
+            npx tsx scripts/create-admin.ts
+
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      # Started once here; Playwright's webServer has reuseExistingServer, so the
+      # fixture run and the suite run both use this build instead of rebuilding.
+      - name: Start the production server
+        run: |
+          nohup npm start > e2e-server.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null http://localhost:3000/login && exit 0
+            sleep 1
+          done
+          echo "server did not answer on :3000"; cat e2e-server.log; exit 1
+
+      - name: Demo fixture (obra, bloques, partidas, resident, one plano)
+        run: E2E_SETUP=1 npx playwright test e2e/setup/dev-fixture.spec.ts --project desktop
+
+      - name: Playwright (${{ matrix.project }})
+        run: npx playwright test --project ${{ matrix.project }} --workers=1
+
+      - name: Upload Playwright report, traces and server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.project }}
+          path: |
+            web/e2e/artifacts/playwright-report
+            web/e2e/artifacts/test-results
+            web/e2e-server.log
+          retention-days: 14
