@@ -102,7 +102,7 @@ test("creates the E2E Obra Demo fixture @setup", async ({ page }, testInfo) => {
     created.push("resident assignment");
   }
 
-  await page.goto(`${projectUrl}?tab=planos`);
+  await page.goto(`${projectUrl}/planos`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByLabel(t.planos.title)).toBeVisible();
   const planoCard = page.getByRole("link", { name: new RegExp(PLANO) });
