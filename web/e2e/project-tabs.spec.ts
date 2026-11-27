@@ -4,7 +4,7 @@ import { loginAs } from "./helpers/auth";
 import { setLang } from "./helpers/prefs";
 import { assertNoHorizontalOverflow } from "./helpers/watch";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
-import { OBRA, startsWith } from "./helpers/partida";
+import { OBRA, PARTIDA, openTestPartida, selectPartida, startsWith } from "./helpers/partida";
 
 // Project tabs are real routes under a shared layout. Runs on the phone
 // (390px) and desktop projects: the five Spanish and English labels must fit
@@ -103,21 +103,24 @@ test("legacy ?tab= links land on the matching route and keep other params", asyn
   expect(here(page).path).toBe(base);
   expect(here(page).search.has("tab")).toBe(false);
 
-  // The old Partidas link keeps the bloque and partida params.
-  await page.goto(base);
-  await page.waitForLoadState("networkidle");
-  const bloqueLink = page.locator('a[href*="block="]').first();
-  await expect(bloqueLink).toBeVisible();
-  const block = new URL((await bloqueLink.getAttribute("href"))!, "http://localhost").searchParams.get("block");
+  // The old Partidas link keeps the bloque and partida params. Use a real
+  // partida: the workspace drops a `p` that names none. In the production build
+  // the redirect runs in the browser (the page streams under loading.tsx), so
+  // wait for the address bar to lose `tab`, then check what it kept.
+  await setLang(page, "es");
+  await openTestPartida(page, dictionaries.es);
+  await selectPartida(page, PARTIDA);
+  const opened = here(page).search;
+  const block = opened.get("block");
+  const partidaId = opened.get("p");
   expect(block).toBeTruthy();
-  // Read the redirect's own target: once hydrated, the workspace drops a `p`
-  // that names no partida from the address bar, which is not the redirect's doing.
-  const res = await page.goto(`${base}?tab=code&block=${block}&p=none`);
-  const landed = new URL(res!.url());
-  expect(landed.pathname).toBe(base);
-  expect(landed.searchParams.get("block")).toBe(block);
-  expect(landed.searchParams.get("p")).toBe("none");
-  expect(landed.searchParams.has("tab")).toBe(false);
+  expect(partidaId).toBeTruthy();
+  await page.goto(`${base}?tab=code&block=${block}&p=${partidaId}`);
+  await page.waitForURL((url) => !url.searchParams.has("tab"));
+  await expect(page.getByRole("heading", { level: 2, name: PARTIDA })).toBeVisible();
+  expect(here(page).path).toBe(base);
+  expect(here(page).search.get("block")).toBe(block);
+  expect(here(page).search.get("p")).toBe(partidaId);
 });
 
 test("a foreign or missing project id is a 404 on every tab route", async ({ page, consoleGuard }) => {
