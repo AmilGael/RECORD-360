@@ -65,7 +65,7 @@ async function openObra(page: Page, tab: string): Promise<string> {
   const href = await obra.getAttribute("href");
   if (!href) throw new Error("obra has no href");
   const pathOnly = new URL(href, "http://localhost").pathname;
-  await page.goto(`${pathOnly}?tab=${tab}`);
+  await page.goto(`${pathOnly}/${tab}`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { level: 1, name: OBRA })).toBeVisible();
   return pathOnly;
@@ -100,19 +100,24 @@ test("manager: plano, critical alert, resident inbox, analítica, informes", asy
   await shot(page, "plano");
   await assertNoHorizontalOverflow(page, "Planos");
 
-  await page.goto(`${obraPath}?tab=cambios`);
+  await page.goto(`${obraPath}/solicitudes`);
   await page.waitForLoadState("networkidle");
-  await page.getByRole("radio", { name: t.requests.kindAlert }).check();
-  await page.getByRole("radio", { name: t.requests.severityCritical }).check();
-  await page.getByPlaceholder(t.changes.fieldTitle).fill(title);
-  await page.locator('select[name="segmentIds"]').selectOption({ label: BLOQUE });
-  await page.locator('input[name="reminderDueAt"]').fill(sdLocalInput(2));
-  await expect(page.getByText(t.requests.gpsAcquired)).toBeVisible({ timeout: 15_000 });
-  const submit = page.getByRole("button", { name: t.changes.new });
+  // The request form opens in the side sheet behind "Nueva solicitud".
+  await page.getByRole("button", { name: t.changes.new }).click();
+  const requestSheet = page.getByRole("dialog", { name: t.changes.new });
+  await expect(requestSheet).toBeVisible();
+  await requestSheet.getByRole("radio", { name: t.requests.kindAlert }).check();
+  await requestSheet.getByRole("radio", { name: t.requests.severityCritical }).check();
+  await requestSheet.getByPlaceholder(t.changes.fieldTitle).fill(title);
+  await requestSheet.locator('select[name="segmentIds"]').selectOption({ label: BLOQUE });
+  await requestSheet.locator('input[name="reminderDueAt"]').fill(sdLocalInput(2));
+  await expect(requestSheet.getByText(t.requests.gpsAcquired)).toBeVisible({ timeout: 15_000 });
+  const submit = requestSheet.getByRole("button", { name: t.changes.new });
   await expect(submit).toBeEnabled();
   const posted = page.waitForResponse((r) => r.request().method() === "POST" && Boolean(r.request().headers()["next-action"]));
   await submit.click();
   expect((await posted).status()).toBeLessThan(500);
+  await expect(requestSheet).toHaveCount(0);
   await expect(page.getByRole("link", { name: new RegExp(title) })).toBeVisible({ timeout: 20_000 });
   await shot(page, "alert");
   await assertNoHorizontalOverflow(page, "Solicitudes");
@@ -129,7 +134,7 @@ test("manager: plano, critical alert, resident inbox, analítica, informes", asy
 
   await signOut(page);
   await loginAs(page, "admin");
-  await page.goto(`${obraPath}?tab=analitica`);
+  await page.goto(`${obraPath}/analitica`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: t.project.analitica.weeklyTitle })).toBeVisible();
   await expect(page.getByRole("heading", { name: t.project.analitica.statusTitle })).toBeVisible();
@@ -159,11 +164,11 @@ test("manager: plano, critical alert, resident inbox, analítica, informes", asy
   expect((await resolved).status()).toBeLessThan(500);
   await expect(page.getByText(t.changes.states.REJECTED, { exact: true })).toBeVisible();
 
-  await page.goto(`${obraPath}?tab=analitica`);
+  await page.goto(`${obraPath}/analitica`);
   await page.waitForLoadState("networkidle");
   await expect(page.locator("section.analitica-alerts").getByRole("link", { name: title })).toHaveCount(0);
 
-  await page.goto(`${obraPath}?tab=informes`);
+  await page.goto(`${obraPath}/informes`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByText(t.informes.empty, { exact: true })).toBeVisible();
   await shot(page, "informes");

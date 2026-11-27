@@ -60,7 +60,7 @@ for (const theme of themes) {
     await check("bloque with panel");
 
     const projectPath = new URL(page.url()).pathname;
-    await page.goto(`${projectPath}?tab=planos`);
+    await page.goto(`${projectPath}/planos`);
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("searchbox", { name: t.planos.search })).toBeVisible();
     await check("Planos");
@@ -70,7 +70,7 @@ for (const theme of themes) {
     await expect(page.getByRole("heading", { level: 1, name: t.notifications.title })).toBeVisible();
     await check("Notificaciones");
 
-    await page.goto(`${projectPath}?tab=analitica`);
+    await page.goto(`${projectPath}/analitica`);
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { name: t.project.analitica.weeklyTitle })).toBeVisible();
     await check("Analítica");

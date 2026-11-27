@@ -21,7 +21,7 @@ type SegmentSummary = { id: string; name: string; progress: number; count: numbe
 // product decision. This reverses the earlier WS4F call to keep "Planos" here
 // as the only place to attach a document to a specific bloque — that upload
 // path is intentionally gone; project-wide plano uploads live on the project's
-// own Planos tab (?tab=planos). Documents already attached to a segment stay in
+// own Planos tab (/app/projects/<id>/planos). Documents already attached to a segment stay in
 // the database but are no longer surfaced here. The kind-backed rendering below
 // is still live: "Ideas" uses it.
 export type SpaceKey = "cuaderno" | "solicitudes" | "ideas" | "media" | "recordatorios";
@@ -151,7 +151,7 @@ function DocList({ docs, lang, t }: { docs: Document[]; lang: Lang; t: { emptyDo
             <span className="cr-title">{d.title || d.url.split("/").pop()}</span>
             <span className="cr-meta">{formatTimestamp(d.createdAt, lang)}</span>
           </span>
-          <a href={d.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
+          <a href={d.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 12, color: "var(--accent-text, var(--accent-deep))", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
             {t.view}
           </a>
         </div>

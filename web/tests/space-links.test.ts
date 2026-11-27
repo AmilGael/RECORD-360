@@ -47,15 +47,15 @@ describe("spaceHref", () => {
     expect(href).toContain("block=seg-1");
   });
 
-  it("always sets tab=code", () => {
-    expect(spaceHref("proj1", {}, "seg-1", "cuaderno")).toContain("tab=code");
+  it("carries no legacy tab param (the index route is the Partidas tab)", () => {
+    expect(spaceHref("proj1", {}, "seg-1", "cuaderno")).toBe("/app/projects/proj1?block=seg-1&space=cuaderno");
   });
 });
 
 describe("projectHrefWithParams", () => {
   it("omits empty/null/undefined values", () => {
-    const href = projectHrefWithParams("proj1", { q: "", p: null, block: undefined, tab: "code" });
-    expect(href).toBe("/app/projects/proj1?tab=code");
+    const href = projectHrefWithParams("proj1", { q: "", p: null, block: undefined, space: "media" });
+    expect(href).toBe("/app/projects/proj1?space=media");
   });
 
   it("builds a bare project link with no params", () => {

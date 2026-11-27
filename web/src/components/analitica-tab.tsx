@@ -5,6 +5,7 @@
 // itself, and yellow/red are reserved for request severity elsewhere in the
 // app (see cambios-list / cambios detail).
 import Link from "next/link";
+import { BloqueLabel } from "@/components/bloque-label";
 import { EntriesByAuthorChart } from "@/components/analitica/entries-by-author";
 import { PartidaStatusChart, StatusStack } from "@/components/analitica/partida-status";
 import { WeeklyActivityChart } from "@/components/analitica/weekly-activity";
@@ -101,8 +102,7 @@ function BloquePlate({
       <span className="plate-index" aria-hidden="true">{String(index).padStart(2, "0")}</span>
       <div className="analitica-bloque-body">
         <div className="repo-title">
-          {name}
-          {closed && <span className="state-badge is-archived">{t.blockClosed}</span>}
+          <BloqueLabel name={name} closed={closed} closedLabel={t.blockClosed} />
         </div>
         <div className="repo-meta">
           <span>{partidas.length} {t.partidasWord}</span>

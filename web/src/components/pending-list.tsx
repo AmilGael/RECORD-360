@@ -49,7 +49,7 @@ export function PendingList({
           <div style={{ minWidth: 0 }}>
             {row.content}
             {failedId === row.id && (
-              <p role="alert" className="mono" style={{ fontSize: "0.74rem", color: "var(--accent-deep)", margin: "6px 0 0" }}>
+              <p role="alert" className="mono" style={{ fontSize: "0.74rem", color: "var(--accent-text, var(--accent-deep))", margin: "6px 0 0" }}>
                 {labels.resolveError}
               </p>
             )}

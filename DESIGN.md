@@ -1,21 +1,43 @@
 ---
 name: Raphel
-description: The obra's record as a precisionist industrial plate — flat hard-edged planes under one raking light.
+description: The obra's record as a warm site ledger: paper planes with soft rounded corners over a fine hairline grid, one orange accent.
 colors:
-  slate-ground: "#1E2328"
-  slate-plane: "#2A3138"
-  slate-plane-raised: "#343C44"
-  chalk: "#F2F1EC"
-  chalk-soft: "#C9CCC9"
-  steel: "#A0AAB1"
-  rust: "#C34E2D"
-  rust-deep: "#C24A2A"
-  mark-active: "#7fae90"
-  mark-merged: "#8d9ac4"
-  mark-blocked: "#d0674d"
-  brass: "#b08a2e"
-  hairline: "rgba(242, 241, 236, 0.14)"
-  hairline-strong: "rgba(242, 241, 236, 0.30)"
+  night-ground: "#171412"
+  night-plane: "#1f1b18"
+  night-plane-raised: "#292420"
+  night-ink: "#f1e7d8"
+  night-ink-soft: "#d4c7b7"
+  night-steel: "#b5a998"
+  night-accent: "#ff6f43"
+  night-accent-deep: "#e85a2c"
+  night-on-accent: "#171412"
+  night-accent-text: "#ff7d55"
+  brass-fill: "#b08a2e"
+  night-active: "#5bbd8d"
+  night-merged: "#a388e4"
+  night-blocked: "#e06a54"
+  night-brass: "#c9a347"
+  night-line: "rgba(241, 231, 216, 0.12)"
+  night-line-strong: "rgba(241, 231, 216, 0.22)"
+  night-grid: "rgba(241, 231, 216, 0.03)"
+  day-paper: "#ECE7DD"
+  day-paper-2: "#E3DDD0"
+  day-paper-3: "#DBD4C5"
+  day-ink: "#19140F"
+  day-ink-soft: "#4A433A"
+  day-steel: "#5A5348"
+  day-accent: "#E14A1F"
+  day-accent-deep: "#B83814"
+  day-on-accent: "#19140F"
+  day-on-accent-deep: "#ffffff"
+  day-accent-text: "#922a0c"
+  day-active: "#1f573c"
+  day-merged: "#5d4492"
+  day-blocked: "#8c3322"
+  day-brass: "#654e0d"
+  day-line: "rgba(25, 20, 15, 0.14)"
+  day-line-strong: "rgba(25, 20, 15, 0.26)"
+  day-grid: "rgba(25, 20, 15, 0.045)"
 typography:
   display:
     fontFamily: "Saira Stencil One, Archivo, sans-serif"
@@ -24,18 +46,16 @@ typography:
     lineHeight: 1
   headline:
     fontFamily: "Archivo, system-ui, sans-serif"
-    fontSize: "2.7rem"
-    fontWeight: 800
-    lineHeight: 0.94
-    letterSpacing: "0.01em"
-    fontVariation: "'wdth' 82"
+    fontSize: "2.6rem"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "-0.02em"
   title:
     fontFamily: "Archivo, system-ui, sans-serif"
-    fontSize: "1.3rem"
-    fontWeight: 800
-    lineHeight: 1.04
-    letterSpacing: "0.015em"
-    fontVariation: "'wdth' 86"
+    fontSize: "1.35rem"
+    fontWeight: 700
+    lineHeight: 1.1
+    letterSpacing: "-0.012em"
   body:
     fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "0.95rem"
@@ -46,9 +66,10 @@ typography:
     fontSize: "0.72rem"
     fontWeight: 400
     lineHeight: 1.25
-    letterSpacing: "0.2em"
+    letterSpacing: "0.16em"
 rounded:
-  none: "0px"
+  md: "10px"
+  sm: "6px"
 spacing:
   xs: "8px"
   sm: "12px"
@@ -57,185 +78,223 @@ spacing:
   gutter: "28px"
 components:
   button-primary:
-    backgroundColor: "{colors.rust}"
-    textColor: "#fff"
-    rounded: "{rounded.none}"
+    backgroundColor: "{colors.night-accent}"
+    textColor: "{colors.night-on-accent}"
+    rounded: "{rounded.sm}"
     padding: "0.72rem 1.2rem"
   button-primary-hover:
-    backgroundColor: "{colors.rust-deep}"
+    backgroundColor: "{colors.night-accent-deep}"
   button-ink:
-    backgroundColor: "{colors.chalk}"
-    textColor: "{colors.slate-ground}"
-    rounded: "{rounded.none}"
+    backgroundColor: "{colors.night-ink}"
+    textColor: "{colors.night-ground}"
+    rounded: "{rounded.sm}"
     padding: "0.72rem 1.2rem"
-  button-ink-hover:
-    backgroundColor: "{colors.rust}"
-    textColor: "#fff"
   button-ghost:
     backgroundColor: "transparent"
-    textColor: "{colors.chalk}"
-    rounded: "{rounded.none}"
+    textColor: "{colors.night-ink}"
+    rounded: "{rounded.sm}"
     padding: "0.72rem 1.2rem"
   input:
-    backgroundColor: "{colors.slate-ground}"
-    textColor: "{colors.chalk}"
-    rounded: "{rounded.none}"
+    backgroundColor: "{colors.night-ground}"
+    textColor: "{colors.night-ink}"
+    rounded: "{rounded.sm}"
     padding: "0.7rem 0.8rem"
+  card:
+    backgroundColor: "{colors.night-plane}"
+    rounded: "{rounded.md}"
+  sheet:
+    backgroundColor: "{colors.night-plane}"
+    rounded: "{rounded.md}"
 ---
 
 # Design System: Raphel
 
+## Scope
+
+This file describes the look of the signed-in app, everything under `/app`. That look lives in one stylesheet, `web/src/app/app/raphel-app.css`, and every rule in it is scoped under the `.raphel-app` class on the `/app` layout wrapper. The public landing page and the login, activation, reset, request-access and offline screens are out of scope: they still render from `web/src/app/globals.css` exactly as before, and nothing here applies to them. A test (`web/tests/raphel-app-theme.test.ts`) fails if a rule in `raphel-app.css` is not scoped.
+
 ## Overview
 
-**Creative North Star: "Plancha Industrial"** (seed d81dddab; approved comp: `.impeccable/mocks/comp-a-planar-ledger.png`)
+**Creative North Star: "Cuaderno de Obra"** (the original Raphel look, recovered from git before commit 2dff366 and confirmed by Victor, 2026-10-20).
 
-The obra's record rendered as a precisionist industrial plate: flat, hard-edged planes under one raking light. The world refuses both the white-card/blue-accent SaaS dashboard and the blueprint-blue cliché. Every surface is painted steel — deep-slate ground, slate planes, chalk type, ash secondaries, rust paint. Nothing glows, nothing floats; the record is machinery, and it holds.
+The obra's record as a warm site ledger: paper planes with soft rounded corners, lying on a fine hairline grid, with one orange accent. The app is a sales tool for Dominican construction companies, so it must feel calm, warm and finished, not industrial.
 
-The system is theme-dual but night-native. Night shift (deep slate) is the first-run default — the client reviews the record at night — and day shift is the *same site under daylight*: concrete and chalk with slate ink, derived by re-aiming the identical token set (`:root` day, `body[data-theme="dark"]` night). The public landing commits to night unconditionally via a scoped `.lp-night` token override: it is the brand surface, and the black box's native state is night.
+The system is theme-dual and night-native. Night is the first-run default (`r360_theme` cookie applied as `body[data-theme]`); day is the same site under daylight, derived by re-aiming one token set (`.raphel-app` day, `body[data-theme="dark"] .raphel-app` night).
 
-State is carried by **marks, not hues**: the active plane takes the light, pending is a chalk outline, concluded is a full chalk plane, danger and progress are painted rust bands, archived is an unlit plane. The ground itself is painted canvas — flat color with a ~4% SVG-turbulence tooth and one immense hard-edged raking-light diagonal, the world's single light source made visible.
-
-**Key Characteristics:**
-- Flat hard-edged planes; zero border radius everywhere; one chamfered corner on actions
-- Hard offset shadows only (the raking light) — never blurred halos
-- Night-native, day-derived; both shifts share one token vocabulary
-- Rust `#C34E2D` night / `#C24A2A` day used as painted bands and commitments, never as ambient wash
-- Stencil numerals as the display device; condensed Archivo caps as signage; mono as the data voice
-- State grammar of marks (outline / plane / band / unlit), not color-coding alone
-- No emoji anywhere in the UI — monochrome SVG line icons or text only (owner rule, PRODUCT.md)
+**Key characteristics:**
+- Warm dark ground (night) or warm paper (day), never slate, never white.
+- Rounded planes: `10px` on cards, panels and sheets, `6px` on small controls.
+- Soft shadows only: a tight `0 1px 2px` contact shadow plus a long, low-opacity drop. No hard offset shadows.
+- A fine hairline grid on the app ground only, never inside a card.
+- One orange accent for commitments and the active mark; never an ambient wash.
+- Archivo for everything addressed to a person, Chivo Mono for everything the machine recorded.
+- State is never carried by color alone.
+- No emoji anywhere in the UI.
 
 ## Colors
 
-One slate ramp, one chalk voice, one rust paint — the palette of a painted-steel yard at night, with three quiet advisory marks.
+### Night (first-run default)
 
-### Primary
-- **Rust** (`--accent`, #C34E2D night / #C24A2A day): the painted band. Primary action fill, progress bands inset on plate bottom edges, active-tab underline, active-language underline, the hover underline on row titles, the underline under the unread tag and the landing step numbers, selection background, the sync-pulse lamp. Small type on a slate plane is never rust (at most 3.35:1); it stays chalk or ink and carries a rust underline. Night rust is dark enough that white type on the button clears 4.5:1. Rust is applied like paint on steel — bands, edges, stamps — never as tinted backgrounds for whole regions. The new-obra toggle and the active state badge use chalk type; the rust icon and the green border stay the marks.
-- **Rust Deep** (`--accent-deep`, #C24A2A night / #A83D20 day): the pressed/hover state of rust, and rust legible on chalk planes (the sealed plate's hash, cost figures).
+| Token | Value | Role |
+|---|---|---|
+| `--paper` | `#171412` | App ground, input wells |
+| `--paper-2` | `#1f1b18` | Standard plane: cards, sidebar, panels, sheet |
+| `--paper-3` | `#292420` | Raised plane: hover, active row, track fills |
+| `--ink` | `#f1e7d8` | Primary type |
+| `--ink-soft` | `#d4c7b7` | Secondary type, nav at rest |
+| `--steel` | `#b5a998` | Meta voice: kickers, mono metadata, placeholders |
+| `--accent` | `#ff6f43` | Primary action fill, active marks, progress bands |
+| `--accent-deep` | `#e85a2c` | Accent hover fill |
+| `--accent-text` | `#ff7d55` | Accent used as small text (errors, costs, links, admin badge) |
+| `--on-accent` | `#171412` | Type on an accent fill |
+| `--on-accent-deep` | `#171412` | Type on an accent-deep fill |
+| `--state-active` | `#5bbd8d` | Open / healthy / done |
+| `--state-merged` | `#a388e4` | Merged change requests |
+| `--state-blocked` | `#e06a54` | Rejected / critical |
+| `--brass` | `#c9a347` | Middle severity (supervisor, "important") |
+| `--line` | `rgba(241, 231, 216, 0.12)` | Hairlines and dividers |
+| `--line-strong` | `rgba(241, 231, 216, 0.22)` | Control borders, emphasized dividers |
+| `--grid` | `rgba(241, 231, 216, 0.03)` | Ground grid lines |
 
-### Neutral
-- **Slate Ground** (`--paper`, #1E2328 night / #E9E7E0 day): the page ground and input wells.
-- **Slate Plane** (`--paper-2`, #2A3138 night / #F2F1EC day): the standard plate — cards, sidebar, panels, drawer.
-- **Slate Plane Raised** (`--paper-3`, #343C44 night / #DDDAD1 day): hover/active surface and track fills — the plane that has taken the light.
-- **Chalk** (`--ink`, #F2F1EC night / #1E2328 day): primary type, and the fill of concluded/sealed planes (`.lp-plate--sealed`, `.invite-panel-head`, `.seg-toggle-item.is-on` invert to ink-on-paper).
-- **Chalk Soft** (`--ink-soft`, #C9CCC9 night / #3C444C day): secondary type, nav links at rest.
-- **Steel** (`--steel`, #A0AAB1 night / #545E65 day): the meta voice — kickers, mono metadata, stencil numerals at rest, placeholders, archived state. Shifted just far enough from the slate planes to clear 4.5:1 on `--paper-3`.
-- **Hairline / Hairline Strong** (`--line` chalk at 14% / `--line-strong` chalk at 30%; ink-based in day): every border and divider. Structure is drawn with hairlines, not with elevation.
+### Day (derived)
 
-### State Marks (advisory colors — always paired with a mark or text label, never the only carrier)
-- **Mark Active** (`--state-active`, #7fae90 night / #2f6d52 day): open/healthy — badges, done bands, green lamps.
-- **Mark Merged** (`--state-merged`, #8d9ac4 night / #4d5a8a day): merged change requests.
-- **Mark Blocked** (`--state-blocked`, #d0674d night / #a8432f day): rejected/critical — danger badges, red lamps, soft-danger buttons.
-- **Brass** (#b08a2e, text-on-tint #8a6c1a): the middle severity — supervisor role, yellow health lamps, "important" severity chips. Hardcoded in the build but consistently reused; treated as a system color.
+| Token | Value | Role |
+|---|---|---|
+| `--paper` | `#ECE7DD` | App ground, input wells |
+| `--paper-2` | `#E3DDD0` | Standard plane |
+| `--paper-3` | `#DBD4C5` | Raised plane |
+| `--ink` | `#19140F` | Primary type |
+| `--ink-soft` | `#4A433A` | Secondary type |
+| `--steel` | `#5A5348` | Meta voice |
+| `--accent` | `#E14A1F` | Primary action fill, active marks, progress bands |
+| `--accent-deep` | `#B83814` | Accent hover fill |
+| `--accent-text` | `#922a0c` | Accent used as small text |
+| `--on-accent` | `#19140F` | Type on an accent fill |
+| `--on-accent-deep` | `#ffffff` | Type on an accent-deep fill |
+| `--state-active` | `#1f573c` | Open / healthy / done |
+| `--state-merged` | `#5d4492` | Merged change requests |
+| `--state-blocked` | `#8c3322` | Rejected / critical |
+| `--brass` | `#654e0d` | Middle severity |
+| `--line` | `rgba(25, 20, 15, 0.14)` | Hairlines |
+| `--line-strong` | `rgba(25, 20, 15, 0.26)` | Control borders |
+| `--grid` | `rgba(25, 20, 15, 0.045)` | Ground grid lines |
 
-**The Marks-Not-Hues Rule.** State is a mark before it is a color: pending = chalk outline (dashed border, transparent fill, no shadow), concluded = full chalk plane, danger/progress = rust band, archived = unlit steel. A color chip alone never carries state; severity chips and badges always contain their text label.
+### Contrast notes
 
-**The Paint Ration Rule.** Rust is paint, applied in bands, edges, and stamps on commitments. It never fills a region larger than a button, and never appears as an ambient background wash.
+- Ink and soft ink clear 4.5:1 on the ground in both themes (night 15.0 and 11.1; day 14.8 and 7.9).
+- **Type on the accent is dark in both themes.** White on the night accent is 2.8:1 and white on the day accent `#E14A1F` is 4.0:1, both under 4.5:1. Dark type reaches 6.6:1 (night) and 4.5:1 (day). On hover the day button deepens to `#B83814`, where dark type fails, so the type turns white (5.8:1). This is why `--on-accent` and `--on-accent-deep` exist: never hard-code `#fff` on an accent fill.
+- **Accent as text uses `--accent-text`**, never `--accent` or `--accent-deep`: the pinned `--accent-deep` is for fills (day `#B83814` is only 3.9:1 on `--paper-3`; night `#e85a2c` is 4.2:1 on a 10% accent tint). `--accent-text` clears 4.5:1 on all three planes and on an 8 to 12% accent tint over them. Inline styles write `var(--accent-text, var(--accent-deep))` so a component rendered outside `/app` still has a color.
+- Badge text on its own tint clears 4.5:1: day state colors and day brass are darker than the pre-2026 values, night brass is lighter (`#c9a347`), and the night blocked tint is 8% (12% put `#e06a54` at 4.4:1). Night blocked text over a tint on `--paper-3` stays under 4.5:1 because the pinned color itself is only 4.65:1 there; keep critical chips off the raised plane.
+- `.btn-danger-soft` keeps its resting tint on hover (a deeper tint fails); the border carries the hover.
+- The supervisor avatar is filled `#b08a2e` in both themes, so its initials are dark (`#171412`, 5.7:1).
+- `.state-badge.is-active` keeps ink text; the green tint and border are the mark.
+
+**The Marks-Not-Hues Rule.** State is never carried by color alone. Every colored state (badge, dot, band, chip, lamp) sits beside its text label. A colored dot without a label is not a state.
+
+**The Paint Ration Rule.** The accent is for commitments (primary buttons), the active mark (tab underline, active row edge) and progress bands. It never fills a region larger than a button, and never appears as a background wash.
 
 ## Typography
 
-**Display Font:** Saira Stencil One (fallback: Archivo)
-**Headline/UI Font:** Archivo variable, `wdth` axis loaded (fallback: system-ui)
-**Data/Label Font:** Chivo Mono (fallback: monospace)
+**Headline / UI font:** Archivo (fallback: system-ui).
+**Data / label font:** Chivo Mono (fallback: monospace).
+**Numerals:** Saira Stencil One, kept only where existing markup already uses it for counts and indices.
 
-**Character:** All three faces are Omnibus-Type (Latin American foundry). Archivo condensed caps read as painted-steel signage; Chivo Mono is the ledger's data voice (timestamps, hashes, codes, kickers, badges); Saira Stencil One is the stencil sprayed on the plate. Fraunces (the old serif brand voice) is retired with the old world.
+Fraunces (the old serif) is retired; Archivo carries headings and the wordmark.
 
 ### Hierarchy
-- **Display — stencil numerals** (400, `clamp(2.4rem, 5vw, 3.4rem)` for the yard count, 2.1rem plate index, 1.25–1.55rem stat counts, line-height ≤1, `--steel` at rest): counts and section indices only. `.counter-stencil`, `.plate-index`, `.lp-sec-num`, `.sidebar-stat strong`, `.analitica-card strong`.
-- **Headline** (800, 2.7rem `.h-xl` / 2rem `.h-lg`, uppercase, `font-stretch` 82–84%, line-height 0.94–0.98): page and section titles.
-- **Title** (800, 1.3rem `.h-md`, uppercase, `font-stretch` 86%, line-height 1.04): panel and plate headings; plate titles use 700/1.05rem at stretch 88%.
-- **Body** (400–600, 0.82–0.95rem, line-height 1.4–1.5): Archivo at natural width, sentence case.
-- **Label/Kicker** (Chivo Mono, 0.6–0.74rem, 0.06–0.2em tracking, uppercase, `--steel`): kickers, form labels, badges, metadata, filenames, dates.
+- **Headline** (`.h-xl` 2.6rem / `.h-lg` 2rem, 700, sentence case, natural width, `-0.02em` tracking, line-height about 1): page titles.
+- **Title** (`.h-md` 1.35rem, 700, sentence case): panel and card headings.
+- **Body** (400 to 600, 0.82 to 0.95rem, line-height 1.4 to 1.5): sentence case.
+- **Label / kicker** (Chivo Mono, 0.6 to 0.74rem, uppercase, 0.06 to 0.2em tracking, `--steel`): kickers, form labels, badges, metadata, filenames, dates.
 
-**The Signage Compression Rule.** The bigger the type, the narrower the width: display headlines compress to 82% width, titles to 86–88%, all uppercase with tight line-height (≤1.05). Body text stays at natural width and sentence case.
+**The Two-Voices Rule.** Anything the machine recorded (timestamps, hashes, percentages, codes, filenames) speaks in Chivo Mono; anything addressed to the person speaks in Archivo.
 
-**The Stencil-Is-Numerals Rule.** Saira Stencil One sets numerals only — counts, indices, section numbers — never words, never body copy.
-
-**The Two-Voices Rule.** Anything the machine recorded (timestamps, hashes, percentages, codes, filenames, metadata) speaks in Chivo Mono at small sizes with tracking; anything addressed to the human speaks in Archivo.
+Buttons, nav links and card titles are sentence case at natural width. Uppercase is reserved for the mono label voice.
 
 ## Layout
 
-Ledger density on a 1280px maximum container with 28px gutters (16px below 480px). The app shell is a two-column grid: a 280px sticky sidebar plane and a `minmax(0,1fr)` main column, 24px gap; at ≤1040px the sidebar becomes a left drawer (`min(320px, 86vw)`, slide transition) behind a fixed mono drawer-toggle. The dashboard splits `1fr 340px` (stacking at ≤860px); the obra workspace splits `240px 1fr` tree/viewport (stacking at ≤760px); analytics splits `minmax(0,1fr) 320px` (≤960px).
+A 1280px maximum container with 28px gutters (16px below 480px). The app shell is a 280px sticky sidebar plus a `minmax(0, 1fr)` main column, 24px gap; at 1040px and below the sidebar becomes a left drawer. Touch targets get `min-height: 44px` under `pointer: coarse`. Nothing may make the page scroll sideways at 390px.
 
-Vertical rhythm is hairline-divided lists: full-width rows separated by 1px `--line` borders with 13–16px block padding, not gapped cards. Internal plate padding runs 14–20px; panel bodies 18px. Safe-area insets (`env()`) pad the appbar and shell for notched phones; touch targets get `min-height: 44px` under `pointer: coarse` only, leaving desktop density unchanged. Tabs become a horizontal scroll strip (no visible scrollbar) at ≤640px; the dashboard table restructures into stacked labeled rows via `td::before { content: attr(data-label) }`.
+## Ground
 
-## Elevation & Depth
+The app ground is a fine hairline grid: 1px lines at `--grid` on a 14px cell over `--paper`, with `background-attachment: fixed` so the grid stays put while the record scrolls. It is subtle enough that type set directly on it stays readable.
 
-Depth is a single raking light, not a z-axis. Shadows are **hard offset planes** — zero blur, zero spread — as if every plate were lit from the upper-left and casting onto the wall behind it. Interactive lift is expressed as the plane "taking the light": background steps up one slate (`--paper-2` → `--paper-3`), the shadow deepens from soft to card, and content nudges (translate, never padding).
+Behind the wrapper, `body:has(.raphel-app)` (and its night form) paints the body in the same `--paper` value, so iOS overscroll never shows another color. These two selectors are the only ones in `raphel-app.css` not under `.raphel-app`; they cannot match the landing or auth screens, which never contain the class.
 
-### Shadow Vocabulary
-- **Soft offset** (`--shadow-soft`: `2px 2px 0 rgba(0,0,0,0.30)` night / `2px 2px 0 rgba(30,35,40,0.10)` day): plates at rest in a list (repo cards, capability planes, analytics panels).
-- **Card offset** (`--shadow-card`: `6px 7px 0 rgba(0,0,0,0.38)` night / `5px 6px 0 rgba(30,35,40,0.14)` day): standing planes (sidebar, list containers, landing plates) and the hover state of resting plates.
-- **Inset accent bar** (`inset 2px 0 0 var(--accent)`): the active row's left edge (tree rows, reply quotes) — paint, not glow.
+Only the ground gets the grid. Cards, panels, the sidebar, the sheet and every other plane carry an opaque `--paper-2` (or `--paper`) fill, so the grid never shows inside them.
 
-**The Raking Light Rule.** Shadows are hard offset planes, never soft halos. `box-shadow` values carry no blur radius. Depth changes are shadow-offset changes plus one slate step — nothing floats, and nothing glows.
+## Elevation and shadows
 
-The one sanctioned translucency is the sticky appbar: 82% paper with `backdrop-filter: blur(10px)` — glass over the record while it scrolls, not elevation.
+Depth is soft and quiet. Every shadow is a tight contact shadow plus a long low-opacity drop:
+
+| Token | Night | Day | Use |
+|---|---|---|---|
+| `--shadow-soft` | `0 1px 2px rgba(0, 0, 0, 0.22), 0 8px 20px -12px rgba(0, 0, 0, 0.40)` | `0 1px 2px rgba(25, 20, 15, 0.05), 0 6px 16px -10px rgba(25, 20, 15, 0.10)` | Cards at rest in a list |
+| `--shadow-card` | `0 1px 2px rgba(0, 0, 0, 0.22), 0 16px 34px -20px rgba(0, 0, 0, 0.50)` | `0 1px 2px rgba(25, 20, 15, 0.05), 0 12px 30px -14px rgba(25, 20, 15, 0.14)` | Standing panels, hover lift |
+| `--shadow-sheet` | `0 1px 2px rgba(0, 0, 0, 0.22), 0 24px 60px -18px rgba(0, 0, 0, 0.60)` | `0 1px 2px rgba(25, 20, 15, 0.05), 0 24px 60px -18px rgba(25, 20, 15, 0.22)` | The side sheet |
+
+**The No-Offset Rule.** No hard offset shadows (zero-blur `x y 0` planes) inside `/app`. Lift is one plane step up (`--paper-2` to `--paper-3`) plus `--shadow-soft` to `--shadow-card`. Inset accent bars (`inset 2px 0 0 var(--accent)`) are marks, not shadows, and stay.
+
+The sticky appbar is the one translucent surface: 82% ground with a 10px backdrop blur.
 
 ## Shapes
 
-Planes have machined edges: `border-radius: 0` on every surface, badge, chip, avatar, and bar (`--radius` and `--radius-sm` are both `0px`). The single sanctioned corner treatment is the **chamfer**: `.btn` clips its bottom-left corner with a 10px `clip-path` polygon — a plate with the corner sheared. The chamfer is the world's signature on every commitment the user makes; it appears on buttons and nowhere else.
-
-**The One Chamfer Rule.** Zero radius everywhere; actions alone carry one 10px chamfered corner (bottom-left). Do not chamfer non-interactive planes, and do not round anything.
-
-**The Round Exception Rule.** Circles are reserved for period-correct hardware: indicator lamps (`.pdot`, `.health-dot`, 8–10px, `border-radius: 50%`) and the sync-chip's 6px pulsing lamp. These are the only curved shapes in the world, and they never grow beyond lamp scale.
-
-Pending/outline states use 1px dashed hairline borders; the active nav link carries a 2px rust left edge; structure elsewhere is 1px solid hairlines.
+- `--radius: 10px` on cards, panels, plates, list containers, the workspace and the sheet.
+- `--radius-sm: 6px` on buttons, inputs, badges, chips, tags, nav links and small controls. On thin bars (progress tracks, 4 to 10px tall) the same token renders as fully rounded ends.
+- Indicator lamps and avatars are circles.
+- No chamfers. The `clip-path` cut corner of the retired look is removed from `.btn`.
 
 ## Components
 
 ### Buttons (`.btn`)
-- **Character:** cut steel — condensed caps, square edges, one sheared corner.
-- **Shape:** square with a 10px bottom-left chamfer (`clip-path`), radius 0.
-- **Type:** Archivo 700 at 88% width, uppercase, 0.82rem, 0.06em tracking; padding `0.72rem 1.2rem`.
-- **Primary** (`.btn-accent`): rust fill, white text; hover deepens to rust-deep and lifts −1px.
-- **Ink** (`.btn-ink`): chalk plate (ink token) with paper text; hover turns rust.
-- **Ghost** (`.btn-ghost`): transparent with `--line-strong` border; hover strengthens the border to ink.
-- **Soft danger** (`.btn-danger-soft`): blocked-red at ~12% tint with tinted border.
-- **States:** `:active` presses down 1px; `:disabled` at 0.55 opacity with `cursor: progress`; `[aria-busy]` pulses opacity; arrows inside slide +3px on hover. Focus is a 2px rust outline, 2px offset (shared across all interactive classes).
-
-### Quiet Actions (`.icon-action`)
-Borderless mono-voice icon+label pairs (Archivar, Restaurar, Borrar): Chivo Mono 0.7rem, steel, `inline-flex` + `nowrap` (icon and label may never stack); hover to ink, danger variant hovers to rust-deep.
+Archivo 700, 0.9rem, sentence case, `--radius-sm`, padding `0.72rem 1.2rem`.
+- **Primary** (`.btn-accent`): accent fill, `--on-accent` type; hover deepens to `--accent-deep` with `--on-accent-deep` type and lifts 1px.
+- **Ink** (`.btn-ink`): ink fill, ground type; hover turns accent with `--on-accent` type.
+- **Ghost** (`.btn-ghost`): transparent, `--line-strong` border; hover strengthens the border to ink.
+- **Soft danger** (`.btn-danger-soft`): `--state-blocked-bg` tint with a tinted border; hover strengthens the border only.
+- Focus is a 2px accent outline, 2px offset.
 
 ### Inputs (`.input`, `.search-input`)
-- **Style:** paper-ground well, 1px `--line-strong` border, radius 0, 0.95rem.
-- **Focus:** rust border plus a 3px rust-tinted ring (`0 0 0 3px` at ~12%); no outline.
-- **File pickers:** native `<input type="file">` styled via `::file-selector-button` as a small ghost button; filename text speaks mono/steel like other file metadata. One treatment across all eight pickers.
-- **Form labels:** mono kicker voice (0.68rem, 0.09em tracking, uppercase).
+Ground-colored well, 1px `--line-strong` border, `--radius-sm`. Focus: accent border plus a 3px accent ring at 12%.
 
-### Badges & Chips (`.state-badge`, `.role-badge`, `.severity-chip`, `.chip`)
-Mono 0.58–0.66rem uppercase, radius 0, tinted background (~10–14%) with matching tinted 1px border and state-color text. Text label always present; wrapping is word-boundary only (badges move whole to the next line, never break mid-word).
+### Cards and panels (`.card`, `.repo-list`, `.panel-create`, `.invite-panel`, `.analitica-card`, `.planos-card`)
+`--paper-2` fill, 1px `--line` border, `--radius`, `--shadow-soft` at rest or `--shadow-card` standing. No grid inside.
 
-### Plates (`.repo-card` — signature component)
-Each obra is a painted-steel plate: slate-plane grid row (stencil index column + content), 1px hairline, soft offset shadow, radius 0. The **stencil index** (`.plate-index`, Saira 2.1rem, steel) is the plate's painted number; the **progress band** (`.plate-band`, 6px rust bar inset absolutely along the bottom edge over a 12%-ink track) is data as material, not a floating widget; done bands turn mark-active. Hover: the plane takes the light (`--paper-3`, card shadow, index brightens to ink).
+### Badges and chips (`.state-badge`, `.role-badge`, `.severity-chip`, `.chip`, `.aging-mark`)
+Chivo Mono 0.58 to 0.66rem uppercase, `--radius-sm`, a 10 to 14% tint of the state color with a matching tinted border and state-colored text. The text label is always present.
+
+### Tab strip (project tabs)
+One list of tabs (`web/src/lib/project/tabs.ts`) read by the layout and the tests. Each tab is a real route; the active tab is an exact path match, carries `aria-current="page"` and a 3px accent underline. On narrow screens the strip slides sideways with a fading edge instead of wrapping (`.slide-row`), and the active tab scrolls into view after a route change. All five Spanish labels must fit at 390px without the page scrolling sideways.
+
+### Side sheet (`.sheet-*`)
+One component for the Partida preview and the create forms. A right-hand panel, about 28rem wide on desktop and full screen under 640px, over a dimmed backdrop, rendered into `#sheet-root` (the last child of the `/app` wrapper). `--paper-2` fill, `--radius` on its open edge, `--shadow-sheet`. Closes on Escape, backdrop click, a Cerrar button and the phone back gesture (one pushed history entry per open sheet). Focus moves in on open and returns to the opener on close. No confirm bar: records are append-only.
 
 ### Navigation
-- **Appbar:** sticky translucent plane (82% paper + 10px blur), 60px, hairline bottom; brand in wide Archivo 800 caps with a rust dot; the "BLACK BOX" tag is a bordered mono chip that never wraps.
-- **Sidebar rail:** slate plane with card shadow; links in condensed Archivo caps 0.8rem with a transparent 2px left border that turns rust + `--paper-3` fill when active; section headings in mono kicker voice; stat counts in stencil.
-- **Tabs (`.tabs`):** underline grammar — 2px transparent bottom border, rust 3px when active; disabled tabs carry a mono "soon" chip.
-- **Segmented toggle (`.seg-toggle`):** panel-scoped view switch (deliberately not `.tabs` — these are two views of one list, not page peers); bordered mono strip whose active segment inverts to ink-on-paper.
+- **Appbar:** sticky translucent plane, 60px, hairline bottom; wordmark in Archivo 800 sentence case with an accent dot.
+- **Sidebar:** `--paper-2` plane, `--radius`, `--shadow-card`; links in Archivo 600 sentence case with `--radius-sm`; the active link takes `--paper-3` and a 2px accent left edge.
 
-### Lamps & Sync (`.sync-chip`, `.pdot`, `.health-dot`)
-The offline-queue chip is a bordered mono chip with a 6px round rust lamp pulsing at 1.4s — the sanctioned round exception, period-correct hardware.
+## Motion
 
-### Motion
-One easing (`--ease: cubic-bezier(0.2, 0.7, 0.2, 1)`), 0.15–0.18s for state changes. Page content rises in (`.reveal`, 0.45s, 50ms stagger). Progress and health bars draw themselves once via `transform: scaleX` entrance (`bar-grow`) — never width animation. Hover nudges translate content, never padding. The landing's one authored moment: plates write in narrative order and the seal stamps last with a snap ease. `prefers-reduced-motion` kills everything.
+- One easing, `--ease: cubic-bezier(0.2, 0.7, 0.2, 1)`, 0.15 to 0.2s for state changes.
+- Animate `transform` and `opacity` only. Never animate width, height or padding.
+- Progress fills draw in once with `transform: scaleX` (`bar-grow`). Progress bands may carry a slow, gentle pulse (`.pulse-band`), on opacity or transform only.
+- The sheet slides in with `transform: translateX` (from the bottom edge on phones) and the backdrop fades.
+- Everything animated stops under `prefers-reduced-motion: reduce`.
 
 ## Do's and Don'ts
 
-### Do:
-- **Do** keep every surface at radius 0 and reserve the 10px bottom-left chamfer for `.btn` commitments only.
-- **Do** cast hard offset shadows only (`2px 2px 0` at rest, `6px 7px 0` standing/hover in night) and express lift as one slate step up plus a deeper offset.
-- **Do** carry state as marks — chalk outline (pending), chalk plane (concluded), rust band (danger/progress), unlit steel (archived) — with the text label always present.
-- **Do** set all machine data (timestamps, hashes, counts, filenames, badges) in Chivo Mono at small sizes with tracking, and all display/headline type in condensed Archivo caps.
-- **Do** use Saira Stencil One for numerals only, in steel at rest, brightening to ink when its plane takes the light.
-- **Do** style native controls into the world (file pickers via `::file-selector-button`, radios via `accent-color`) rather than replacing them with JS widgets.
-- **Do** honor both shifts: express every color through the theme tokens so day shift derives automatically; never hardcode a night hex into a component.
+### Do
+- **Do** express every color through the tokens so day derives from night automatically.
+- **Do** use `--on-accent` / `--on-accent-deep` for any type on an accent fill, and `--accent-text` for accent-colored type.
+- **Do** give every plane an opaque fill so the ground grid stays on the ground.
+- **Do** put a text label beside every colored state.
+- **Do** scope every new `/app` rule under `.raphel-app` in `raphel-app.css` (a descendant or compound step, never a sibling combinator).
 
-### Don't:
-- **Don't** use blurred or spread shadows, glows, or halos — the raking light casts hard planes. (The appbar's backdrop blur is the one sanctioned translucency.)
-- **Don't** round anything except indicator lamps and the sync pulse; no pills, no rounded avatars, no rounded bars.
-- **Don't** let rust fill regions larger than a button or read as ambient background; it is paint on edges, bands, and stamps.
-- **Don't** use emoji anywhere in the UI — monochrome SVG line icons or text only (owner rule).
-- **Don't** carry state by hue alone; a colored dot or tint without a mark and label is not a state.
-- **Don't** revert to the retired world: no blueprint grid ground, no serif (Fraunces) voice, no white-card/blue-accent grammar.
-- **Don't** animate layout properties (width, padding); entrances use transform/opacity, hover nudges translate content.
+### Don't
+- **Don't** use hard offset shadows, chamfered corners or zero-radius planes inside `/app`.
+- **Don't** put white type on the accent.
+- **Don't** let the accent fill a region larger than a button.
+- **Don't** use emoji anywhere in the UI: monochrome SVG line icons (`web/src/components/icons.tsx`) or text only.
+- **Don't** carry state by color alone.
+- **Don't** animate layout properties.
+- **Don't** edit `globals.css` to change the `/app` look: the landing and auth screens depend on it.

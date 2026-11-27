@@ -262,18 +262,18 @@ export function LogComposer({
       {correction && (
         <div className="mono" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", background: "var(--paper-2)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "8px 10px", fontSize: "0.7rem", marginBottom: 10 }}>
           <span>{correction.notice} {correction.label}</span>
-          <Link href={`/app/partidas/${partidaId}`} style={{ color: "var(--accent-deep)", textDecoration: "none" }}>{correction.cancelLabel}</Link>
+          <Link href={`/app/partidas/${partidaId}`} style={{ color: "var(--accent-text, var(--accent-deep))", textDecoration: "none" }}>{correction.cancelLabel}</Link>
         </div>
       )}
       {reply && (
         <div className="mono" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", background: "var(--paper-2)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "8px 10px", fontSize: "0.7rem", marginBottom: 10 }}>
           <span>{reply.notice} {reply.label}</span>
-          <Link href={`/app/partidas/${partidaId}`} style={{ color: "var(--accent-deep)", textDecoration: "none" }}>{reply.cancelLabel}</Link>
+          <Link href={`/app/partidas/${partidaId}`} style={{ color: "var(--accent-text, var(--accent-deep))", textDecoration: "none" }}>{reply.cancelLabel}</Link>
         </div>
       )}
       <textarea ref={textRef} name="text" placeholder={t.placeholder} rows={3} className="input" style={{ marginBottom: 10, resize: "vertical" }} />
       {error && (
-        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-text, var(--accent-deep))", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
           {error}
         </p>
       )}
@@ -290,7 +290,7 @@ export function LogComposer({
         </p>
       )}
       {dictationError && (
-        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-text, var(--accent-deep))", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
           {dictationError}
         </p>
       )}

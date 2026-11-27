@@ -103,9 +103,9 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
           <p role="status" className="mono text-steel" style={{ fontSize: "0.72rem", margin: 0 }}>{t.alreadyGenerating}</p>
         )}
         {state && !state.ok && (
-          <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem" }}>
+          <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-text, var(--accent-deep))", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem" }}>
             {state.missingFirma ? (
-              <>{t.missingFirma} <Link href="/app/admin" style={{ color: "var(--accent-deep)" }}>{t.goToEquipo}</Link></>
+              <>{t.missingFirma} <Link href="/app/admin" style={{ color: "var(--accent-text, var(--accent-deep))" }}>{t.goToEquipo}</Link></>
             ) : state.missingSeal ? (
               t.noSealNotice
             ) : state.error}
@@ -122,14 +122,14 @@ export function InformesTab({ projectId, segments, partidas, informes, t, archet
               <span className="cr-title">{i.brief.length > 90 ? `${i.brief.slice(0, 90)}…` : i.brief}</span>
               <span className="cr-meta">{i.scopeLabel} · {i.archetypeLabel} · {t.requestedBy} {i.requesterName} · {i.createdAt}</span>
               {i.status === "FAILED" && i.errorMessage && (
-                <span className="cr-meta" style={{ color: "var(--accent-deep)" }}>{i.errorMessage}</span>
+                <span className="cr-meta" style={{ color: "var(--accent-text, var(--accent-deep))" }}>{i.errorMessage}</span>
               )}
             </span>
             {/* target=_blank pairs with the PDF route's `inline` disposition:
                 the informe opens in its own tab and the informes list stays
                 put. Same-origin link, but rel=noopener stays as belt-and-braces. */}
             {i.status === "READY" ? (
-              <a href={`/api/informes/${i.id}/pdf`} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
+              <a href={`/api/informes/${i.id}/pdf`} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 12, color: "var(--accent-text, var(--accent-deep))", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px", maxWidth: "100%", lineHeight: 1.25, overflowWrap: "anywhere" }}>
                 {t.downloadPdf}
               </a>
             ) : (

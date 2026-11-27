@@ -43,14 +43,26 @@ export async function openCuaderno(page: Page, t: T, name: string): Promise<void
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
-/** Creates a partida in the current bloque workspace and reloads so the new row is on the list. */
-export async function createPartidaInWorkspace(page: Page, t: T, name: string): Promise<void> {
-  const form = page.locator(`input[placeholder="${t.project.newPartida}"]:visible`).first();
-  await expect(form).toBeVisible();
-  await form.fill(name);
+/** The bloque workspace has loaded: its "Nueva partida" button is shown (admins, open bloque). */
+export async function expectWorkspaceReady(page: Page, t: T): Promise<void> {
+  await expect(page.getByRole("button", { name: t.project.newPartidaButton, exact: true })).toBeVisible();
+}
+
+/** Creates a partida through the "Nueva partida" side sheet; resolves once the server answered and the sheet closed. */
+export async function submitNewPartida(page: Page, t: T, name: string): Promise<void> {
+  await page.getByRole("button", { name: t.project.newPartidaButton, exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: t.project.newPartidaButton });
+  await expect(sheet).toBeVisible();
+  await sheet.getByPlaceholder(t.project.newPartida).fill(name);
   const answered = page.waitForResponse((r) => r.request().method() === "POST" && Boolean(r.request().headers()["next-action"]));
-  await page.getByRole("button", { name: t.project.add, exact: true }).click();
+  await sheet.getByRole("button", { name: t.project.add, exact: true }).click();
   expect((await answered).status()).toBe(200);
+  await expect(sheet).toHaveCount(0);
+}
+
+/** Creates a partida in the current bloque workspace and reloads so the new card is on the grid. */
+export async function createPartidaInWorkspace(page: Page, t: T, name: string): Promise<void> {
+  await submitNewPartida(page, t, name);
   await page.reload();
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("button", { name: startsWith(name) }).first()).toBeVisible();
@@ -61,12 +73,10 @@ export async function openTestPartida(page: Page, t: T): Promise<void> {
   await page.goto("/app");
   await follow(page, startsWith(OBRA));
   await follow(page, startsWith(BLOQUE));
-  const partidaForm = page.locator(`input[placeholder="${t.project.newPartida}"]:visible`).first();
-  await expect(partidaForm).toBeVisible();
+  await expectWorkspaceReady(page, t);
   const partidaRow = page.getByRole("button", { name: startsWith(PARTIDA) });
   if ((await partidaRow.count()) === 0) {
-    await partidaForm.fill(PARTIDA);
-    await page.getByRole("button", { name: t.project.add, exact: true }).click();
+    await submitNewPartida(page, t, PARTIDA);
     await expect(partidaRow.first()).toBeVisible();
   }
   await selectPartida(page, PARTIDA);

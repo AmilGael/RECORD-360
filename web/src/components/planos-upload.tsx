@@ -127,7 +127,7 @@ export function PlanosUpload({ projectId, segmentId, kind = "PLANO", t }: { proj
         <input name="title" className="input" />
       </label>
       {error && (
-        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-text, var(--accent-deep))", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
           {error}
         </p>
       )}

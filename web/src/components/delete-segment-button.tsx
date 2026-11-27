@@ -18,7 +18,7 @@ export function DeleteSegmentButton({ segmentId, t }: { segmentId: string; t: T 
   return (
     <form action={deleteSegment} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
       <input type="hidden" name="segmentId" value={segmentId} />
-      <span className="mono" style={{ fontSize: "0.66rem", color: "var(--accent-deep)" }}>{t.deleteBloqueConfirm}</span>
+      <span className="mono" style={{ fontSize: "0.66rem", color: "var(--accent-text, var(--accent-deep))" }}>{t.deleteBloqueConfirm}</span>
       <SubmitButton className="btn btn-accent" style={{ padding: "0.22rem 0.6rem", fontSize: "0.68rem" }}>{t.yes}</SubmitButton>
       <button type="button" onClick={() => setConfirming(false)} className="btn btn-ghost" style={{ padding: "0.22rem 0.6rem", fontSize: "0.68rem" }}>{t.no}</button>
     </form>

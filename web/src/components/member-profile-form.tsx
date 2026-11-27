@@ -74,7 +74,7 @@ function FilePreviewField({
       <input name={name} type="file" accept={accept} onChange={onChange} style={{ display: "block", marginTop: 4 }} />
       <span className="mono text-steel" style={{ display: "block", fontSize: "0.62rem", marginTop: 2 }}>{hint}</span>
       {localError && (
-        <span role="alert" className="mono" style={{ display: "block", fontSize: "0.68rem", color: "var(--accent-deep)", marginTop: 3 }}>{localError}</span>
+        <span role="alert" className="mono" style={{ display: "block", fontSize: "0.68rem", color: "var(--accent-text, var(--accent-deep))", marginTop: 3 }}>{localError}</span>
       )}
       {(currentUrl || previewUrl) && (
         <div style={{ display: "flex", gap: 10, marginTop: 6, alignItems: "flex-start" }}>
@@ -126,7 +126,7 @@ export function MemberProfileForm({
           currentUrl={signatureUrl} currentLabel={t.currentSignature} previewLabel={t.newSignaturePreview} t={t} onValidate={setSignatureError}
         />
         {state && !state.ok && (
-          <p role="alert" className="mono" style={{ fontSize: "0.74rem", color: "var(--accent-deep)", margin: 0 }}>{state.error}</p>
+          <p role="alert" className="mono" style={{ fontSize: "0.74rem", color: "var(--accent-text, var(--accent-deep))", margin: 0 }}>{state.error}</p>
         )}
         <SubmitButton className="btn btn-ghost" style={{ justifySelf: "start" }} disabled={blocked}>{t.saveProfile}</SubmitButton>
       </form>

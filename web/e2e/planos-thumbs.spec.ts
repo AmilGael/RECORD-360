@@ -32,7 +32,7 @@ async function openPlanos(page: Parameters<typeof loginAs>[0], t: (typeof dictio
   await expect(obra).toBeVisible();
   const href = await obra.getAttribute("href");
   if (!href) throw new Error("obra has no href");
-  await page.goto(`${href}?tab=planos`);
+  await page.goto(`${href}/planos`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("link", { name: t.project.tabPlanos })).toBeVisible();
 }

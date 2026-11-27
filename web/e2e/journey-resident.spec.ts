@@ -196,7 +196,7 @@ test("resident: capture, offline sync, reminder, volver, notifications, planos",
   await shot(page, "notifications");
   await assertNoHorizontalOverflow(page, "Notificaciones");
 
-  await page.goto(`${obraPath}?tab=planos`);
+  await page.goto(`${obraPath}/planos`);
   await page.waitForLoadState("networkidle");
   const search = page.getByRole("searchbox", { name: t.planos.search });
   await search.fill("electr");

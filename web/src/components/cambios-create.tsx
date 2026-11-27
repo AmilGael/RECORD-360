@@ -18,13 +18,21 @@ type T = {
 
 const INITIAL: CreateChangeRequestState = { status: "idle" };
 
-export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
+export function CambiosCreate({ projectId, segments, fixedSegment, t, onSuccess }: {
   projectId: string;
   segments: { id: string; name: string }[];
   fixedSegment?: { id: string; name: string };
   t: T;
+  /** Called once a request is created (the side sheet closes on it). */
+  onSuccess?: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  // Read through a ref so a new callback each render cannot re-run the
+  // success effect (and reset the form a second time).
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  });
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsState, setGpsState] = useState<GpsState>("acquiring");
   const [state, formAction, pending] = useActionState(createChangeRequest, INITIAL);
@@ -70,6 +78,7 @@ export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
       formRef.current?.reset();
       setCoords(null);
       acquireGps();
+      onSuccessRef.current?.();
     }
   }, [state]);
 
@@ -92,7 +101,7 @@ export function CambiosCreate({ projectId, segments, fixedSegment, t }: {
       <input type="hidden" name="gpsLng" value={coords?.lng ?? ""} />
 
       {state.status === "error" && (
-        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-deep)", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
+        <p role="alert" style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid var(--accent)", color: "var(--accent-text, var(--accent-deep))", padding: "8px 11px", borderRadius: "var(--radius-sm)", fontSize: "0.84rem", marginBottom: 10 }}>
           {state.message}
         </p>
       )}

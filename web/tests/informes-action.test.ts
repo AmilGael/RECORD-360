@@ -165,7 +165,7 @@ describe("createInforme", () => {
     expect(ok).toMatchObject({ ok: true, status: "READY" });
     const ready = await prisma.notification.findFirst({ where: { companyId, userId: managerId, eventKey: "informe.ready" } });
     expect(ready).toMatchObject({ severity: "SUCCESS", projectId });
-    expect(ready?.link).toContain("tab=informes");
+    expect(ready?.link).toBe(`/app/projects/${projectId}/informes`);
 
     generateMock.mockRejectedValue(new Error("api down"));
     const bad = await createInforme(null, fd({ projectId, scopeType: "project", scopeId: projectId, brief: "notifica-fail", archetype: "OWNER" }));

@@ -21,7 +21,7 @@ function Media({ a, t }: { a: Attachment; t: RecordT }) {
   if (a.fileType === "VIDEO") return <video src={a.url} controls style={s} />;
   if (a.fileType === "AUDIO") return <audio src={a.url} controls style={{ width: "100%" }} />;
   return (
-    <a href={a.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ display: "inline-flex", alignItems: "center", fontSize: 12, color: "var(--accent-deep)", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px" }}>
+    <a href={a.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ display: "inline-flex", alignItems: "center", fontSize: 12, color: "var(--accent-text, var(--accent-deep))", textDecoration: "none", border: "1px solid var(--line-strong)", borderRadius: "var(--radius-sm)", padding: "6px 10px" }}>
       {t.document ?? "Document"}
     </a>
   );
@@ -92,12 +92,12 @@ export function RecordCard({
           GPS {gps} · HASH {r.hash.slice(0, 8)}…{r.hash.slice(-4)} · <Check size={11} style={{ verticalAlign: -1, marginRight: 2 }} />{t.immutable}
         </div>
         {correctionHref && (
-          <Link href={correctionHref} className="mono" style={{ display: "inline-flex", marginTop: 8, fontSize: 11, color: "var(--accent-deep)", textDecoration: "none" }}>
+          <Link href={correctionHref} className="mono" style={{ display: "inline-flex", marginTop: 8, fontSize: 11, color: "var(--accent-text, var(--accent-deep))", textDecoration: "none" }}>
             {t.correct ?? "Correct"}
           </Link>
         )}
         {replyHref && (
-          <Link href={replyHref} className="mono" style={{ display: "inline-flex", marginTop: 8, marginLeft: correctionHref ? 12 : 0, fontSize: 11, color: "var(--accent-deep)", textDecoration: "none" }}>
+          <Link href={replyHref} className="mono" style={{ display: "inline-flex", marginTop: 8, marginLeft: correctionHref ? 12 : 0, fontSize: 11, color: "var(--accent-text, var(--accent-deep))", textDecoration: "none" }}>
             {t.reply ?? "Reply"}
           </Link>
         )}

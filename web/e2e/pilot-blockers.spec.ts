@@ -50,7 +50,9 @@ for (const lang of langs) {
       await page.screenshot({ path: shot(`lockout-${lang}-${theme}`, testInfo.project.name), fullPage: true });
     });
 
-    test(`unknown obra and partida ids show the app 404 page (${lang}, ${theme})`, async ({ page }, testInfo) => {
+    test(`unknown obra and partida ids show the app 404 page (${lang}, ${theme})`, async ({ page, consoleGuard }, testInfo) => {
+      // The project layout answers a real HTTP 404, which Chrome logs as a console error.
+      consoleGuard.allow(/status of 404 \(Not Found\) \(http:\/\/[^/]+\/app\/(projects|partidas)\/[^/]+\)$/);
       await page.emulateMedia({ reducedMotion: "reduce" });
       await setLang(page, lang);
       await setTheme(page, theme);

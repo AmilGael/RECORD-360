@@ -130,7 +130,7 @@ for (const lang of langs) {
     await clickLink(page, t.project.tabAnalytics);
     await expect(page.getByRole("link", { name: t.project.tabAnalytics })).toHaveAttribute("aria-current", "page");
     await volver(page, t);
-    expect(new URL(page.url()).searchParams.get("tab")).toBe("planos");
+    expect(new URL(page.url()).pathname).toMatch(/\/planos$/);
     await expect(page.getByRole("link", { name: t.project.tabPlanos })).toHaveAttribute("aria-current", "page");
   });
 
@@ -159,6 +159,12 @@ for (const lang of langs) {
     });
     expect(trail.at(-1)).toBe(workspaceEntry);
     expect(trail.at(-2), "previous entry must not be the partida we just left").not.toBe(partidaPath);
+
+    // The workspace URL carries ?p=, so the preview sheet is open again and
+    // covers the page; a click at Volver's spot would only hit its backdrop.
+    await expect(page.getByRole("dialog", { name: COCINA_PARTIDA })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
 
     await page.evaluate(() => window.scrollTo(0, 0));
     const volver = page.getByRole("button", { name: t.nav.backAria });

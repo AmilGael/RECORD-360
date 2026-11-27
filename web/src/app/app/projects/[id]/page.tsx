@@ -1,32 +1,16 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getDict } from "@/i18n/server";
 import { PartidaWorkspace } from "@/components/partida-workspace";
 import { CambiosList } from "@/components/cambios-list";
-import { PlanosTab } from "@/components/planos-tab";
-import { AnaliticaTab } from "@/components/analitica-tab";
-import { InformesTab } from "@/components/informes-tab";
-import { Layers, Branch, BarChart, Sliders, Folder, FileText } from "@/components/icons";
-import { formatDate, formatTimestamp } from "@/lib/format/datetime";
+import { formatDate } from "@/lib/format/datetime";
 import { projectProgress } from "@/lib/project/progress";
 import { filterPartidaGroups } from "@/lib/project/partida-filter";
 import { PartidaRecycle } from "@/components/partida-recycle";
-import { RenameProjectForm } from "@/components/project-edit-controls";
-import { ArchiveButton } from "@/components/archive-button";
-import { PurgeProjectButton } from "@/components/purge-project-button";
-import { restoreProject, updateProjectCoverForm } from "@/app/actions/admin";
-import { informeErrorText } from "@/lib/informes/error-text";
-import { InlineActionForm } from "@/components/inline-action-form";
 import { ObraSearch } from "@/components/obra-search";
-import { registrationQrDataUrl } from "@/lib/project/qr";
-import { SubmitButton } from "@/components/submit-button";
-import { ProjectAssignmentsPanel } from "@/components/project-assignments-panel";
-import { hasCompanyWideAccess, projectAccessWhere } from "@/lib/authz/projects";
+import { hasCompanyWideAccess } from "@/lib/authz/projects";
 import { BloqueSpacesPanel, type SpaceKey } from "@/components/bloque-spaces-panel";
-import { Breadcrumbs } from "@/components/breadcrumbs";
-import { BackButton } from "@/components/back-button";
 import type { DocumentKind, Role } from "@prisma/client";
 import { BloqueCards } from "@/components/bloque-cards";
 import { MediaGalleries, isMediaTab, type MediaItem, type MediaTab } from "@/components/media-galleries";
@@ -35,8 +19,12 @@ import { projectHrefWithParams } from "@/lib/project/space-links";
 import { UNGROUPED_FILTER } from "@/lib/project/partida-filter";
 import { parseDayBound } from "@/lib/time/zone";
 import { getPartidaPreview, lastActivityByPartidaIds } from "@/lib/partida/preview";
-import { getProjectAnalytics } from "@/lib/analytics/project";
+import { loadProject } from "@/lib/project/load";
+import { legacyTabTarget } from "@/lib/project/tabs";
+import { requestListLabels } from "@/lib/project/request-list-labels";
 
+// The Partidas tab: the obra overview and the bloque workspace. The header and
+// tab strip come from layout.tsx; the other tabs are their own routes.
 export default async function ProjectPage({
   params, searchParams,
 }: {
@@ -44,59 +32,27 @@ export default async function ProjectPage({
   searchParams: Promise<{ p?: string; pq?: string; tab?: string; q?: string; block?: string; space?: string; media?: string; mpage?: string; tags?: string | string[]; pmin?: string; pmax?: string; cambios?: string; ffrom?: string; fto?: string; rem?: string }>;
 }) {
   const { id } = await params;
-  const { p: selectedId, pq, tab, q, block, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto, rem } = await searchParams;
+  const search = await searchParams;
+  // Old links that select a tab by query param (bookmarks, notifications stored
+  // before the tabs became routes) land on the matching route, other params kept.
+  const legacyTarget = legacyTabTarget(id, search);
+  if (legacyTarget) redirect(legacyTarget);
+
+  const { p: selectedId, q, block, space, media, mpage, tags, pmin, pmax, cambios, ffrom, fto, rem } = search;
   const session = await auth();
   const sessionUser = session!.user as { id: string; companyId: string; role: Role };
-  const companyId = sessionUser.companyId;
   const isAdmin = hasCompanyWideAccess(sessionUser.role);
   const isOwner = sessionUser.role === "ADMIN"; // delete/recycle is ADMIN-only
   const { lang, t } = await getDict();
   const P = t.project;
-  const requestListT = {
-    empty: t.changes.empty, states: t.changes.states,
-    new: t.changes.new, fieldTitle: t.changes.fieldTitle, fieldDescription: t.changes.fieldDescription,
-    fieldPartidas: t.changes.fieldPartidas,
-    fieldReminder: t.changes.fieldReminder, fieldReminderPlaceholder: t.changes.fieldReminderPlaceholder,
-    evidence: t.changes.evidence,
-    kindLabel: t.requests.kindLabel, kindChange: t.requests.kindChange, kindAlert: t.requests.kindAlert,
-    severityLabel: t.requests.severityLabel, severityImportant: t.requests.severityImportant, severityCritical: t.requests.severityCritical,
-    gpsAcquiring: t.requests.gpsAcquiring, gpsAcquired: t.requests.gpsAcquired, gpsDenied: t.requests.gpsDenied,
-    gpsUnavailable: t.requests.gpsUnavailable, gpsTimeout: t.requests.gpsTimeout, gpsInvalid: t.requests.gpsInvalid,
-    gpsRetry: t.requests.gpsRetry,
-  };
+  const requestListT = requestListLabels(t);
 
   // Tenant scoping: only return the project if it belongs to the caller's company.
   // A missing id and another tenant's id both render the same 404.
-  const project = await prisma.project.findFirst({
-    where: { id, ...projectAccessWhere(sessionUser) },
-    include: {
-      company: { select: { name: true } },
-      assignments: {
-        include: { user: { select: { name: true, email: true } } },
-        orderBy: { createdAt: "asc" },
-      },
-      segments: {
-        orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-        include: {
-          partidas: {
-            where: { deletedAt: null },
-            orderBy: { createdAt: "asc" },
-            include: { tags: { include: { tag: { select: { name: true } } } } },
-          },
-        },
-      },
-      partidas: {
-        where: { segmentId: null, deletedAt: null },
-        orderBy: { createdAt: "asc" },
-        include: { tags: { include: { tag: { select: { name: true } } } } },
-      },
-    },
-  });
+  const project = await loadProject(id, sessionUser.id, sessionUser.companyId, sessionUser.role);
   if (!project) notFound();
 
-  const allPartidas = [...project.segments.flatMap((s) => s.partidas), ...project.partidas];
   const canEditStructure = isAdmin || project.assignments.some((a) => a.userId === sessionUser.id);
-  const avg = projectProgress(allPartidas);
   const segmentOptions = project.segments.map((s) => ({ id: s.id, name: s.name }));
   const segmentSummaries = project.segments.map((s) => ({
     id: s.id,
@@ -106,9 +62,8 @@ export default async function ProjectPage({
     closedAt: s.closedAt,
   }));
 
-  const activeTab = tab === "cambios" ? "cambios" : tab === "planos" ? "planos" : tab === "analitica" ? "analitica" : tab === "informes" ? "informes" : "code";
   const blockParam = String(block ?? "");
-  const inBloqueView = activeTab === "code" && Boolean(blockParam);
+  const inBloqueView = Boolean(blockParam);
   // WS4F: `block` is the ONLY canonical param for the active bloque — the
   // workspace (file tree + spaces panel) both derive from it directly. There
   // is no second `spaceBlock` param to reconcile anymore (that mismatch was
@@ -182,13 +137,25 @@ export default async function ProjectPage({
       })()
     : { segments: [], ungrouped: [], total: 0, hasFilters: false };
 
+  // Partidas in the workspace's bloque before any filter: tells "this bloque has
+  // none yet" apart from "nothing matches". `block` itself counts as a filter in
+  // filterPartidaGroups, so hasFilters cannot.
+  const scopeTotal = blockParam === UNGROUPED_FILTER
+    ? project.partidas.length
+    : project.segments.find((s) => s.id === blockParam)?.partidas.length ?? 0;
   const visiblePartidaIds = inBloqueView
     ? [
       ...filteredPartidas.segments.flatMap((s) => s.partidas.map((p) => p.id)),
       ...filteredPartidas.ungrouped.map((p) => p.id),
     ]
     : [];
-  const lastActivity = inBloqueView ? await lastActivityByPartidaIds(visiblePartidaIds) : new Map<string, string>();
+  const [lastActivity, recordCounts] = inBloqueView && visiblePartidaIds.length
+    ? await Promise.all([
+        lastActivityByPartidaIds(visiblePartidaIds),
+        prisma.registro.groupBy({ by: ["partidaId"], where: { partidaId: { in: visiblePartidaIds } }, _count: { _all: true } })
+          .then((rows) => new Map(rows.map((r) => [r.partidaId, r._count._all]))),
+      ])
+    : [new Map<string, string>(), new Map<string, number>()];
   const toTreeRow = (p: { id: string; name: string; progressPct: number; segmentId?: string | null; completedAt: Date | null; tags: { tag: { name: string } }[] }) => ({
     id: p.id,
     name: p.name,
@@ -197,6 +164,7 @@ export default async function ProjectPage({
     completedAt: p.completedAt ? p.completedAt.toISOString() : null,
     tags: p.tags,
     lastActivityAt: lastActivity.get(p.id) ?? null,
+    recordCount: recordCounts.get(p.id) ?? 0,
   });
   const treeSegments = filteredPartidas.segments.map((s) => {
     const source = project.segments.find((g) => g.id === s.id);
@@ -220,19 +188,7 @@ export default async function ProjectPage({
   // hasActive = facet filters are active (excludes q and block which have their own clear mechanism)
   const hasActiveFacets = tagsParam.length > 0 || partidaFilters.progressMin != null || partidaFilters.progressMax != null || partidaFilters.openCambios || !!ffrom || !!fto;
 
-  const changeRows = activeTab === "cambios"
-    ? (await prisma.changeRequest.findMany({
-        where: { projectId: id },
-        orderBy: { createdAt: "desc" },
-        include: { _count: { select: { partidas: true, segments: true } } },
-      })).map((c) => ({
-        id: c.id, code: c.code, title: c.title, status: c.status,
-        kind: c.kind, severity: c.severity,
-        createdAt: c.createdAt, seal: c.seal,
-        segmentCount: c._count.segments || c._count.partidas,
-      }))
-    : [];
-  const blockChangeRows = activeTab === "code" && inBloqueView && selectedSpace === "solicitudes" && selectedSpaceBlock
+  const blockChangeRows = inBloqueView && selectedSpace === "solicitudes" && selectedSpaceBlock
     ? (await prisma.changeRequest.findMany({
         where: { projectId: id, segments: { some: { segmentId: selectedSpaceBlock } } },
         orderBy: { createdAt: "desc" },
@@ -245,10 +201,7 @@ export default async function ProjectPage({
       }))
     : [];
 
-  const docs = activeTab === "planos"
-    ? await prisma.document.findMany({ where: { projectId: id, kind: { in: ["PLANO", "PLANO_ACTUALIZADO"] } }, orderBy: { createdAt: "desc" } })
-    : [];
-  const spaceDocs = activeTab === "code" && inBloqueView && selectedSpaceBlock && spaceKind[selectedSpace]
+  const spaceDocs = inBloqueView && selectedSpaceBlock && spaceKind[selectedSpace]
     ? await prisma.document.findMany({
         where: {
           projectId: id,
@@ -262,7 +215,7 @@ export default async function ProjectPage({
         orderBy: { createdAt: "desc" },
       })
     : [];
-  const spaceNotes = activeTab === "code" && inBloqueView && selectedSpaceBlock && selectedSpace === "cuaderno"
+  const spaceNotes = inBloqueView && selectedSpaceBlock && selectedSpace === "cuaderno"
     ? (await prisma.registro.findMany({
         where: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null } },
         orderBy: [{ serverCreatedAt: "desc" }, { id: "desc" }],
@@ -270,7 +223,7 @@ export default async function ProjectPage({
         select: { id: true, partidaId: true, text: true, serverCreatedAt: true, hash: true, partida: { select: { name: true } } },
       })).map((r) => ({ id: r.id, partidaId: r.partidaId, text: r.text, serverCreatedAt: r.serverCreatedAt, hash: r.hash, partidaName: r.partida.name }))
     : [];
-  const spaceMedia = activeTab === "code" && inBloqueView && selectedSpaceBlock && selectedSpace === "media"
+  const spaceMedia = inBloqueView && selectedSpaceBlock && selectedSpace === "media"
     ? (await prisma.attachment.findMany({
         where: { registro: { partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null } } },
         orderBy: { id: "desc" },
@@ -278,32 +231,12 @@ export default async function ProjectPage({
         select: { id: true, url: true, fileType: true, registro: { select: { text: true, serverCreatedAt: true } } },
       })).map((a) => ({ id: a.id, url: a.url, fileType: a.fileType, text: a.registro.text, createdAt: a.registro.serverCreatedAt }))
     : [];
-  const now = new Date();
-  const overdueReminders = activeTab === "analitica"
-    ? await prisma.registro.count({ where: { partida: { projectId: id, deletedAt: null }, reminderDueAt: { lt: now }, reminderResolvedAt: null } })
-    : 0;
-  const analytics = activeTab === "analitica"
-    ? await getProjectAnalytics(sessionUser, id)
-    : null;
-  if (activeTab === "analitica" && !analytics) notFound();
-  // WS6: `completed` (Partida.completedAt != null) threads the real lifecycle
-  // state through so the analítica progress bar only shows green ("is-done")
-  // for an actually-concluded partida, never for an aggregate that happens to
-  // read 100%.
-  const analiticaBloques = project.segments.map((s) => ({
-    id: s.id, name: s.name, progress: projectProgress(s.partidas), closedAt: s.closedAt,
-    partidas: s.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct, completed: p.completedAt != null })),
-  }));
-  const analiticaUngrouped = project.partidas.map((p) => ({ id: p.id, name: p.name, progressPct: p.progressPct, completed: p.completedAt != null }));
-  const concludedCount = analytics
-    ? analytics.status.reduce((s, r) => s + r.concluded, 0)
-    : 0;
   // Resolving a reminder used to make it disappear from every surface at once
   // (it leaves both the pending queue and this space), so there was no way to
   // confirm what had been dealt with. `?rem=resolved` is the history view of
   // the same list.
   const showResolvedReminders = String(rem ?? "") === "resolved";
-  const reminderRows = activeTab === "code" && inBloqueView && selectedSpaceBlock
+  const reminderRows = inBloqueView && selectedSpaceBlock
     ? await prisma.registro.findMany({
         where: {
           partida: { projectId: id, segmentId: selectedSpaceBlock, deletedAt: null },
@@ -327,13 +260,13 @@ export default async function ProjectPage({
     ffrom: ffrom ?? null, fto: fto ?? null,
   };
   // Overview data — only computed when NOT in the bloque workspace view.
-  const searchResults = !inBloqueView && activeTab === "code" && partidaFilters.q
+  const searchResults = !inBloqueView && partidaFilters.q
     ? await searchProject(sessionUser, id, partidaFilters.q)
     : null;
 
   // Deletable = empty by the same rule the action enforces.
   const segmentIdsAll = project.segments.map((s) => s.id);
-  const [partidaCounts, docCounts, crCounts] = !inBloqueView && activeTab === "code" && segmentIdsAll.length
+  const [partidaCounts, docCounts, crCounts] = !inBloqueView && segmentIdsAll.length
     ? await Promise.all([
         prisma.partida.groupBy({ by: ["segmentId"], where: { segmentId: { in: segmentIdsAll } }, _count: { _all: true } }),
         prisma.document.groupBy({ by: ["segmentId"], where: { segmentId: { in: segmentIdsAll } }, _count: { _all: true } }),
@@ -354,7 +287,7 @@ export default async function ProjectPage({
   const mediaType = ({ fotos: "IMAGE", videos: "VIDEO", documentos: "PDF", audio: "AUDIO" } as const)[mediaTab];
   let mediaItems: MediaItem[] = [];
   let mediaHasMore = false;
-  if (!inBloqueView && activeTab === "code") {
+  if (!inBloqueView) {
     const atts = await prisma.attachment.findMany({
       where: { fileType: mediaType, registro: { partida: { projectId: id, deletedAt: null } } },
       orderBy: { id: "desc" },
@@ -390,37 +323,7 @@ export default async function ProjectPage({
     }
   }
 
-  const uploaderIds = [...new Set(docs.map((d) => d.uploadedById))];
-  const uploaders = uploaderIds.length
-    ? await prisma.user.findMany({ where: { id: { in: uploaderIds }, companyId }, select: { id: true, name: true } })
-    : [];
-  const docAuthorMap = new Map(uploaders.map((u) => [u.id, u.name]));
-
-  // R3 WS7 (Agent 4): +archetype select/mapping only — flagged per the R3
-  // dispatch brief as a minimal cross-file touch in Agent 3's file (the
-  // archetype label needs to reach InformesTab's history list, and this
-  // query/mapping is where every other informe row field is already built).
-  const informeRows = activeTab === "informes"
-    ? await prisma.informe.findMany({
-        where: { projectId: id, project: projectAccessWhere(sessionUser) },
-        orderBy: { createdAt: "desc" },
-        take: 30,
-        select: { id: true, brief: true, createdAt: true, requestedById: true, segmentId: true, partidaId: true, archetype: true, status: true, errorMessage: true },
-      })
-    : [];
-  const informeRequesterIds = [...new Set(informeRows.map((i) => i.requestedById))];
-  const informeRequesters = informeRequesterIds.length
-    ? await prisma.user.findMany({ where: { id: { in: informeRequesterIds }, companyId }, select: { id: true, name: true } })
-    : [];
-  const informeRequesterMap = new Map(informeRequesters.map((u) => [u.id, u.name]));
-  // R3 WS11 missing-seal notice: server-computed, ADMIN/MANAGER only (isAdmin
-  // here = hasCompanyWideAccess), shown on the informes tab where the PDF
-  // download links live.
-  const companyHasSeal = activeTab === "informes"
-    ? Boolean((await prisma.company.findUnique({ where: { id: companyId }, select: { sealKey: true } }))?.sealKey)
-    : true;
-
-  const deletedPartidas = activeTab === "code" && inBloqueView && isOwner
+  const deletedPartidas = inBloqueView && isOwner
     ? await prisma.partida.findMany({
         where: { projectId: id, deletedAt: { not: null } },
         include: { _count: { select: { registros: true } } },
@@ -429,305 +332,136 @@ export default async function ProjectPage({
     : [];
   const deleterIds = [...new Set(deletedPartidas.map((p) => p.deletedById).filter((x): x is string => !!x))];
   const deleters = deleterIds.length
-    ? await prisma.user.findMany({ where: { id: { in: deleterIds }, companyId }, select: { id: true, name: true } })
+    ? await prisma.user.findMany({ where: { id: { in: deleterIds }, companyId: sessionUser.companyId }, select: { id: true, name: true } })
     : [];
   const deleterMap = new Map(deleters.map((u) => [u.id, u.name]));
-  const assignableUsers = isAdmin
-    ? await prisma.user.findMany({
-        where: { companyId, role: { in: ["SUPERVISOR", "RESIDENT"] }, disabledAt: null },
-        orderBy: [{ role: "asc" }, { name: "asc" }],
-        select: { id: true, name: true, email: true, role: true },
-      })
-    : [];
 
-  // The overview (default tab, no bloque; search and media params included)
-  // is the obra root; every other view of the obra returns to it.
-  const isObraRoot = activeTab === "code" && !inBloqueView;
-
-  return (
-    <div className="reveal">
-      <BackButton fallbackHref={isObraRoot ? "/app" : `/app/projects/${project.id}`} labels={{ label: t.nav.back, aria: t.nav.backAria }} />
-      <Breadcrumbs
-        ariaLabel={t.breadcrumb.aria}
-        items={[
-          { label: t.nav.sites, href: "/app" },
-          { label: project.name },
-        ]}
-      />
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "10px 0 2px" }}>
-        {project.coverImageKey && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={`/api/media/${project.coverImageKey}`} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: "var(--radius-sm)", flexShrink: 0 }} />
-        )}
-        <h1 className="h-lg" style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)" }}>{project.name}</h1>
-        <span className={`state-badge ${project.archivedAt ? "is-archived" : "is-active"}`}>
-          {project.archivedAt ? P.statusArchived : P.statusActive}
-        </span>
-        {isAdmin && <RenameProjectForm projectId={project.id} currentName={project.name} t={{ rename: P.rename, save: P.save, move: P.move, moveTo: P.moveTo, ungrouped: P.ungrouped }} />}
-      </div>
-      {(project.ownerName || project.description) && (
-        <div className="mono text-steel" style={{ fontSize: "0.78rem", display: "flex", flexDirection: "column", gap: 2, margin: "2px 0" }}>
-          {project.ownerName && <span>{t.projectFields.owner}: {project.ownerName}</span>}
-          {project.description && <span>{t.projectFields.generalDescription}: {project.description}</span>}
-        </div>
-      )}
-      <div className="mono text-steel" style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span>{project.company.name} · {allPartidas.length} {P.partidasWord} · {avg}%</span>
-        <span className="sep">·</span>
-        <span title={P.registrationCode}>{project.registrationCode}</span>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={await registrationQrDataUrl(project.registrationCode, 64)} alt={project.registrationCode} style={{ width: 44, height: 44 }} />
-      </div>
-      {isOwner && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
-          <InlineActionForm action={updateProjectCoverForm} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <input type="hidden" name="projectId" value={project.id} />
-            <input type="file" name="cover" required accept="image/jpeg,image/png,image/webp" aria-label={t.dash.cover} style={{ maxWidth: 220 }} />
-            <SubmitButton className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{P.changeCover}</SubmitButton>
-          </InlineActionForm>
-          {project.archivedAt ? (
-            <>
-              <form action={restoreProject} style={{ display: "inline" }}>
-                <input type="hidden" name="projectId" value={project.id} />
-                <button type="submit" className="btn btn-ghost" style={{ padding: "0.25rem 0.65rem", fontSize: "0.72rem" }}>{P.restoreProject}</button>
-              </form>
-              <PurgeProjectButton projectId={project.id} t={{ purge: t.dash.purge, purgeConfirm: t.dash.purgeConfirm, yes: t.dash.yes, no: t.dash.no }} />
-            </>
-          ) : (
-            <ArchiveButton projectId={project.id} t={{ archive: t.dash.archive, confirm: t.dash.confirm, yes: t.dash.yes, no: t.dash.no }} />
-          )}
-        </div>
-      )}
-      <ProjectAssignmentsPanel
+  return inBloqueView ? (
+    <>
+      <PartidaWorkspace
         projectId={project.id}
-        assignments={project.assignments}
-        users={assignableUsers}
-        canManage={isAdmin}
-        t={{
-          title: P.assignmentsTitle, supervisor: P.supervisor, resident: P.resident,
-          noAssigned: P.noAssigned, assign: P.assign, remove: P.remove,
-          chooseUser: P.chooseUser, selectRole: t.admin.selectRole,
+        segments={treeSegments}
+        ungrouped={treeUngrouped}
+        segmentOptions={segmentOptions}
+        selectedId={initialPreview ? selectedId : undefined}
+        initialPreview={initialPreview}
+        canEdit={canEditStructure}
+        filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters, scopeTotal }}
+        facets={{
+          tagCounts: [...tagCounts.entries()],
+          selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios, createdFrom: String(ffrom ?? ""), createdTo: String(fto ?? "") },
+          hasActive: hasActiveFacets,
+        }}
+        activeBlock={activeSegment ? { id: activeSegment.id, name: activeSegment.name, closedAt: activeSegment.closedAt } : null}
+        lang={lang}
+        treeT={{
+          ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add,
+          segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment,
+          addSegment: P.addSegment, rename: P.rename, save: P.save,
+          move: P.move, moveTo: P.moveTo, searchPartidas: P.searchPartidas,
+          allBlocks: P.allBlocks, filter: P.filter, clear: P.clear,
+          noResults: P.noResults, empty: P.empty,
+          recordsOne: P.recordsOne, recordsMany: P.recordsMany,
+          statusNotStarted: P.analitica.notStarted, statusInProgress: P.analitica.inProgress,
+          newPartidaButton: P.newPartidaButton, close: P.panelClose,
+          facetTags: P.facetTags, facetProgress: P.facetProgress,
+          facetProgressMin: P.facetProgressMin, facetProgressMax: P.facetProgressMax,
+          facetOpenCambios: P.facetOpenCambios, facetCreated: P.facetCreated,
+          blockClosedNoCreate: t.lifecycle.blockClosedNoCreate,
+          concluded: t.lifecycle.concluded, aging7: P.aging7, aging14: P.aging14, noActivity: P.noActivity,
+        }}
+        panelT={{
+          empty: P.summaryEmpty, noEntries: P.summaryNoEntries,
+          newRegistro: P.newRegistro, openCuaderno: P.openCuaderno, editPartida: P.editPartida,
+          panelOffline: P.panelOffline, panelClose: P.panelClose,
+          progress: t.partida.progress, save: P.save,
+          conclude: t.lifecycle.concludePartida, reopen: t.lifecycle.reopenPartida,
+          concluded: t.lifecycle.concluded, concludedOn: t.lifecycle.concludedOn,
+          rename: P.rename, move: P.move, moveTo: P.moveTo, ungrouped: P.ungrouped,
+          tagsLabel: P.tagsLabel,
         }}
       />
-
-      <div className="tabs">
-        <Link href={`/app/projects/${id}?tab=code`} className={`tab ${activeTab === "code" ? "is-on" : ""}`} aria-current={activeTab === "code" ? "page" : undefined}><Layers size={13} />{P.tabPartidas}</Link>
-        <Link href={`/app/projects/${id}?tab=planos`} className={`tab ${activeTab === "planos" ? "is-on" : ""}`} aria-current={activeTab === "planos" ? "page" : undefined}><Folder size={13} />{P.tabPlanos}</Link>
-        <Link href={`/app/projects/${id}?tab=cambios`} className={`tab ${activeTab === "cambios" ? "is-on" : ""}`} aria-current={activeTab === "cambios" ? "page" : undefined}><Branch size={13} />{t.requests.tab}</Link>
-        <Link href={`/app/projects/${id}?tab=analitica`} className={`tab ${activeTab === "analitica" ? "is-on" : ""}`} aria-current={activeTab === "analitica" ? "page" : undefined}><BarChart size={13} />{P.tabAnalytics}</Link>
-        <Link href={`/app/projects/${id}?tab=informes`} className={`tab ${activeTab === "informes" ? "is-on" : ""}`} aria-current={activeTab === "informes" ? "page" : undefined}><FileText size={13} />{P.tabInformes}</Link>
-        <span className="tab is-off" aria-disabled="true"><Sliders size={13} />{P.tabSettings} <span className="soon">{P.soon}</span></span>
-      </div>
-
-      {activeTab === "cambios" ? (
-        <div style={{ marginTop: 16 }}>
+      <BloqueSpacesPanel
+        projectId={project.id}
+        segments={segmentSummaries}
+        selectedSegmentId={selectedSpaceBlock}
+        selectedSpace={selectedSpace}
+        docs={spaceDocs}
+        notes={spaceNotes}
+        media={spaceMedia}
+        reminders={spaceReminders}
+        remindersShowResolved={showResolvedReminders}
+        remindersOpenHref={projectHrefWithParams(project.id, {
+          ...remindersPreserved, block: blockParam, space: "recordatorios",
+        })}
+        remindersResolvedHref={projectHrefWithParams(project.id, {
+          ...remindersPreserved, block: blockParam, space: "recordatorios", rem: "resolved",
+        })}
+        requestsContent={selectedSpaceBlock ? (
           <CambiosList
             projectId={project.id}
-            rows={changeRows}
+            rows={blockChangeRows}
             partidas={segmentOptions}
+            fixedSegment={{
+              id: selectedSpaceBlock,
+              name: segmentOptions.find((s) => s.id === selectedSpaceBlock)?.name ?? "",
+            }}
             lang={lang}
             t={requestListT}
           />
-        </div>
-      ) : activeTab === "planos" ? (
-        <div style={{ marginTop: 16 }}>
-          <PlanosTab
-            projectId={project.id}
-            docs={docs}
-            authorMap={docAuthorMap}
-            lang={lang}
-            isAdmin={isAdmin}
-            canEdit={canEditStructure}
-            initialQuery={typeof pq === "string" ? pq : ""}
-            t={{
-              empty: t.planos.empty, upload: t.planos.uploadByKind.PLANO, file: t.planos.file, title: t.planos.title,
-              error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view,
-              search: t.planos.search, searchCount: t.planos.searchCount, searchEmpty: t.planos.searchEmpty,
-              searchClear: t.planos.searchClear, updated: t.planos.updated, defaultName: t.planos.defaultName,
-              backfill: t.planos.backfill, backfillProgress: t.planos.backfillProgress, backfillDone: t.planos.backfillDone,
-            }}
-          />
-        </div>
-      ) : activeTab === "analitica" && analytics ? (
-        <AnaliticaTab
-          projectId={project.id}
-          lang={lang}
-          general={{
-            progress: avg,
-            concluded: concludedCount,
-            partidas: allPartidas.length,
-            openCambios: analytics.requests.open,
-            criticalAlerts: analytics.requests.criticalAlerts,
-            overdueReminders,
-            last7Days: analytics.weekly.last7Days,
-            photoPct: analytics.photo.overall.pct,
-          }}
-          bloques={analiticaBloques}
-          ungrouped={analiticaUngrouped}
-          analytics={analytics}
-          t={{
-            ...P.analitica,
-            general: P.analiticaGeneral,
-            byBloque: P.analiticaByBloque,
-            openChanges: P.analiticaOpenChanges,
-            overdue: P.analiticaOverdue,
-            partidasWord: P.partidasWord,
-            noBloques: P.analiticaNoBloques,
-            ungrouped: P.ungrouped,
-            aging7: P.aging7,
-            aging14: P.aging14,
-            noActivity: P.noActivity,
-            blockClosed: t.lifecycle.blockClosed,
-            severityImportant: t.requests.severityImportant,
-            severityCritical: t.requests.severityCritical,
-          }}
-        />
-      ) : activeTab === "informes" ? (
-        <InformesTab
-          projectId={project.id}
-          segments={segmentOptions}
-          partidas={allPartidas.map((p) => ({ id: p.id, name: p.name }))}
-          informes={informeRows.map((i) => ({
-            id: i.id,
-            brief: i.brief,
-            createdAt: formatTimestamp(i.createdAt, lang),
-            requesterName: informeRequesterMap.get(i.requestedById) ?? "—",
-            scopeLabel: i.partidaId ? t.informes.scopePartida : i.segmentId ? t.informes.scopeSegment : t.informes.scopeProject,
-            archetypeLabel: i.archetype === "OWNER" ? t.archetypes.owner
-              : i.archetype === "SENIOR_MANAGEMENT" ? t.archetypes.senior
-              : i.archetype === "PERSONAL_FEEDBACK" ? t.archetypes.personal
-              : t.archetypes.legacy,
-            status: i.status,
-            errorMessage: informeErrorText(i.errorMessage, t),
-          }))}
-          t={t.informes}
-          archetypes={t.archetypes}
-          hasCompanySeal={companyHasSeal}
-        />
-      ) : inBloqueView ? (
-        <>
-          <PartidaWorkspace
-            projectId={project.id}
-            segments={treeSegments}
-            ungrouped={treeUngrouped}
-            segmentOptions={segmentOptions}
-            selectedId={initialPreview ? selectedId : undefined}
-            initialPreview={initialPreview}
-            canEdit={canEditStructure}
-            filters={{ ...partidaFilters, total: filteredPartidas.total, hasFilters: filteredPartidas.hasFilters }}
-            facets={{
-              tagCounts: [...tagCounts.entries()],
-              selected: { tags: partidaFilters.tags, progressMin: partidaFilters.progressMin, progressMax: partidaFilters.progressMax, openCambios: partidaFilters.openCambios, createdFrom: String(ffrom ?? ""), createdTo: String(fto ?? "") },
-              hasActive: hasActiveFacets,
-            }}
-            activeBlock={activeSegment ? { id: activeSegment.id, name: activeSegment.name, closedAt: activeSegment.closedAt } : null}
-            lang={lang}
-            treeT={{
-              ungrouped: P.ungrouped, newPartida: P.newPartida, add: P.add,
-              segmentPlaceholder: P.segmentPlaceholder, newSegment: P.newSegment,
-              addSegment: P.addSegment, rename: P.rename, save: P.save,
-              move: P.move, moveTo: P.moveTo, searchPartidas: P.searchPartidas,
-              allBlocks: P.allBlocks, filter: P.filter, clear: P.clear,
-              noResults: P.noResults,
-              facetTags: P.facetTags, facetProgress: P.facetProgress,
-              facetProgressMin: P.facetProgressMin, facetProgressMax: P.facetProgressMax,
-              facetOpenCambios: P.facetOpenCambios, facetCreated: P.facetCreated,
-              blockClosedNoCreate: t.lifecycle.blockClosedNoCreate,
-              concluded: t.lifecycle.concluded, aging7: P.aging7, aging14: P.aging14, noActivity: P.noActivity,
-            }}
-            panelT={{
-              empty: P.summaryEmpty, noEntries: P.summaryNoEntries,
-              newRegistro: P.newRegistro, openCuaderno: P.openCuaderno, editPartida: P.editPartida,
-              panelOffline: P.panelOffline, panelClose: P.panelClose,
-              progress: t.partida.progress, save: P.save,
-              conclude: t.lifecycle.concludePartida, reopen: t.lifecycle.reopenPartida,
-              concluded: t.lifecycle.concluded, concludedOn: t.lifecycle.concludedOn,
-              rename: P.rename, move: P.move, moveTo: P.moveTo, ungrouped: P.ungrouped,
-              tagsLabel: P.tagsLabel,
-            }}
-          />
-          <BloqueSpacesPanel
-            projectId={project.id}
-            segments={segmentSummaries}
-            selectedSegmentId={selectedSpaceBlock}
-            selectedSpace={selectedSpace}
-            docs={spaceDocs}
-            notes={spaceNotes}
-            media={spaceMedia}
-            reminders={spaceReminders}
-            remindersShowResolved={showResolvedReminders}
-            remindersOpenHref={projectHrefWithParams(project.id, {
-              ...remindersPreserved, tab: "code", block: blockParam, space: "recordatorios",
-            })}
-            remindersResolvedHref={projectHrefWithParams(project.id, {
-              ...remindersPreserved, tab: "code", block: blockParam, space: "recordatorios", rem: "resolved",
-            })}
-            requestsContent={selectedSpaceBlock ? (
-              <CambiosList
-                projectId={project.id}
-                rows={blockChangeRows}
-                partidas={segmentOptions}
-                fixedSegment={{
-                  id: selectedSpaceBlock,
-                  name: segmentOptions.find((s) => s.id === selectedSpaceBlock)?.name ?? "",
-                }}
-                lang={lang}
-                t={requestListT}
-              />
-            ) : null}
-            canUpload={canEditStructure}
-            canResolve={canEditStructure}
-            canManageLifecycle={canEditStructure}
-            preserved={remindersPreserved}
-            lang={lang}
-            t={{
-              emptyDocs: t.planos.empty, upload: t.planos.upload, file: t.planos.file, uploadByKind: t.planos.uploadByKind, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder,
-              blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
-              remindersOpen: P.remindersOpen, remindersResolved: P.remindersResolved,
-              remindersResolvedEmpty: P.remindersResolvedEmpty, reminderResolvedAt: P.reminderResolvedAt,
-            }}
-          />
-          <PartidaRecycle
-            rows={deletedPartidas}
-            deleterMap={deleterMap}
-            lang={lang}
-            canPurge={sessionUser.role === "ADMIN"}
-            t={{ recycleTitle: P.recycleTitle, restore: P.restore, deleteForever: P.deleteForever, deletedBy: P.deletedBy, hasRecords: P.hasRecords }}
-          />
-        </>
-      ) : (
-        <>
-          <BloqueCards
-            projectId={project.id}
-            bloques={bloqueCards}
-            ungroupedCount={project.partidas.length}
-            canEdit={canEditStructure}
-            isOwner={isOwner}
-            t={{
-              bloquesTitle: P.bloquesTitle, bloqueCard: P.bloqueCard, openBloque: P.openBloque, ungrouped: P.ungrouped, newSegment: P.newSegment, addSegment: P.addSegment, deleteBloque: P.deleteBloque, deleteBloqueConfirm: P.deleteBloqueConfirm, yes: P.yes, no: P.no,
-              blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
-            }}
-          />
-          <ObraSearch
-            projectId={project.id}
-            initialQuery={partidaFilters.q}
-            initialResults={searchResults}
-            t={{
-              searchObra: P.searchObra, filter: P.filter, searchLoading: P.searchLoading, searchError: P.searchError,
-              searchResults: P.searchResults, searchNoResults: P.searchNoResults, searchInPartidas: P.searchInPartidas,
-              searchInRegistros: P.searchInRegistros, searchInDocumentos: P.searchInDocumentos, searchInCambios: P.searchInCambios,
-            }}
-          />
-          <MediaGalleries
-            projectId={project.id}
-            tab={mediaTab}
-            items={mediaItems}
-            page={mediaPage}
-            hasMore={mediaHasMore}
-            t={{ mediaTitle: P.mediaTitle, mediaFotos: P.mediaFotos, mediaVideos: P.mediaVideos, mediaDocumentos: P.mediaDocumentos, mediaAudio: P.mediaAudio, mediaEmpty: P.mediaEmpty, older: t.pager.older, newer: t.pager.newer }}
-          />
-        </>
-      )}
-    </div>
+        ) : null}
+        canUpload={canEditStructure}
+        canResolve={canEditStructure}
+        canManageLifecycle={canEditStructure}
+        preserved={remindersPreserved}
+        lang={lang}
+        t={{
+          emptyDocs: t.planos.empty, upload: t.planos.upload, file: t.planos.file, uploadByKind: t.planos.uploadByKind, title: t.planos.title, error: t.planos.error, uploadedBy: t.planos.uploadedBy, view: t.planos.view, resolve: P.resolveReminder,
+          blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
+          remindersOpen: P.remindersOpen, remindersResolved: P.remindersResolved,
+          remindersResolvedEmpty: P.remindersResolvedEmpty, reminderResolvedAt: P.reminderResolvedAt,
+        }}
+      />
+      <PartidaRecycle
+        rows={deletedPartidas}
+        deleterMap={deleterMap}
+        lang={lang}
+        canPurge={sessionUser.role === "ADMIN"}
+        t={{ recycleTitle: P.recycleTitle, restore: P.restore, deleteForever: P.deleteForever, deletedBy: P.deletedBy, hasRecords: P.hasRecords }}
+      />
+    </>
+  ) : (
+    <>
+      <BloqueCards
+        projectId={project.id}
+        bloques={bloqueCards}
+        ungroupedCount={project.partidas.length}
+        canEdit={canEditStructure}
+        isOwner={isOwner}
+        t={{
+          bloquesTitle: P.bloquesTitle, bloqueCard: P.bloqueCard, openBloque: P.openBloque, ungrouped: P.ungrouped, newSegment: P.newSegment, addSegment: P.addSegment, deleteBloque: P.deleteBloque, deleteBloqueConfirm: P.deleteBloqueConfirm, yes: P.yes, no: P.no,
+          blockClosed: t.lifecycle.blockClosed, closeBlock: t.lifecycle.closeBlock, reopenBlock: t.lifecycle.reopenBlock,
+          newBloque: P.newBloque, add: P.add, close: P.panelClose,
+        }}
+      />
+      <ObraSearch
+        projectId={project.id}
+        initialQuery={partidaFilters.q}
+        initialResults={searchResults}
+        t={{
+          searchObra: P.searchObra, filter: P.filter, searchLoading: P.searchLoading, searchError: P.searchError,
+          searchResults: P.searchResults, searchNoResults: P.searchNoResults, searchInPartidas: P.searchInPartidas,
+          searchInRegistros: P.searchInRegistros, searchInDocumentos: P.searchInDocumentos, searchInCambios: P.searchInCambios,
+        }}
+      />
+      <MediaGalleries
+        projectId={project.id}
+        tab={mediaTab}
+        items={mediaItems}
+        page={mediaPage}
+        hasMore={mediaHasMore}
+        t={{ mediaTitle: P.mediaTitle, mediaFotos: P.mediaFotos, mediaVideos: P.mediaVideos, mediaDocumentos: P.mediaDocumentos, mediaAudio: P.mediaAudio, mediaEmpty: P.mediaEmpty, older: t.pager.older, newer: t.pager.newer }}
+      />
+    </>
   );
 }

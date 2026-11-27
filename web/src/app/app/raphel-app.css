@@ -1,0 +1,431 @@
+/*
+  Raphel /app look: "Cuaderno de Obra" (see DESIGN.md).
+
+  Every rule in this file is scoped under `.raphel-app` (the /app layout
+  wrapper) or `body[data-theme="dark"] .raphel-app`, so the landing page and
+  the login / activation / reset / request-access / offline screens keep
+  rendering from globals.css exactly as before. tests/raphel-app-theme.test.ts
+  fails on any unscoped selector, including selectors inside @media.
+
+  The tokens below override the inherited :root / body[data-theme] tokens for
+  the wrapper and its descendants only. globals.css rules that read tokens
+  (radius, shadows, colors) pick up the new look on their own; the overrides
+  further down fix what globals.css hard-codes for the retired look (zero
+  radius, the button chamfer, hard offset shadows, condensed caps).
+*/
+
+/* ---------- tokens: day (derived) ---------- */
+.raphel-app {
+  --paper: #ECE7DD;
+  --paper-2: #E3DDD0;
+  --paper-3: #DBD4C5;
+  --ink: #19140F;
+  --ink-soft: #4A433A;
+  --steel: #5A5348;
+  --accent: #E14A1F;
+  --accent-deep: #B83814;
+  /* White on #E14A1F is 4.0:1; dark ink reaches 4.5:1. On the deeper hover
+     fill dark ink fails, so hover type turns white (5.8:1). */
+  --on-accent: #19140F;
+  --on-accent-deep: #ffffff;
+  /* Accent as small text. --accent-deep stays for fills; as text it is only
+     3.9:1 on --paper-3. This clears 4.5:1 on all three planes and on a 12%
+     accent tint over them. */
+  --accent-text: #922a0c;
+  /* Day state and brass colors are unpinned: dark enough that their text
+     clears 4.5:1 on their own tint over every plane. */
+  --state-active: #1f573c;
+  --state-active-bg: rgba(31, 87, 60, 0.12);
+  --state-merged: #5d4492;
+  --state-merged-bg: rgba(93, 68, 146, 0.12);
+  --state-blocked: #8c3322;
+  --state-blocked-bg: rgba(140, 51, 34, 0.10);
+  --brass: #654e0d;
+  --brass-bg: rgba(176, 138, 46, 0.14);
+  --line: rgba(25, 20, 15, 0.14);
+  --line-strong: rgba(25, 20, 15, 0.26);
+  --grid: rgba(25, 20, 15, 0.045);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow-soft: 0 1px 2px rgba(25, 20, 15, 0.05), 0 6px 16px -10px rgba(25, 20, 15, 0.10);
+  --shadow-card: 0 1px 2px rgba(25, 20, 15, 0.05), 0 12px 30px -14px rgba(25, 20, 15, 0.14);
+  --shadow-sheet: 0 1px 2px rgba(25, 20, 15, 0.05), 0 24px 60px -18px rgba(25, 20, 15, 0.22);
+  color: var(--ink);
+  color-scheme: light;
+}
+
+/* ---------- tokens: night (first-run default) ---------- */
+body[data-theme="dark"] .raphel-app {
+  --paper: #171412;
+  --paper-2: #1f1b18;
+  --paper-3: #292420;
+  --ink: #f1e7d8;
+  --ink-soft: #d4c7b7;
+  --steel: #b5a998;
+  --accent: #ff6f43;
+  --accent-deep: #e85a2c;
+  /* White on #ff6f43 is 2.8:1; the night ground color reaches 6.6:1. */
+  --on-accent: #171412;
+  --on-accent-deep: #171412;
+  /* Accent as small text: clears 4.5:1 on all three planes and on a 12%
+     accent tint over them (#e85a2c on its tint is 4.2:1). */
+  --accent-text: #ff7d55;
+  --state-active: #5bbd8d;
+  --state-active-bg: rgba(91, 189, 141, 0.12);
+  --state-merged: #a388e4;
+  --state-merged-bg: rgba(163, 136, 228, 0.12);
+  /* #e06a54 is pinned; an 8% tint keeps its text at 4.7:1 over --paper-2
+     (12% was 4.4:1). */
+  --state-blocked: #e06a54;
+  --state-blocked-bg: rgba(224, 106, 84, 0.08);
+  /* Brass is unpinned: lighter so its text clears 4.5:1 on its tint. */
+  --brass: #c9a347;
+  --brass-bg: rgba(176, 138, 46, 0.16);
+  --line: rgba(241, 231, 216, 0.12);
+  --line-strong: rgba(241, 231, 216, 0.22);
+  --grid: rgba(241, 231, 216, 0.03);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.22), 0 8px 20px -12px rgba(0, 0, 0, 0.40);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.22), 0 16px 34px -20px rgba(0, 0, 0, 0.50);
+  --shadow-sheet: 0 1px 2px rgba(0, 0, 0, 0.22), 0 24px 60px -18px rgba(0, 0, 0, 0.60);
+  color-scheme: dark;
+}
+
+.raphel-app ::selection { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- body ground behind the wrapper ---------- */
+/* globals.css paints body with the old --paper, which shows during iOS
+   overscroll. Only /app pages contain .raphel-app, so these two selectors
+   (the only ones not under .raphel-app) never match landing or auth screens.
+   Literals, because body sits above the wrapper's tokens. */
+body:has(.raphel-app) { background-color: #ECE7DD; }
+body[data-theme="dark"]:has(.raphel-app) { background-color: #171412; }
+
+/* ---------- ground: fine hairline grid ---------- */
+/* Replaces the diagonal-and-noise ground. Only the ground gets the grid:
+   every plane below carries an opaque fill. */
+.raphel-app.grid-bg {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 14px 14px;
+  background-attachment: fixed;
+}
+
+/* ---------- typography: sentence case, natural width ---------- */
+.raphel-app .h-xl,
+.raphel-app .h-lg,
+.raphel-app .h-md {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-stretch: 100%; text-transform: none; font-weight: 700;
+}
+.raphel-app .h-xl { font-size: 2.6rem; letter-spacing: -0.02em; line-height: 1; }
+.raphel-app .h-lg { font-size: 2rem; letter-spacing: -0.018em; line-height: 1.04; }
+.raphel-app .h-md { font-size: 1.35rem; letter-spacing: -0.012em; line-height: 1.1; }
+.raphel-app .notif-section-title { font-stretch: 100%; text-transform: none; font-weight: 700; letter-spacing: -0.01em; }
+
+.raphel-app .brand b { font-stretch: 100%; text-transform: none; letter-spacing: -0.02em; font-size: 1.25rem; }
+.raphel-app .brand .tag { border-radius: var(--radius-sm); }
+.raphel-app .sidebar-brand strong { font-stretch: 100%; text-transform: none; font-weight: 800; letter-spacing: -0.02em; }
+
+/* ---------- buttons ---------- */
+.raphel-app .btn {
+  clip-path: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-stretch: 100%; text-transform: none; letter-spacing: 0;
+}
+.raphel-app .btn-accent { color: var(--on-accent); }
+.raphel-app .btn-accent:hover { color: var(--on-accent-deep); }
+.raphel-app .btn-ink:hover { color: var(--on-accent); }
+/* Hover keeps the resting tint (a deeper tint drops the text under 4.5:1);
+   the border carries the hover. */
+.raphel-app .btn-danger-soft,
+.raphel-app .btn-danger-soft:hover { background: var(--state-blocked-bg); }
+.raphel-app .btn-danger-soft { border-color: color-mix(in srgb, var(--state-blocked) 34%, transparent); }
+.raphel-app .btn-danger-soft:hover { border-color: var(--state-blocked); }
+/* `.raphel-app .btn` outranks the compact sizes globals.css sets; restate them. */
+.raphel-app .btn-back { font-size: 0.74rem; }
+.raphel-app .notif-mark-read { font-size: 0.76rem; }
+.raphel-app .inline-edit .btn,
+.raphel-app .assignment-row .btn,
+.raphel-app .assignment-form .btn { font-size: 0.72rem; }
+.raphel-app .progress-edit .btn { font-size: 0.74rem; }
+.raphel-app .tag-edit .btn { font-size: 0.65rem; }
+
+/* ---------- accent as text ---------- */
+.raphel-app .icon-action.is-danger:hover,
+.raphel-app .form-error,
+.raphel-app .cr-cost,
+.raphel-app .media-group a,
+.raphel-app .role-badge.is-admin,
+.raphel-app .aging-mark.is-14 { color: var(--accent-text); }
+
+.raphel-app .panel-close { border-radius: var(--radius-sm); }
+
+/* ---------- sidebar ---------- */
+.raphel-app .sidebar-link {
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-weight: 600; font-stretch: 100%;
+  text-transform: none; letter-spacing: 0;
+}
+.raphel-app .sidebar-pill { border-radius: var(--radius-sm); }
+
+/* ---------- planes: cards, plates, panels ---------- */
+.raphel-app .repo-card { border-radius: var(--radius); }
+.raphel-app .repo-card .repo-title { font-stretch: 100%; text-transform: none; letter-spacing: -0.005em; }
+/* Active obra card: large cover on the left, text beside it, progress band on
+   the bottom edge. The archived list keeps the compact .repo-card rows. */
+.raphel-app .project-card { display: block; padding: 16px 18px 22px; }
+.raphel-app .project-card-link {
+  display: flex; align-items: center; gap: 20px;
+  color: inherit; text-decoration: none; min-width: 0;
+}
+.raphel-app .project-card-body { flex: 1; min-width: 0; }
+.raphel-app .project-card .repo-title { font-size: 1.5rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.015em; }
+.raphel-app .project-card .repo-meta { margin-top: 10px; row-gap: 4px; }
+.raphel-app .project-card .progress-label { min-width: 0; text-align: left; }
+.raphel-app .project-card-actions { margin-top: 12px; }
+@media (min-width: 561px) {
+  .raphel-app .project-card-actions { padding-left: 240px; }
+}
+@media (max-width: 560px) {
+  .raphel-app .project-card { padding: 14px 14px 20px; }
+  .raphel-app .project-card-link { flex-direction: column; align-items: stretch; gap: 14px; }
+  .raphel-app .project-card .repo-title { font-size: 1.3rem; }
+}
+
+/* Project cover: image, or a plane tinted with --paper-3 and --line carrying
+   the folder line icon (no text). */
+.raphel-app .project-cover {
+  position: relative; flex: none; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper-3); border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--steel);
+}
+.raphel-app .project-cover.is-card { width: 220px; height: 140px; }
+.raphel-app .project-cover.is-hero { width: 100%; height: 200px; }
+.raphel-app .project-cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.raphel-app .project-cover-placeholder { display: inline-flex; opacity: 0.8; }
+@media (max-width: 560px) {
+  .raphel-app .project-cover.is-card { width: 100%; height: 160px; }
+}
+
+.raphel-app .planos-card { border-radius: var(--radius); overflow: hidden; }
+.raphel-app .panel-entry { border-radius: var(--radius-sm); }
+.raphel-app .panel-thumb { border-radius: var(--radius-sm); }
+.raphel-app .panel-create-icon { border-radius: var(--radius-sm); color: var(--on-accent); box-shadow: none; }
+/* The workspace is a panel: an opaque fill keeps the ground grid out of it. */
+.raphel-app .workspace { background: var(--paper); }
+
+/* ---------- badges, chips, marks ---------- */
+.raphel-app .state-badge,
+.raphel-app .role-badge,
+.raphel-app .severity-chip,
+.raphel-app .aging-mark,
+.raphel-app .sync-chip,
+.raphel-app .capture-notice,
+.raphel-app .tab .soon,
+.raphel-app .cr-detail .chip,
+.raphel-app .tag-line .chip { border-radius: var(--radius-sm); }
+
+/* Text stays ink (globals.css); the tinted fill and border are the mark. */
+.raphel-app .state-badge.is-active { border-color: color-mix(in srgb, var(--state-active) 35%, transparent); }
+.raphel-app .role-badge.is-manager { border-color: color-mix(in srgb, var(--state-active) 35%, transparent); }
+.raphel-app .role-badge.is-supervisor,
+.raphel-app .severity-chip.is-important {
+  color: var(--brass); background: var(--brass-bg);
+  border-color: color-mix(in srgb, var(--brass) 35%, transparent);
+}
+.raphel-app .severity-chip.is-critical { border-color: color-mix(in srgb, var(--state-blocked) 35%, transparent); }
+
+/* ---------- avatars and lamps ---------- */
+.raphel-app .avatar { border-radius: 50%; }
+.raphel-app .avatar.role-admin { color: var(--on-accent); }
+/* globals.css fills this avatar with #b08a2e in both themes; light initials
+   on it are 2.6:1, dark ones 5.7:1. */
+.raphel-app .avatar.role-supervisor { color: #171412; }
+
+/* ---------- bars: thin tracks take fully rounded ends ---------- */
+.raphel-app .progress-track,
+.raphel-app .dash-health-track,
+.raphel-app .panel-progress-track { border-radius: var(--radius-sm); }
+.raphel-app .analitica-author-track { border-radius: var(--radius-sm); overflow: hidden; }
+
+/* ---------- block workspace ---------- */
+/* The partida preview opens in the side sheet, so the workspace is one column:
+   the card grid takes the full width and scrolls with the page (no inner
+   scroll box, so the search bar is no longer sticky inside one). */
+.raphel-app .workspace { grid-template-columns: 1fr; min-height: 0; }
+.raphel-app .workspace-list { max-height: none; overflow: visible; border-right: 0; }
+.raphel-app .workspace-list .tree-filter { position: static; }
+.raphel-app .partida-preview-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+
+/* ---------- side sheet (components/sheet.tsx) ---------- */
+/* z-index 70 clears the sticky appbar (40) and the phone drawer (55-60). */
+.raphel-app .sheet-layer { position: fixed; inset: 0; z-index: 70; }
+.raphel-app .sheet-backdrop {
+  position: absolute; inset: 0; width: 100%; padding: 0; border: 0; cursor: pointer;
+  background: rgba(10, 8, 6, 0.55);
+  animation: raphel-sheet-fade 200ms var(--ease) both;
+}
+.raphel-app .sheet-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  display: flex; flex-direction: column;
+  background: var(--paper); color: var(--ink);
+  animation: raphel-sheet-in 260ms var(--ease) both;
+}
+.raphel-app .sheet-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: calc(12px + var(--safe-t)) calc(20px + var(--safe-r)) 12px calc(20px + var(--safe-l));
+  border-bottom: 1px solid var(--line);
+}
+.raphel-app .sheet-title {
+  min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 1.25rem; font-weight: 700; letter-spacing: -0.012em;
+}
+.raphel-app .sheet-close { flex: none; }
+.raphel-app .sheet-body {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 20px calc(20px + var(--safe-r)) calc(20px + var(--safe-b)) calc(20px + var(--safe-l));
+}
+@media (min-width: 640px) {
+  .raphel-app .sheet-panel {
+    left: auto; width: 28rem; max-width: 100%;
+    border-left: 1px solid var(--line-strong);
+    border-radius: var(--radius) 0 0 var(--radius);
+    box-shadow: var(--shadow-sheet);
+  }
+  .raphel-app .sheet-head { padding-right: 20px; padding-left: 20px; }
+  .raphel-app .sheet-body { padding-right: 20px; padding-left: 20px; }
+}
+@keyframes raphel-sheet-in { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes raphel-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .raphel-app .sheet-panel,
+  .raphel-app .sheet-backdrop { animation: none; }
+}
+
+/* ---------- project header (projects/[id]/layout.tsx) ---------- */
+/* Cover fills the row; the name sits large on its right. Stacks on phones. */
+.raphel-app .project-hero { display: flex; align-items: stretch; gap: 20px; margin: 10px 0 12px; }
+.raphel-app .project-hero .project-cover.is-hero { flex: 1 1 0; width: auto; min-width: 0; }
+.raphel-app .project-hero-title {
+  flex: 0 1 38%; min-width: 0;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 10px;
+}
+.raphel-app .project-hero-title h1 { overflow-wrap: anywhere; }
+.raphel-app .project-hero-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 720px) {
+  .raphel-app .project-hero { flex-direction: column; gap: 12px; }
+  .raphel-app .project-hero .project-cover.is-hero { flex: none; width: 100%; height: 160px; }
+  .raphel-app .project-hero-title { flex: none; }
+}
+
+/* ---------- project tab strip (components/project-tabs.tsx) ---------- */
+/* One line, never wraps: SlideRow slides it sideways when the labels do not fit. */
+.raphel-app .project-tabs { flex-wrap: nowrap; }
+.raphel-app .project-tabs .tab { flex: none; white-space: nowrap; overflow-wrap: normal; }
+/* The row clips overflow, so keep the focus ring inside it. */
+.raphel-app .project-tabs .tab:focus-visible { outline-offset: -3px; }
+
+/* ---------- bloque label (components/bloque-label.tsx) ---------- */
+/* Icon beside the name, everywhere; a long name wraps beside the icon. */
+.raphel-app .bloque-label { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-width: 0; max-width: 100%; }
+.raphel-app .bloque-label > svg { flex: none; }
+.raphel-app .bloque-label-name { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+
+/* ---------- partida cards (components/partida-card-grid.tsx) ---------- */
+.raphel-app .partida-grid-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin: 12px 0 10px;
+}
+.raphel-app .partida-grid {
+  list-style: none; margin: 10px 0 0; padding: 0;
+  display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+}
+.raphel-app .partida-grid-empty { color: var(--steel); font-size: 0.86rem; padding: 18px 8px; margin: 0; }
+.raphel-app .partida-card-btn {
+  position: relative; overflow: hidden; width: 100%; height: 100%;
+  display: flex; align-items: stretch; gap: 0; padding: 0; text-align: left; cursor: pointer;
+  font: inherit; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+.raphel-app .partida-card-btn:hover { border-color: var(--line-strong); }
+.raphel-app .partida-card-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Selected: the accent edge runs down the bloque strip side. */
+.raphel-app .partida-card.is-selected .partida-card-btn { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent), var(--shadow-card); }
+/* 14 days quiet: the same accent rule along the top the old rows carried. */
+.raphel-app .partida-card.is-aging-14 .partida-card-btn { box-shadow: inset 0 3px 0 var(--accent), var(--shadow-card); }
+.raphel-app .partida-card.is-selected.is-aging-14 .partida-card-btn { box-shadow: inset 3px 0 0 var(--accent), inset 0 3px 0 var(--accent), var(--shadow-card); }
+.raphel-app .partida-card-bloque {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 34px; padding: 10px 0 14px;
+  background: var(--paper-2); border-right: 1px solid var(--line); color: var(--ink-soft);
+}
+.raphel-app .partida-card-body {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 14px 16px;
+}
+.raphel-app .partida-card-name { font-size: 1.02rem; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.raphel-app .partida-card-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px;
+  font-size: 0.7rem; color: var(--steel); letter-spacing: 0.02em;
+}
+.raphel-app .partida-card-meta .is-aging-7 { color: var(--brass); }
+.raphel-app .partida-card-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.72rem; }
+.raphel-app .partida-card-track {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--paper-3);
+}
+.raphel-app .partida-card-band { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--accent); }
+.raphel-app .partida-card-band.is-done { background: var(--state-active); }
+
+/* Vertical bloque label: reads bottom to top, icon first, long names cut. */
+.raphel-app .bloque-label.is-vertical {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  flex-wrap: nowrap; max-height: 9rem; overflow: hidden;
+  font-size: 0.68rem; letter-spacing: 0.04em;
+}
+.raphel-app .bloque-label.is-vertical .bloque-label-name {
+  font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal;
+}
+
+/* ---------- create triggers (components/new-record-sheets.tsx) ---------- */
+/* "Nuevo bloque" sits in the bloque grid as a card-shaped button. */
+.raphel-app .new-bloque-trigger {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 96px; padding: 14px; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--ink-soft);
+  background: transparent; border: 1px dashed var(--line-strong); box-shadow: none;
+}
+.raphel-app .new-bloque-trigger:hover { color: var(--ink); border-color: var(--accent); }
+.raphel-app .new-bloque-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.raphel-app .partida-grid-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- progress pulse ---------- */
+/* After the bar-grow entrance (transform, from globals.css), unfinished bands
+   breathe slowly on opacity. Concluded bands stay still: a pulse would read as
+   work still going on. */
+.raphel-app .pulse-band,
+.raphel-app .progress-fill:not(.is-done),
+.raphel-app .plate-band:not(.is-done),
+.raphel-app .dash-health-fill,
+.raphel-app .partida-card-band:not(.is-done),
+.raphel-app .panel-progress-band:not(.is-done) {
+  transform-origin: left;
+  animation:
+    bar-grow 0.55s var(--ease) 0.15s backwards,
+    raphel-band-pulse 3.2s ease-in-out 0.9s infinite;
+}
+@keyframes raphel-band-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .raphel-app .pulse-band,
+  .raphel-app .progress-fill,
+  .raphel-app .plate-band,
+  .raphel-app .dash-health-fill,
+  .raphel-app .partida-card-band,
+  .raphel-app .panel-progress-band { animation: none; }
+}

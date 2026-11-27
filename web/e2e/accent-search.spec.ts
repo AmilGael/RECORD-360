@@ -47,7 +47,7 @@ for (const lang of langs) {
     expect(await page.evaluate(() => (window as Window & { __r360?: number }).__r360)).toBe(1);
     page.off("request", onDocument);
 
-    await page.goto(`${obraPath}?tab=planos`);
+    await page.goto(`${obraPath}/planos`);
     await page.waitForLoadState("networkidle");
     const planos = page.getByRole("searchbox", { name: t.planos.search });
     await planos.fill("electrica");

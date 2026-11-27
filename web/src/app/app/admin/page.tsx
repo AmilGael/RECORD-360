@@ -154,7 +154,7 @@ export default async function AdminPage() {
                       </summary>
                       <div style={{ display: "grid", gap: 2, marginTop: 4 }}>
                         {(assignmentsByUser.get(u.id) ?? []).map((p) => (
-                          <Link key={p.id} href={`/app/projects/${p.id}`} className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-deep)", textDecoration: "none" }}>
+                          <Link key={p.id} href={`/app/projects/${p.id}`} className="mono" style={{ fontSize: "0.7rem", color: "var(--accent-text, var(--accent-deep))", textDecoration: "none" }}>
                             {p.name}{p.archivedAt ? A.archivedSuffix : ""}
                           </Link>
                         ))}
