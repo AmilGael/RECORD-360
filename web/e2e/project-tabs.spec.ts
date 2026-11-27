@@ -4,7 +4,7 @@ import { loginAs } from "./helpers/auth";
 import { setLang } from "./helpers/prefs";
 import { assertNoHorizontalOverflow } from "./helpers/watch";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
-import { OBRA, PARTIDA, openTestPartida, selectPartida, startsWith } from "./helpers/partida";
+import { BLOQUE, OBRA, PARTIDA, expectWorkspaceReady, follow, selectPartida, startsWith } from "./helpers/partida";
 
 // Project tabs are real routes under a shared layout. Runs on the phone
 // (390px) and desktop projects: the five Spanish and English labels must fit
@@ -108,7 +108,10 @@ test("legacy ?tab= links land on the matching route and keep other params", asyn
   // the redirect runs in the browser (the page streams under loading.tsx), so
   // wait for the address bar to lose `tab`, then check what it kept.
   await setLang(page, "es");
-  await openTestPartida(page, dictionaries.es);
+  await page.goto("/app");
+  await follow(page, startsWith(OBRA));
+  await follow(page, startsWith(BLOQUE));
+  await expectWorkspaceReady(page, dictionaries.es);
   await selectPartida(page, PARTIDA);
   const opened = here(page).search;
   const block = opened.get("block");
