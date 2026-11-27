@@ -1,11 +1,10 @@
-import { createWriteStream } from "node:fs";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
-import PDFDocument from "pdfkit";
 import type { Locator } from "@playwright/test";
 import { test, expect } from "./helpers/guards";
+import { writeTinyPdf } from "./helpers/pdf";
 import { loginAs } from "./helpers/auth";
 import { setLang, setTheme, type Theme } from "./helpers/prefs";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
@@ -20,19 +19,6 @@ const PNG_1x1 = Buffer.from(
 );
 
 const prisma = new PrismaClient();
-
-async function writeTinyPdf(filePath: string): Promise<void> {
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await new Promise<void>((resolve, reject) => {
-    const doc = new PDFDocument({ size: [400, 300], margin: 0 });
-    const out = createWriteStream(filePath);
-    doc.pipe(out);
-    doc.rect(20, 20, 360, 260).fill("#336699");
-    doc.end();
-    out.on("finish", resolve);
-    out.on("error", reject);
-  });
-}
 
 async function assertRenderedThumb(img: Locator) {
   await expect(img).toBeVisible({ timeout: 60_000 });

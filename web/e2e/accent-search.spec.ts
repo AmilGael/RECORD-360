@@ -1,9 +1,7 @@
-import { createWriteStream } from "node:fs";
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { Page, Request } from "@playwright/test";
-import PDFDocument from "pdfkit";
 import { test, expect } from "./helpers/guards";
+import { writeTinyPdf } from "./helpers/pdf";
 import { loginAs } from "./helpers/auth";
 import { setLang } from "./helpers/prefs";
 import { dictionaries, type Lang } from "../src/i18n/dictionaries";
@@ -17,19 +15,6 @@ test.use({ timezoneId: "America/Santo_Domingo" });
 async function openObra(page: Page) {
   await page.goto("/app");
   await follow(page, startsWith(OBRA));
-}
-
-async function writeTinyPdf(filePath: string): Promise<void> {
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await new Promise<void>((resolve, reject) => {
-    const doc = new PDFDocument({ size: [400, 300], margin: 0 });
-    const out = createWriteStream(filePath);
-    doc.pipe(out);
-    doc.rect(20, 20, 360, 260).fill("#336699");
-    doc.end();
-    out.on("finish", resolve);
-    out.on("error", reject);
-  });
 }
 
 for (const lang of langs) {

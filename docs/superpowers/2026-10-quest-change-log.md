@@ -330,3 +330,21 @@ One entry per quest PR. Audience: Gamaliel and the next AI agent working in this
   - JavaScript strips every combining mark. The SQL `translate` covers only ÁÀÄÂÉÈËÊÍÌÏÎÓÒÖÔÚÙÜÛÑÇ and the same letters in lower case. The parity fixture is that set. A character outside it can match in the browser and miss in Postgres, or the reverse.
   - Stacked on #30. Review only the commits after `54fb00f`.
 
+## E2E in CI (ci/e2e-in-ci, 2026-11-20)
+
+- **What users will notice:** nothing. No app code changed.
+- **What changed in code:**
+  - `.github/workflows/ci.yml`: new `e2e` job, a matrix of `phone` and `desktop`. Each half has its own Postgres 16 service and runs `npm ci`, `migrate deploy`, seeds the admin and resident with `scripts/create-admin.ts` (same company), builds, starts `npm start` once, runs the `@setup` demo fixture, then `playwright test --project <half> --workers=1`. Report, traces and the server log are uploaded on failure. A new push to a PR cancels that PR's older run.
+  - `e2e/setup/dev-fixture.spec.ts` also creates "Pruebas automáticas" in bloque Sala and uploads one "Planta Eléctrica" plano. On an empty database, `a11y` needed that partida before any spec had created it, and `accent-search` / `journey-resident` waited for the Planos search box, which is hidden while an obra has no documents.
+  - `e2e/helpers/pdf.ts`: `writeTinyPdf`, shared by the fixture, `accent-search` and `planos-thumbs`.
+- **Migrations:** none.
+- **Rules for future work:**
+  - A spec must pass on a database that holds only the fixture. Anything it needs before its first step goes in `dev-fixture.spec.ts`, not in another spec.
+  - CI has no secrets: no `S3_BUCKET` (uploads go to local disk), no `RESEND_API_KEY` (email is logged), no `ANTHROPIC_API_KEY`. A spec that needs one of them does not belong in this job.
+  - The `E2E_*` passwords in `ci.yml` are throwaway values for a database that lives only for that job. Never point that job at a shared database.
+  - Keep `--workers=1` per half until specs stop sharing the inbox (mark-all-read) and the login lockout key.
+- **How to verify:** the two `e2e · phone` / `e2e · desktop` checks on the PR. Before this change, a fresh-database run (one worker, 1 retry) gave 170 passed, 5 failed (all phone, all missing fixture data), 0 flaky, 26.5 min. After it, a local stand-in for the matrix (one build, each half on its own fresh Postgres, seeded as `ci.yml` seeds it, `CI=1`) gave phone 87 passed / 3 skipped and desktop 88 passed / 2 skipped, 0 failed, 0 flaky, 4.9 min per half.
+- **Known limits:**
+  - Not a required check yet. Watch it for one to two weeks of PRs for flakes before making it required.
+  - CI covers only `direct:false` uploads (no R2). The production R2 check from Q5 still stands.
+

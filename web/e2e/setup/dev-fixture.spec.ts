@@ -1,6 +1,9 @@
+import path from "node:path";
 import { test, expect } from "../helpers/guards";
 import { credentialsFor, loginAs } from "../helpers/auth";
 import { setLang } from "../helpers/prefs";
+import { writeTinyPdf } from "../helpers/pdf";
+import { BLOQUE as TEST_BLOQUE, PARTIDA as TEST_PARTIDA } from "../helpers/partida";
 import { dictionaries } from "../../src/i18n/dictionaries";
 
 // Permanent local demo data for later quests. Run with:
@@ -13,6 +16,11 @@ const BLOQUES: Record<string, string[]> = {
   "Lavandería": ["Impermeabilización de piso", "Circuito eléctrico dedicado", "Tomas de agua y desagüe", "Cerámica de pared"],
   "Sala": ["Resanado de muros", "Cielo raso de yeso", "Piso porcelanato", "Pintura general"],
 };
+// Specs assume these exist from their first run, so a fresh database (CI) must
+// have them before any spec starts: the e2e partida that every e2e registro
+// goes to, and one plano (Planos hides its search box while it has no documents).
+const SEED_PARTIDAS: Record<string, string[]> = { [TEST_BLOQUE]: [TEST_PARTIDA] };
+const PLANO = "Planta Eléctrica";
 
 const t = dictionaries.es;
 const startsWith = (s: string) => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
@@ -57,7 +65,10 @@ test("creates the E2E Obra Demo fixture @setup", async ({ page }, testInfo) => {
     created.push(`bloque ${bloque}`);
   }
 
-  for (const [bloque, partidas] of Object.entries(BLOQUES)) {
+  const partidasByBloque = Object.entries(BLOQUES).map(
+    ([bloque, partidas]) => [bloque, [...partidas, ...(SEED_PARTIDAS[bloque] ?? [])]] as const,
+  );
+  for (const [bloque, partidas] of partidasByBloque) {
     await page.goto(projectUrl);
     await page.getByRole("link", { name: startsWith(bloque) }).click();
     await page.waitForURL(/[?&]block=/);
@@ -86,6 +97,19 @@ test("creates the E2E Obra Demo fixture @setup", async ({ page }, testInfo) => {
     await page.getByRole("button", { name: t.project.assign, exact: true }).click();
     await expect(assigned).toBeVisible();
     created.push("resident assignment");
+  }
+
+  await page.goto(`${projectUrl}?tab=planos`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByLabel(t.planos.title)).toBeVisible();
+  const planoCard = page.getByRole("link", { name: new RegExp(PLANO) });
+  if ((await planoCard.count()) === 0) {
+    const pdfPath = path.join("e2e", "artifacts", "setup", `${PLANO}.pdf`);
+    await writeTinyPdf(pdfPath);
+    await page.locator('input[type="file"][name="file"]').setInputFiles(pdfPath);
+    await page.getByRole("button", { name: t.planos.uploadByKind.PLANO }).click();
+    await expect(planoCard.first()).toBeVisible({ timeout: 60_000 });
+    created.push(`plano ${PLANO}`);
   }
 
   testInfo.annotations.push({
