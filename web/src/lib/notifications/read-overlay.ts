@@ -25,10 +25,6 @@ export function removeReadOverlay(id: string) {
   emit();
 }
 
-export function hasReadOverlay(id: string) {
-  return ids.has(id);
-}
-
 export function listReadOverlay(): string[] {
   return [...ids];
 }

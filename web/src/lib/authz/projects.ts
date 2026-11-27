@@ -31,10 +31,6 @@ export async function canAccessProject(user: SessionUser, projectId: string) {
   return Boolean(project);
 }
 
-export async function requireProjectAccess(user: SessionUser, projectId: string) {
-  if (!(await canAccessProject(user, projectId))) throw new Error("Forbidden");
-}
-
 export async function canManageProjectStructure(user: SessionUser, projectId: string) {
   if (hasCompanyWideAccess(user.role)) {
     const project = await prisma.project.findFirst({ where: { id: projectId, companyId: user.companyId }, select: { id: true } });
@@ -49,9 +45,4 @@ export async function canManageProjectStructure(user: SessionUser, projectId: st
 
 export async function requireProjectStructureAccess(user: SessionUser, projectId: string) {
   if (!(await canManageProjectStructure(user, projectId))) throw new Error("Forbidden");
-}
-
-export async function canAccessMediaProject(user: { id?: string; companyId?: string; role?: Role }, projectId: string) {
-  if (!user.id || !user.companyId || !user.role) return false;
-  return canAccessProject({ id: user.id, companyId: user.companyId, role: user.role }, projectId);
 }
