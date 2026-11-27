@@ -110,15 +110,19 @@ test("legacy ?tab= links land on the matching route and keep other params", asyn
   await expect(bloqueLink).toBeVisible();
   const block = new URL((await bloqueLink.getAttribute("href"))!, "http://localhost").searchParams.get("block");
   expect(block).toBeTruthy();
-  await page.goto(`${base}?tab=code&block=${block}&p=none`);
-  await page.waitForLoadState("networkidle");
-  expect(here(page).path).toBe(base);
-  expect(here(page).search.get("block")).toBe(block);
-  expect(here(page).search.get("p")).toBe("none");
-  expect(here(page).search.has("tab")).toBe(false);
+  // Read the redirect's own target: once hydrated, the workspace drops a `p`
+  // that names no partida from the address bar, which is not the redirect's doing.
+  const res = await page.goto(`${base}?tab=code&block=${block}&p=none`);
+  const landed = new URL(res!.url());
+  expect(landed.pathname).toBe(base);
+  expect(landed.searchParams.get("block")).toBe(block);
+  expect(landed.searchParams.get("p")).toBe("none");
+  expect(landed.searchParams.has("tab")).toBe(false);
 });
 
-test("a foreign or missing project id is a 404 on every tab route", async ({ page }) => {
+test("a foreign or missing project id is a 404 on every tab route", async ({ page, consoleGuard }) => {
+  // Each 404 asked for here is logged by Chrome as a console error.
+  consoleGuard.allow(/status of 404 \(Not Found\) \(http:\/\/[^/]+\/app\/projects\/does-not-exist[^)]*\)$/);
   await loginAs(page, "admin");
   for (const route of ROUTES) {
     const res = await page.goto(`/app/projects/does-not-exist${route.segment}`);

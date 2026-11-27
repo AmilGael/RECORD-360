@@ -137,7 +137,10 @@ for (const lang of langs) {
     expect(new URL(page.url()).searchParams.get("block"), "Back from a deep link stays in the workspace").toBeTruthy();
   });
 
-  test(`offline, the sheet shows the offline message (${lang})`, async ({ page, context }) => {
+  test(`offline, the sheet shows the offline message (${lang})`, async ({ page, context, consoleGuard }) => {
+    // The production build prefetches the sheet's links; offline, those fetches fail and log.
+    consoleGuard.allow(/^console\.error: Failed to load resource: net::ERR_INTERNET_DISCONNECTED$/);
+    consoleGuard.allow(/^console\.error: Failed to fetch RSC payload for [\s\S]*TypeError: Failed to fetch/);
     await prepare(page, lang);
     await loginAs(page, "admin");
     await openBloque(page, t);
