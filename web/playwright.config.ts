@@ -23,6 +23,12 @@ export default defineConfig({
   reporter: [["list"], ["html", { outputFolder: "e2e/artifacts/playwright-report", open: "never" }]],
   use: {
     baseURL,
+    // The app's users are in Santo Domingo, and specs type reminder times in
+    // that zone (sdLocalInput). Without this the browser takes the machine's
+    // zone: UTC on CI, where "2 h ahead in Santo Domingo" is already past and
+    // the reminder input refuses it. Specs that test other zones still
+    // override it with test.use({ timezoneId }).
+    timezoneId: "America/Santo_Domingo",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
